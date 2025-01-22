@@ -17,7 +17,7 @@ Welcome to Leishmania_Project's documentation!
 Modules
 =======
 .. here I will post the program modules and reStructured Text Anotation
-.. the location of my code is written in config.py in ../SIDER_RepetitiveSearcher
+.. the location of my code is written in config.py in ../blastoise
 
 .. toctree::
    :maxdepth: 3
