@@ -1,8 +1,8 @@
-# Use a base image with Miniconda
+# Loading image miniconda for conda environments
 FROM continuumio/miniconda3
 
 # Set the working directory in the container
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # Copy the environment.yml file into the container
 COPY environment.yml .
@@ -10,13 +10,12 @@ COPY environment.yml .
 # Create the Conda environment from the environment.yml file
 RUN conda env create -f environment.yml
 
-# Make RUN commands use the new environment
-SHELL ["conda", "run", "-n", "blastoise", "/bin/bash", "-c"]
+# Ensure Conda is properly initialized and available in the container
+RUN echo "conda activate blastoise" > ~/.bashrc
 
 # Copy the application code into the container
 COPY . .
 
-# Ensure the environment is activated whenever a command is executed
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "blastoise", "python", "blastoise.py"]
-
-CMD ["python", "blastoise.py"]
+# Set the default command to start with the environment ready.
+## --login will execute the .bashrc scripts.
+CMD ["/bin/bash", "--login"]
