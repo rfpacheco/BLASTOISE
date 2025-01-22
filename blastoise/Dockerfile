@@ -11,12 +11,12 @@ COPY environment.yml .
 RUN conda env create -f environment.yml
 
 # Make RUN commands use the new environment
-SHELL ["conda", "run", "-n", "SIDER_RepetitiveSearcher", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "blastoise", "/bin/bash", "-c"]
 
 # Copy the application code into the container
 COPY . .
 
 # Ensure the environment is activated whenever a command is executed
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "SIDER_RepetitiveSearcher", "python", "SIDER_RepetitiveSearcher.py"]
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "blastoise", "python", "blastoise.py"]
 
-CMD ["python", "SIDER_RepetitiveSearcher.py"]
+CMD ["python", "blastoise.py"]

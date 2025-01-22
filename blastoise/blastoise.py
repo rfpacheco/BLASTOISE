@@ -12,7 +12,7 @@ from modules.bedops import bedops_main
 
 # Initiate parser
 parser = argparse.ArgumentParser(
-    prog="SIDER_RepetitiveSearcher",
+    prog="BLASTOISE",
     description="This is a program to search for repetitive sequences in SIDERs elements in Leishmania spp.",
 )
 

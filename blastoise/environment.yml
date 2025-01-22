@@ -1,4 +1,4 @@
-name: SIDER_RepetitiveSearcher
+name: blastoise
 channels:
   - conda-forge
   - bioconda

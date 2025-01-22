@@ -1,4 +1,4 @@
-# Cómo usar `SIDER_RepetitiveSearcher.py`
+# Cómo usar `blastoise.py`
 
 ## Introducción
 
@@ -17,30 +17,30 @@ Hay otro método de uso, que es utilizando construcción de imágenes mediante *
 
 ## 1º paso: preparación del environment.
 
-Dentro del repositorio, toda la información del programa está dentro de la carpeta [SIDER_RepetitiveSearcher](../SIDER_RepetitiveSearcher), la otra carpeta [docs](../docs) está dedicada solo a documentación.
+Dentro del repositorio, toda la información del programa está dentro de la carpeta [blastoise](../blastoise), la otra carpeta [docs](../docs) está dedicada solo a documentación.
 
 En esa carpeta nos interesa 2 ficheros:
-- [environment.yml](../SIDER_RepetitiveSearcher/environment.yml) --> lo utilizaremos para crear el _environment_ con conda.
-- [SIDER_RepetitiveSearcher.py](../SIDER_RepetitiveSearcher/SIDER_RepetitiveSearcher.py) --> El programa principal. Todavía está sujeto a ser cambiado de nombre.
+- [environment.yml](../blastoise/environment.yml) --> lo utilizaremos para crear el _environment_ con conda.
+- [blastoise.py](../blastoise/blastoise.py) --> El programa principal. Todavía está sujeto a ser cambiado de nombre.
 
 El primer paso será tener todos los paquetes y requerimientos del programa, para lo cual usaremos "conda" en la terminal de _bash_:
 
-1. En la terminal de *bash* nos movemos dentro de "path" en donde se encuentra el archivo [environment.yml](../SIDER_RepetitiveSearcher/environment.yml), utilizando bash realizamos: `conda env create -f environment.yml`. Con esto crearemos un _environment_ con todas las dependencias necesarias, que se llamará SIDER_RepetitiveSearcher (el nombre lo tiene, porque así está descrito dentro del archivo [environment.yml](../SIDER_RepetitiveSearcher/environment.yml)). La instalación de las dependencias tardará un rato en instalarse.
+1. En la terminal de *bash* nos movemos dentro de "path" en donde se encuentra el archivo [environment.yml](../blastoise/environment.yml), utilizando bash realizamos: `conda env create -f environment.yml`. Con esto crearemos un _environment_ con todas las dependencias necesarias, que se llamará blastoise (el nombre lo tiene, porque así está descrito dentro del archivo [environment.yml](../blastoise/environment.yml)). La instalación de las dependencias tardará un rato en instalarse.
 
 
-2. Una vez terminado, activamos nuestro nuevo _environment_ con `conda activate SIDER_RepetitiveSearcher`. A partir de aquí ya tenemos las herramientas necesarias para ejecutar el programa.
+2. Una vez terminado, activamos nuestro nuevo _environment_ con `conda activate blastoise`. A partir de aquí ya tenemos las herramientas necesarias para ejecutar el programa.
 
-## 2º paso: ejecución de SIDER_RepetitiveSearcher.py
+## 2º paso: ejecución de blastoise.py
 
 A continuación ejecutaremos el programa utilizando python, el cual se habrá instalado dentro de nuestro _environment_. Para ejecutarlo necesitamos dos archivos:
 
 - El genoma a buscar en formato FASTA. Por ejemplo podría ser _Leishmania_infantim_whole_genome.fasta_.
 - La secuencia de búsqueda en formato FASTA. Podría ser por ejemplo _ingi_hallmark.fasta_
 
-Y llamamos al programa con esos dos elementos en _bash_. Recordamos que estamos en el "path" del archivo [SIDER_RepetitiveSearcher.py](../SIDER_RepetitiveSearcher/SIDER_RepetitiveSearcher.py):
+Y llamamos al programa con esos dos elementos en _bash_. Recordamos que estamos en el "path" del archivo [blastoise.py](../blastoise/blastoise.py):
 
 ```bash
-python SIDER_RepetitiveSearcher.py \
+python blastoise.py \
 -d <archivo secuencia de búsqueda FASTA> \
 -g <archivo genoma FASTA>
 ```
@@ -71,9 +71,9 @@ El programa encuentra de forma iterativa todas las secuencias repetidas que busc
 
 ### 3.1 Union de datos en ambas hebras
 
-[join_strands.py](../SIDER_RepetitiveSearcher/extra/join_strands.py)
+[join_strands.py](../blastoise/extra/join_strands.py)
 
-"Last_Data.csv" tiene todas las secuencias repartidas tanto en el sentido positivo como negativo de las hebras. Esto es una repercusión de la forma que tiene BLASTn de encontrar las secuencias. Sin embargo, no podemos darle ese sentido debido a la estructura que tiene el genoma de _Leishmania_ (i.e., Directional Gene Clusters). Por ello, el primer paso es unir todos los elementos en el sentido "positivo", para ello usaremos [join_strands.py](../SIDER_RepetitiveSearcher/extra/join_strands.py):
+"Last_Data.csv" tiene todas las secuencias repartidas tanto en el sentido positivo como negativo de las hebras. Esto es una repercusión de la forma que tiene BLASTn de encontrar las secuencias. Sin embargo, no podemos darle ese sentido debido a la estructura que tiene el genoma de _Leishmania_ (i.e., Directional Gene Clusters). Por ello, el primer paso es unir todos los elementos en el sentido "positivo", para ello usaremos [join_strands.py](../blastoise/extra/join_strands.py):
   
   ```bash
   python ./extra/compare.py \
@@ -86,7 +86,7 @@ De aquí obtendremos un archivo denominado **merged_sequences.csv** como resulta
 
 ### 3.2 Aplicación del test de SIDER
 
-[true_sider_filter.py](../SIDER_RepetitiveSearcher/extra/true_sider_filter.py)
+[true_sider_filter.py](../blastoise/extra/true_sider_filter.py)
 
 
 Este _script_ se encargará de encontrar dentro del amalgama de elementos repetidos aquellos considerados realmente SIDER. Para ser considerado como SIDER en una búsqueda de cada secuencia en BLASTn frente al genoma original, consideramos que deben cumplir las siguientes premisas:
@@ -114,7 +114,7 @@ Una vez terminado, obtendremos dos archivos CSV:
 
 #### 3.3.1 Delimitación y fragmentación
 
-[correct_coor_to_json.py](../SIDER_RepetitiveSearcher/extra/correct_coor_to_json.py)
+[correct_coor_to_json.py](../blastoise/extra/correct_coor_to_json.py)
 
 Este _script_ se encargará de mirar secuencia a secuencia y limitar las coordenadas de los elementos. El archivo resultante será un archivo tipo JSON con las secuencias y coordenadas resultantes.
 
@@ -129,7 +129,7 @@ Dentro de la carpeta elegida, tendremos un archivo denominado **main_dict.json**
 
 #### 3.3.2 True SIDER Test
 
-[correct_coor_json_true_sider_test.py](../SIDER_RepetitiveSearcher/extra/correct_coor_json_true_sider_test.py)
+[correct_coor_json_true_sider_test.py](../blastoise/extra/correct_coor_json_true_sider_test.py)
 
 En este apartado, el _script _ utilizará los datos del archivo JSON **main_dict.json** para efectuar un análisis de True SIDER Test. La diferencia es que en vez de ejecutarse en el CSV, se utilizará el archivo JSON directamente.
 
@@ -145,7 +145,7 @@ Al finalizar el proceso, dentro de nuestra carpeta deseada tendremos un archivo 
 
 #### 3.3.3 Obtención de secuencias
 
-[correct_coor_json_to_csv.py](../SIDER_RepetitiveSearcher/extra/correct_coor_json_to_csv.py)
+[correct_coor_json_to_csv.py](../blastoise/extra/correct_coor_json_to_csv.py)
 
 Este _script_ realizará la transformación de los archivos JSON a un archivo CSV, de un uso más común.
 

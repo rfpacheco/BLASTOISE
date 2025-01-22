@@ -3,4 +3,4 @@ __all__ = [
     "extra"
 ]
 
-from SIDER_RepetitiveSearcher import *
+from blastoise import *

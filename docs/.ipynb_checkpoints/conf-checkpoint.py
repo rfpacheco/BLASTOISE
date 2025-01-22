@@ -8,13 +8,13 @@
 import os
 import sys
 
-project = 'Leishmania_Project'
+project = 'BLASTOISE'
 copyright = '2023, Ronny Pacheco'
 author = 'Ronny Pacheco'
 release = '0.1'
 
 # Here it's the location path of my program
-sys.path.insert(0, os.path.abspath("../SIDER_RepetitiveSearcher"))
+sys.path.insert(0, os.path.abspath("../blastoise"))
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
