@@ -23,52 +23,52 @@ BLASTOISE is available as:
 
 You can install and use BLASTOISE via different methods:
 
-<!-- # TODO: Improve the Docker command, e.g., mount volumes -->
 ### 1. **Using Docker**
-To run the Docker image, ensure you have [Docker](https://www.docker.com/) installed, and execute:
+
+To run the Docker image, first you will need to install [Docker engine](https://docs.docker.com/engine/install/ubuntu/) for Linux, including the [Linux postinstall instructions](https://docs.docker.com/engine/install/linux-postinstall/) if you want to omit the `sudo` command. Then, to download **BLASTOISE** software, follow the next instructions:
+
 ```bash
 docker pull rfpacheco/blastoise
-docker run -it rfpacheco/blastoise
 ```
 
-<!-- TODO: improve the conda installation -->
 ### 2. **Conda Installation**
-Use the Conda-based installation approach:
-1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/).
-2. Create the environment and install dependencies:
-   ```bash
-   conda create -n blastoise_env
-   conda activate blastoise_env
-   # Additional library installations here (e.g., Pandas, BioPython, etc.)
-   ```
+
+Follow these steps to set up BLASTOISE using Conda:
+
+1. **Install Conda**:  
+   - Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/).
+
+
+2. **Clone the Repository using Git**: 
+
+ ```bash
+ git clone https://github.com/rfpacheco/BLASTOISE.git
+ ```
+
+3. **Set Up the Conda Environment**:
+
+```bash
+conda env create -f blastoise/environment.yml 
+conda activate blastoise
+```
    
 ---
 
 ## Usage
 
-1. **Input Preparation**: Provide input genomic data in the required format.
-2. **Run the Software**:
-   Use command-line arguments to configure BLASTOISE for specific datasets. Example:
-   ```bash
-   python blastoise.py --input <input-file> --output <output-dir>
-   ```
-3. **Output Analysis**: The software generates reports and data visualizations for identified SIDER elements.
+1. For the Docker use, follow the [**BLASTOISE** docker use manual](./docs/tutorials/docker_use_manual).
+2. For the conda-git based installation, follow [**BLASTOISE** git use manual](./docs/tutorials/conda_git_use_manual.md)
 
-For advanced usage and configuration, please check the [user guide](https://github.com).
 
 ---
 
 ## Citation
-
-When using BLASTOISE for your research, please cite the following:
 
 
 ---
 
 ## Support and Contributions
 
-- **Issues**: For bugs or feature requests, please open an issue on the [GitHub Issues page](https://github.com).
-- **Contributions**: Contributions are welcome! Please follow the contribution guidelines provided in the repository.
 
 ---
 
@@ -78,8 +78,3 @@ BLASTOISE is open-source software, licensed under the [MIT License](https://open
 
 ---
 
-## Additional Resources
-
-
-
----
