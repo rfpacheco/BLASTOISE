@@ -33,7 +33,7 @@ docker pull rfpacheco/blastoise
 
 ## Usage
 
-For the Docker use, follow the [**BLASTOISE** docker use manual](./docs/tutorials/docker_use_manual).
+For the Docker use, follow the [**BLASTOISE** docker use manual](./docs/tutorials/docker_use_manual.md).
 
 
 ## License
