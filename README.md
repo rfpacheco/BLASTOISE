@@ -35,6 +35,8 @@ docker pull rfpacheco/blastoise
 
 For the Docker use, follow the [**BLASTOISE** docker use manual](./docs/tutorials/docker_use_manual.md).
 
+And for the Post-Processing step, use [**BLASTOISE** docker post processing use manual](./docs/tutorials/docker_post_processing_manual.md)
+
 
 ## License
 

@@ -1,4 +1,4 @@
-# BLASTOISE Docker Image Guide
+# BLASTOISE Docker Image Guide - blastoise.py
 
 This guide will help you use the **BLASTOISE** software via its Docker image. Follow the steps below to successfully set up and execute **BLASTOISE**.
 
@@ -131,7 +131,7 @@ Enter the number of the first run:
 The results will be saved in the destination folder you specified, inside the subfolder `execution_data`, with the output file named:
 
 ```text
-Final_Data.csv
+Last_Data.csv
 ```
 
 You can find all data generated from the software in this folder.
@@ -156,7 +156,7 @@ Below is an example of running **BLASTOISE** with mounted volumes:
 
 3. Provide the required inputs as prompted (refer to the **User Input** section).
 
-4. Retrieve your results from `/<path>/data/execution_data/Final_Data.csv`.
+4. Retrieve your results from `/<path>/data/execution_data/Last_Data.csv`.
 
 ---
 
