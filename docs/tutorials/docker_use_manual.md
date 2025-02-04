@@ -1,81 +1,171 @@
-# BLASTOISE Docker image use
+# BLASTOISE Docker Image Guide
 
-After downloading the docker image, you can check its existance with:
+This guide will help you use the **BLASTOISE** software via its Docker image. Follow the steps below to successfully set up and execute **BLASTOISE**.
+
+---
+
+## Checking the Docker Image
+
+After downloading the Docker image, you can verify its presence by running:
 
 ```bash
 docker images
 ```
-where you should get:
+
+You should see an entry similar to this:
 
 ```text
 REPOSITORY            TAG       IMAGE ID       CREATED      SIZE
 rfpacheco/blastoise   latest    8d62dad40d07   9 days ago   2.88GB
 ```
 
-## How to execute the image
+---
 
-For executing the **BLASTOISE** software, you can do it in two different ways:
+## Running the BLASTOISE Image
 
-- With mounted volumes (recommended)
-- Inside the docker container.
+There are two ways to execute the **BLASTOISE** software:
 
-## With mounted volumes
+1. **With mounted volumes** (recommended)  
+2. **Directly inside the Docker container**
 
-With _mounted volumes_ you will sync the folder of interest in your host to the execution folder inside the docker container. For the **blastoise** software you will need:
+### 1. Running with Mounted Volumes (Recommended)
+
+Mounted volumes allow you to sync a folder from your host machine to the Docker container's execution folder. This method ensures that the data remains easily accessible on the host system.
+
+Run the following command to start the container with your data directory linked:
 
 ```bash
 docker run -it --rm \
--v <path to your data files>:/app/data \
+-v <path_to_your_data_files>:/app/data \
 rfpacheco/blastoise
 ```
 
-This way you will link your \<path to your data files\> where your genome and query sequence is located to the path /app/data inside the **blastoise** docker container.
+Replace `<path_to_your_data_files>` with the absolute path to your directory containing the genome and query sequence. This command will map your host directory to `/app/data` inside the **BLASTOISE** container.
 
-The next step is to call the software inside the container:
+Once the container is running, execute the software using:
 
 ```bash
 python3 blastoise.py \
--d data/<query fasta file name> \
--g data/<genome fasta file name>
+-d data/<query_fasta_file_path> \
+-g data/<genome_fasta_file_path>
 ```
 
-After doing that the software will start running and it will ask the next questions:
+Replace `<query_fasta_file_path>` and `<genome_fasta_file_path>` as appropriate.
 
-- All the data will be saved inside a folder, so you will need to input the name of the folder:
+---
+
+### 2. Running Inside the Docker Container
+
+If you prefer to work directly inside the Docker container, you can start the container interactively:
+
+```bash
+docker run -it --rm rfpacheco/blastoise
+```
+
+From here, inside the container `bash` you will have to copy and move all the data manually, with these types of commands, in another terminal different from the docker running image:
+
+```bash
+docker cp <source_path> <container_name OR container_id>:<destination_path>
+```
+
+To check the `container_name` OR `container_id` run:
+```bash
+docker ps --all
+```
+
+This method can be tedious so we don't recommend it. The mounted volumes are preferred.
+
+
+---
+
+## User Input During BLASTOISE Execution
+
+Once the software starts, you will need to provide the following input as prompted:
+
+#### 1. **Folder Name**
+The name of the folder where all results will be saved:
 ```text
 Enter folder name:
 ```
 
-- The place where you can to save that folder. Since we mounted your host <path to data> folder to the container data/ folder, you will need to save it there, in data/
+#### 2. **Save Path**
+The target directory for saving the folder. If you used mounted volumes, save the data in `/app/data` (mapped to your host directory). For example:
 ```text
 Enter path where you want to place all data:
 ```
 
-- The identity threshold for the minimum percentage of sequence similarity required for a match. For SIDER elements, use a 60 (i.e., 60%) identity.
+#### 3. **Identity Threshold**
+The minimum percentage of sequence similarity required for a match. For SIDER elements, use `60`:
 ```text
 Enter the identity for the first BLASTn step: 
 ```
 
-- BLASTn `word_size` parameter, i.e., length of short exact matched used to seed BLAST alignment. For SIDER elements use 15.
+#### 4. **BLASTn `word_size`**
+The `word_size` parameter defines the length of the short exact matches used to seed BLAST alignments. For SIDER elements, use `15`:
 ```text
 Enter the `word_size` value:
 ```
 
-- The minimum length is the shortest acceptable length for a candidate sequence to be considered. Use 100 for SIDER elements.
+#### 5. **Minimum Length**
+The shortest acceptable length for a candidate sequence. For SIDER elements, use `100`:
 ```text 
 Enter the `min_length` value:
 ```
 
-- The extension length specifies the minimum length required for a sequence to be considered in subsequent iterations of the software.
+#### 6. **Extension Length**
+The minimum length required for a sequence to progress in subsequent iterations of the software:
 ```text 
 Enter the `extend_number` value:
 ```
 
-- The number will be used to number all the software runs, the first numbered run will be the one placed here, so if the argument is "1", it will start in 1.
+#### 7. **Starting Run Number**
+The starting number for the software runs. If "1" is entered, the first run will be labeled as `1`:
 ```text 
-Enter the number of the first run: 
+Enter the number of the first run:
 ```
 
-## End Results
+---
 
-The end results will be saved in the defined destiny folder, inside the subfolder "execution_data", with the name "Final_Data.csv".
+## Results
+
+The results will be saved in the destination folder you specified, inside the subfolder `execution_data`, with the output file named:
+
+```text
+Final_Data.csv
+```
+
+You can find all data generated from the software in this folder.
+
+---
+
+## Example
+
+Below is an example of running **BLASTOISE** with mounted volumes:
+
+1. Start the Docker container:
+    ```bash
+    docker run -it --rm -v /path/to/data:/app/data rfpacheco/blastoise
+    ```
+
+2. Run the software:
+    ```bash
+    python3 blastoise.py \
+    -d data/query.fasta \
+    -g data/genome.fasta
+    ```
+
+3. Provide the required inputs as prompted (refer to the **User Input** section).
+
+4. Retrieve your results from `/<path>/data/execution_data/Final_Data.csv`.
+
+---
+
+## Additional Notes
+
+- Ensure that your host data folder contains the required `query` and `genome` FASTA files before starting the container.
+- If you exit the container, all the data inside the Docker container will be removed (except if you used the mounted volumes).
+- The identity threshold, word_size, and minimum/extension lengths depend on your use case and input data requirements. Follow best practices for the data you're working with.
+
+---
+
+Happy Hello World! 🎉
