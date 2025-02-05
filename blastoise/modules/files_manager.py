@@ -26,7 +26,7 @@ def fasta_creator(data_input, fasta_output_path):
         # index += 1 # To start the index in 1
         rec = SeqRecord(Seq(sequence.loc["sseq"]),  # In the 5 position is the seq
                         id="Seq_" + str(index),
-                        description="Leishmania infantum"  # argument maybe?
+                        description=""
                         )
         matrix.append(rec)
     SeqIO.write(matrix, fasta_output_path, "fasta")
