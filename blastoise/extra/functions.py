@@ -5,6 +5,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from blastoise.modules.blaster import blastn_dic
+
 # ======================================================================================================================
 def simple_fasta_creator(sequence, fasta_index, fasta_output_path):
     rec = SeqRecord(Seq(sequence),
@@ -53,7 +55,7 @@ def recaught_blast(query_path, dict_path, perc_identity, word_size):
 
 # ======================================================================================================================
 # TODO: make it simpler or more modular
-def sider_filter(df, blastn_dic, folder_path, word_size, recaught_file):
+def sider_filter(df, dict_path, folder_path, word_size, recaught_file):
     matches = pd.Series([False] * df.shape[0])
     not_matches = pd.Series([True] * df.shape[0])
     accepted = 0
@@ -69,7 +71,7 @@ def sider_filter(df, blastn_dic, folder_path, word_size, recaught_file):
         simple_fasta_creator(row["sseq"], index, fasta_path)
         blastn_data = blastn_blaster(
             query_path=fasta_path,
-            dict_path=blastn_dic,
+            dict_path=dict_path,
             evalue=1.0E-09,  # TODO: implement as argument
             word_size=word_size
         )
