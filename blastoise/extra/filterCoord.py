@@ -3,7 +3,7 @@ import os
 import pandas as pd
 
 from blastoise.modules.blaster import blastn_dic
-from blastoise.extra.functions import sider_filter
+from blastoise.extra.functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
 
 
 # ======================================================================================================================
@@ -54,7 +54,30 @@ if __name__ == "__main__":
         recaught_file=recaught_file_path
     )
 
-    print("Finished Test")
+    # Correcting coordinates
+    ## Getting json file
+    json_path = coordinates_corrector(
+        df=yes_data,
+        dict_path=dict_file_path_out,
+        folder_path=folder_path
+    )
+
+    ## sider filter to new coordinates
+    filtered_json_path = json_sider_filter(
+        json_file=json_path,
+        folder_path=folder_path,
+        dict_path=dict_file_path_out,
+    )
+
+    ## from json to csv
+    sider_json_to_csv(
+        json_file=filtered_json_path,
+        folder_path=folder_path,
+        dict_path=dict_file_path_out,
+        neg_db_df=no_data
+    )
+
+print("Mugiwara no luffy!")
 
 
 
