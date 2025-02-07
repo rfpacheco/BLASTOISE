@@ -34,7 +34,7 @@ def blastn_blaster(query, path_genome, evalue):
     cmd = (
         f'blastn -word_size 15 '
         f'-query {query} '
-        f'-db {path_blast_dict_file} '
+        f'-db {path_genome} '
         f'-evalue {evalue} '
         f'-outfmt 10'
     )
