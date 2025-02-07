@@ -1,6 +1,6 @@
 from Bio import SeqIO
 
-from modules.bedops import bedops_main
+from blastoise.modules.bedops import bedops_main
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

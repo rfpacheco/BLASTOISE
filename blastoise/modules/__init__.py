@@ -10,4 +10,4 @@ __all__ = [
     "compare"
 ]
 
-from modules import *
+from blastoise.modules import *

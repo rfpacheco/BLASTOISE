@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-from modules.bedops import bedops_coincidence
+from blastoise.modules.bedops import bedops_coincidence
 
 # Compare the coordinates
 def coincidence_counter (df1, df2):

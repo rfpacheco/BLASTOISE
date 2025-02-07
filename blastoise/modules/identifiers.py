@@ -2,11 +2,11 @@ import os
 import time
 import pandas as pd
 
-from modules.files_manager import fasta_creator, columns_to_numeric
+from blastoise.modules.files_manager import fasta_creator, columns_to_numeric
 # from modules.blaster import blastn_dic  # IMPORTANT -> Since "blaster.py" is importing "identifiers.py" I can't make "identifiers.py" import "blaster.py" --> ERROR: CIRCULAR IMPORT
-from modules.seq_modifier import specific_sequence_1000nt, specific_sequence_corrected
-from modules.filters import global_filters_main
-from modules.bedops import bedops_main  # New module 19/04/2024
+from blastoise.modules.seq_modifier import specific_sequence_1000nt, specific_sequence_corrected
+from blastoise.modules.filters import global_filters_main
+from blastoise.modules.bedops import bedops_main  # New module 19/04/2024
 
 
 # -----------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import numpy as np
 import subprocess
 import os
 
-from modules.files_manager import columns_to_numeric
+from blastoise.modules.files_manager import columns_to_numeric
 
 def get_data_sequence(data, strand, genome_fasta):
     """
