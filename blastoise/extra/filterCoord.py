@@ -48,11 +48,13 @@ if __name__ == "__main__":
     data = pd.read_csv(csv_path, sep=",", header=0)
     yes_data, no_data = sider_filter(
         df=data,
-        blastn_dic=dict_file_path_out,
+        dict_path=dict_file_path_out,
         folder_path=folder_path,
         word_size=word_size,
         recaught_file=recaught_file_path
     )
+
+    print("Finished Test")
 
 
 
