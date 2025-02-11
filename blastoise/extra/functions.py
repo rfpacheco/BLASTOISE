@@ -309,12 +309,6 @@ def json_sider_filter(json_file, folder_path, dict_path):
             total_elements_counter += 1
     print(f'\tTotal elements to analyze: {total_elements_counter}')
 
-    # Create a BLASTn dictionary
-    path_blast_folder = os.path.join(folder_path, 'blastn_dict')
-    path_blast_dict_file = os.path.join(path_blast_folder, os.path.basename(dict_path))
-    os.makedirs(path_blast_folder, exist_ok=True)
-    blastn_dic(path_input=dict_path, path_output=path_blast_dict_file)
-
     # Loop through the dictionary to get the sequences
     accepted_elements_not_fragmented = 0
     accepted_elements_fragmented = 0
@@ -334,7 +328,7 @@ def json_sider_filter(json_file, folder_path, dict_path):
                                         end_coor=element[3],
                                         strand=element[1],
                                         chromosome=element[0],
-                                        path_genome=path_blast_dict_file)
+                                        path_genome=dict_path)
                 # Make a BLASTn with this sequence with the filter:
                 ## Prepare data
                 name_id = f'{key}_{i}'
@@ -343,7 +337,7 @@ def json_sider_filter(json_file, folder_path, dict_path):
 
                 # Run BLASTn
                 blastn_df = json_blastn_blaster(query=query,
-                                                path_genome=path_blast_dict_file,
+                                                path_genome=dict_path,
                                                 evalue=evalue)
                 # Check BLASTn lines
                 if not blastn_df.empty:
@@ -441,47 +435,37 @@ def sider_json_to_csv(json_file, folder_path, dict_path, neg_db_df):
     negative_database = negative_database[['sseqid', 'sstart', 'send', 'sstrand']]
     print("\t DONE")
 
-    # Take the sequence from the genome for both databases
-    ## First let's create a blastn dictionary
-    print("6. Creating BLASTn dictionary...")
-    path_genome = dict_path
-    path_blast_dict_folder = os.path.join(folder_path, 'blastn_dict')
-    os.makedirs(path_blast_dict_folder, exist_ok=True)
-    path_blast_dict_file = os.path.join(path_blast_dict_folder, os.path.basename(path_genome))
-    blastn_dic(path_genome, path_blast_dict_file)
-    print("\t DONE")
-
     ## Now let's get the sequence for the positive database
-    print("7. Getting positive sequences...")
+    print("6. Getting positive sequences...")
     positive_database['sseq'] = positive_database.apply(
         lambda x: get_sequence_json_to_csv(start_coor=x['sstart'], end_coor=x['send'], strand=x['sstrand'],
                                            chromosome=x['sseqid'],
-                                           path_genome=path_blast_dict_file), axis=1
+                                           path_genome=dict_path), axis=1
     )
     print("\t DONE")
 
     # And do the same for the negative database
-    print("8. Getting negative sequences...")
+    print("7. Getting negative sequences...")
     negative_database['sseq'] = negative_database.apply(
         lambda x: get_sequence_json_to_csv(start_coor=x['sstart'], end_coor=x['send'], strand=x['sstrand'],
                                            chromosome=x['sseqid'],
-                                           path_genome=path_blast_dict_file), axis=1
+                                           path_genome=dict_path), axis=1
     )
     print("\t DONE")
 
     # Add the negative database to the old one
-    print("9. Merging negative databases...")
+    print("8. Merging negative databases...")
     negative_database = pd.concat([negative_database, neg_database], ignore_index=True, axis=0)
     print("\t DONE")
 
     # Make data types conversion just in case
-    print("10. Transforming data...")
+    print("9. Transforming data...")
     positive_database[['sstart', 'send']] = positive_database[['sstart', 'send']].apply(pd.to_numeric)
     negative_database[['sstart', 'send']] = negative_database[['sstart', 'send']].apply(pd.to_numeric)
     print("\t DONE")
 
     # Reorder data
-    print("11. Reordering data...")
+    print("10. Reordering data...")
     positive_database.sort_values(by=['sseqid', 'sstart'], inplace=True)
     negative_database.sort_values(by=['sseqid', 'sstart'], inplace=True)
     print("\t DONE")
