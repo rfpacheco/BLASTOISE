@@ -4,6 +4,7 @@ import pandas as pd
 
 from blastoise.modules.blaster import blastn_dic
 from blastoise.extra.functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
+from blastoise.modules.aesthetics import boxymcboxface
 
 
 # ======================================================================================================================
@@ -15,15 +16,6 @@ def parse_arguments():
     parser.add_argument("-ws", "--word_size", type=str, required=True, help='word_size value of BLASTN')
     parser.add_argument("-rf", "--recaught_file", type=str, required=True, help='Path to the recaught file.')
     return parser.parse_args()
-# ======================================================================================================================
-
-
-
-
-
-
-
-
 
 # ======================================================================================================================
 if __name__ == "__main__":
@@ -45,6 +37,7 @@ if __name__ == "__main__":
     blastn_dic(path_input=dict_path, path_output=dict_file_path_out)
 
     # First SIDER filter
+    boxymcboxface("Filtering SIDER elements")
     data = pd.read_csv(csv_path, sep=",", header=0)
     yes_data, no_data = sider_filter(
         df=data,
@@ -56,6 +49,7 @@ if __name__ == "__main__":
 
     # Correcting coordinates
     ## Getting json file
+    boxymcboxface("Correcting coordinates 1/3")
     json_path = coordinates_corrector(
         df=yes_data,
         dict_path=dict_file_path_out,
@@ -63,6 +57,7 @@ if __name__ == "__main__":
     )
 
     ## sider filter to new coordinates
+    boxymcboxface("Correcting coordinates 2/3")
     filtered_json_path = json_sider_filter(
         json_file=json_path,
         folder_path=folder_path,
@@ -70,6 +65,7 @@ if __name__ == "__main__":
     )
 
     ## from json to csv
+    boxymcboxface("Correcting coordinates 3/3")
     sider_json_to_csv(
         json_file=filtered_json_path,
         folder_path=folder_path,
@@ -77,7 +73,7 @@ if __name__ == "__main__":
         neg_db_df=no_data
     )
 
-print("Mugiwara no luffy!")
+boxymcboxface("THE END")
 
 
 

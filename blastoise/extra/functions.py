@@ -96,6 +96,7 @@ def recaught_blast(query_path, dict_path, perc_identity, word_size):
 
 # ======================================================================================================================
 # TODO: make it simpler or more modular
+# noinspection DuplicatedCode
 def sider_filter(df, dict_path, folder_path, word_size, recaught_file):
     matches = pd.Series([False] * df.shape[0])
     not_matches = pd.Series([True] * df.shape[0])
@@ -136,6 +137,8 @@ def sider_filter(df, dict_path, folder_path, word_size, recaught_file):
         print(f"\t\t\t\t\tAccepted: {accepted} - Rejected: {rejected}")
 
     # noinspection DuplicatedCode
+    print("")
+    print("~" * 50)
     print(f"The total number of matches is: {matches.sum()} out of {df.shape[0]}")
     print(f"The percentage of matches is: {round(matches.sum() / df.shape[0] * 100, 2)}%")
     print("~"*50)
@@ -473,4 +476,6 @@ def sider_json_to_csv(json_file, folder_path, dict_path, neg_db_df):
     # Save the databases
     positive_database.to_csv(os.path.join(folder_path, 'positive_database.csv'), sep=',', index=False, header=True)
     negative_database.to_csv(os.path.join(folder_path, 'negative_database.csv'), sep=',', index=False, header=True)
-    print("Program finished!")
+    print("")
+    print(f"Positive DataBase saved at: {os.path.join(folder_path, 'positive_database.csv')}")
+    print(f"Negative DataBase saved at: {os.path.join(folder_path, 'negative_database.csv')}")
