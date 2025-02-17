@@ -5,10 +5,10 @@ import time  # to measure the time of the program
 from datetime import datetime
 # import subprocess 
 
-from blastoise.modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
-from blastoise.modules.aesthetics import boxymcboxface
-from blastoise.modules.files_manager import fasta_creator, columns_to_numeric
-from blastoise.modules.bedops import bedops_main
+from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
+from modules.aesthetics import boxymcboxface
+from modules.files_manager import fasta_creator, columns_to_numeric
+from modules.bedops import bedops_main
 
 # Initiate parser
 parser = argparse.ArgumentParser(

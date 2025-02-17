@@ -1,10 +1,15 @@
 import argparse
 import os
+import sys
 import pandas as pd
 
-from blastoise.modules.blaster import blastn_dic
-from blastoise.extra.functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
-from blastoise.modules.aesthetics import boxymcboxface
+# Add the parent directory of 'blastoise' to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+
+from modules.blaster import blastn_dic
+from extra.functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
+from modules.aesthetics import boxymcboxface
 
 
 # ======================================================================================================================

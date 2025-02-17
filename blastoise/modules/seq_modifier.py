@@ -5,7 +5,7 @@ import re
 import math
 import os
 
-from blastoise.modules.bedops import bedops_main
+from modules.bedops import bedops_main
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

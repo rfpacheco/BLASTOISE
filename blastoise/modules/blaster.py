@@ -7,11 +7,11 @@ import logging
 # from pathlib import Path
 from datetime import datetime
 
-from blastoise.modules.aesthetics import boxymcboxface  # Some aesthetics function
-from blastoise.modules.identifiers import genome_specific_chromosome_main
-from blastoise.modules.filters import global_filters_main
+from modules.aesthetics import boxymcboxface  # Some aesthetics function
+from modules.identifiers import genome_specific_chromosome_main
+from modules.filters import global_filters_main
 # from modules.files_manager import columns_to_numeric  # TODO: check if remove
-from blastoise.modules.compare import compare_main
+from modules.compare import compare_main
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

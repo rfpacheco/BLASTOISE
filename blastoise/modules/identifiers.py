@@ -2,11 +2,11 @@ import os
 import time
 import pandas as pd
 
-from blastoise.modules.files_manager import fasta_creator, columns_to_numeric
+from modules.files_manager import fasta_creator, columns_to_numeric
 # from modules.blaster import blastn_dic  # IMPORTANT -> Since "blaster.py" is importing "identifiers.py" I can't make "identifiers.py" import "blaster.py" --> ERROR: CIRCULAR IMPORT
-from blastoise.modules.seq_modifier import specific_sequence_1000nt, specific_sequence_corrected
-from blastoise.modules.filters import global_filters_main
-from blastoise.modules.bedops import bedops_main  # New module 19/04/2024
+from modules.seq_modifier import specific_sequence_1000nt, specific_sequence_corrected
+from modules.filters import global_filters_main
+from modules.bedops import bedops_main  # New module 19/04/2024
 
 
 # -----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path,
         DataFrame
             Filtered data frame after BLASTn and applied filters.
     """
-    from blastoise.modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the ciruclar import. Need to be at the start of function.
+    from modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the ciruclar import. Need to be at the start of function.
 
     chromosme_folder_path = os.path.join(main_folder_path, chromosome_ID)  # For "chromosome_ID" it creates a folder in the main folder.
     os.makedirs(chromosme_folder_path, exist_ok=True)  # Folder

@@ -6,7 +6,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import json
 
-from blastoise.modules.blaster import blastn_dic
+from modules.blaster import blastn_dic
 
 # ======================================================================================================================
 def simple_fasta_creator(sequence, fasta_index, fasta_output_path):

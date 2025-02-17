@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 
-from blastoise.modules.bedops import bedops_coincidence
-from blastoise.modules.files_manager import df_columns_restore, columns_to_numeric
+from modules.bedops import bedops_coincidence
+from modules.files_manager import df_columns_restore, columns_to_numeric
 
 def compare_main(last_df, old_df, folder_path, genome_fasta):
     # -----------------------------------------------------------------------------
