@@ -10,4 +10,5 @@ __all__ = [
     "compare"
 ]
 
-from blastoise.modules import *
+# noinspection PyUnresolvedReferences
+from modules import *
