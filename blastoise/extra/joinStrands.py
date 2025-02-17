@@ -86,7 +86,10 @@ def main(df_path: str, genome_fasta_path: str, example_strand: str) -> NoReturn:
 
     # Get the parent path of 'df_path'
     parent_path = os.path.dirname(df_path)
-    merged_path = os.path.join(parent_path, "merged_sequences.csv")
+    merged_file_name = os.path.basename(df_path)
+    merged_file_name = merged_file_name.replace(".csv", "")
+    merged_file_name = f"{merged_file_name}_merged.csv"
+    merged_path = os.path.join(parent_path, merged_file_name)
     df_merged_seqs.to_csv(merged_path, sep=',', header=True, index=False)
     print(f"Saved data in: {merged_path}")
 
@@ -95,9 +98,9 @@ def main(df_path: str, genome_fasta_path: str, example_strand: str) -> NoReturn:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process some genomic 0.1.data.")
-    parser.add_argument("df_path", type=str, help="Path to the CSV file containing the 0.1.data.")
-    parser.add_argument("genome_fasta_path", type=str, help="Path to the genome FASTA file.")
-    parser.add_argument("example_strand", type=str, help="Strand to use (plus or minus).")
+    parser.add_argument("-f", "--file", type=str, help="Path to the CSV file containing the sequences data.")
+    parser.add_argument("-d", "--dict_path", type=str, help="Path to the genome FASTA file.")
+    parser.add_argument("--strand", type=str, help="Strand to use (plus or minus).")
 
     args = parser.parse_args()
-    main(args.df_path, args.genome_fasta_path, args.example_strand)
+    main(args.file, args.dict_path, args.strand)
