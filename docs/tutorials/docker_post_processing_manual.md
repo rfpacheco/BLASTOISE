@@ -17,7 +17,7 @@ blastoise docker image
 The `Last_Data.csv` represents the distributions of elements in both DNA strands, as BLAST search outputs. However, since the _Leishmania spp._ genome is made out of DGC (Directional Gene Clusters), this matter should not be stated yet. This is both strands shall be joined in a common strand:
 
 ```bash
-python3 extra/join_strands.py \
+python3 extra/joinStrands.py \
 <path_to_Last_Data.csv> \
 <genome_fasta_file_path> \
 plus  # for the strand, can use "minus" as well

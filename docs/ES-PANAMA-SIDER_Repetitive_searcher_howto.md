@@ -71,9 +71,9 @@ El programa encuentra de forma iterativa todas las secuencias repetidas que busc
 
 ### 3.1 Union de datos en ambas hebras
 
-[join_strands.py](../blastoise/extra/join_strands.py)
+[join_strands.py](../blastoise/extra/joinStrands.py)
 
-"Last_Data.csv" tiene todas las secuencias repartidas tanto en el sentido positivo como negativo de las hebras. Esto es una repercusión de la forma que tiene BLASTn de encontrar las secuencias. Sin embargo, no podemos darle ese sentido debido a la estructura que tiene el genoma de _Leishmania_ (i.e., Directional Gene Clusters). Por ello, el primer paso es unir todos los elementos en el sentido "positivo", para ello usaremos [join_strands.py](../blastoise/extra/join_strands.py):
+"Last_Data.csv" tiene todas las secuencias repartidas tanto en el sentido positivo como negativo de las hebras. Esto es una repercusión de la forma que tiene BLASTn de encontrar las secuencias. Sin embargo, no podemos darle ese sentido debido a la estructura que tiene el genoma de _Leishmania_ (i.e., Directional Gene Clusters). Por ello, el primer paso es unir todos los elementos en el sentido "positivo", para ello usaremos [join_strands.py](../blastoise/extra/joinStrands.py):
   
   ```bash
   python ./extra/compare.py \
