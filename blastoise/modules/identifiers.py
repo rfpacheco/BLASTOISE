@@ -42,7 +42,7 @@ def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path,
         DataFrame
             Filtered data frame after BLASTn and applied filters.
     """
-    from modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the ciruclar import. Need to be at the start of function.
+    from blastoise.modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the ciruclar import. Need to be at the start of function.
 
     chromosme_folder_path = os.path.join(main_folder_path, chromosome_ID)  # For "chromosome_ID" it creates a folder in the main folder.
     os.makedirs(chromosme_folder_path, exist_ok=True)  # Folder
