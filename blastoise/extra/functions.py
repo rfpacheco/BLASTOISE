@@ -474,8 +474,10 @@ def sider_json_to_csv(json_file, folder_path, dict_path, neg_db_df):
     print("\t DONE")
 
     # Save the databases
-    positive_database.to_csv(os.path.join(folder_path, 'positive_database.csv'), sep=',', index=False, header=True)
-    negative_database.to_csv(os.path.join(folder_path, 'negative_database.csv'), sep=',', index=False, header=True)
+    positive_path = os.path.join(os.path.dirname(folder_path), 'positive_database.csv')
+    negative_path = os.path.join(os.path.dirname(folder_path), 'negative_database.csv')
+    positive_database.to_csv(positive_path, sep=',', index=False, header=True)
+    negative_database.to_csv(negative_path, sep=',', index=False, header=True)
     print("")
-    print(f"Positive DataBase saved at: {os.path.join(folder_path, 'positive_database.csv')}")
-    print(f"Negative DataBase saved at: {os.path.join(folder_path, 'negative_database.csv')}")
+    print(f"Positive DataBase saved at: {positive_path}")
+    print(f"Negative DataBase saved at: {negative_path}")

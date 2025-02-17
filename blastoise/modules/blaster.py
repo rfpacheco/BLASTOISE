@@ -272,11 +272,11 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
             ['send', 'sstart']
         ].values
 
-        coincidence_data.to_csv(os.path.join(folder_path, "blastoise_final_data.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
+        coincidence_data.to_csv(os.path.join(folder_path, "blastoise_df.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
         print("")
         print(f"6. Stopping:")
         print(f"\t- No new data found.")
-        print(f"\t- Last data with nrow {coincidence_data.shape[0]} saved in {folder_path}/blastoise_final_data.csv")
+        print(f"\t- BLASTOISE final data row length: {coincidence_data.shape[0]}")
 
         return
 

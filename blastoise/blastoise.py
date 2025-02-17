@@ -3,6 +3,7 @@ import os
 import shutil
 import time  # to measure the time of the program
 from datetime import datetime
+import pandas as pd
 # import subprocess 
 
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
@@ -148,12 +149,38 @@ repetitive_blaster(data_input=first_blaster_bedops,
                    folder_path=repetitive_blaster_folder,
                    numbering=first_run,
                    start_time=formatted_start_time,
-                   identity_1 = identity_1,
-                   tic_start = tic_main,
+                   identity_1=identity_1,
+                   tic_start=tic_main,
                    word_size=word_size_param,
                    min_length=min_length_param,
                    extend_number=extend_number_param)
-toc = time.perf_counter()  # Stop the timer
+
+# Move "blastose_df.csv" to the main folder
+final_data_path = os.path.join(repetitive_blaster_folder, "blastoise_df.csv")
+new_final_data_path = os.path.join(folder_location, "blastoise_df.csv")
+if os.path.exists(new_final_data_path):
+    os.remove(new_final_data_path)
+else:
+    shutil.move(final_data_path, new_final_data_path)
+
+
+# Create a new temporary folder 'tmpBlastoise' and move files into it
+tmp_folder = os.path.join(folder_location, "tmpBlastoise")
+os.makedirs(tmp_folder, exist_ok=True)
+
+for file_or_folder in os.listdir(folder_location):
+    # Skip the 'tmpBlastoise' folder itself
+    if file_or_folder not in ("original_data", "tmpBlastoise", "blastoise_df.csv"):  # Except for "tmpBlastoise" & "blastoise_df.csv"
+        full_path = os.path.join(folder_location, file_or_folder)
+        destination_path = os.path.join(tmp_folder, os.path.basename(full_path))
+        if os.path.exists(destination_path):  # If the destination exists
+            if os.path.isdir(destination_path):
+                shutil.rmtree(destination_path)  # Safely remove directory at destination
+            else:
+                os.remove(destination_path)  # Safely remove file at destination
+        shutil.move(full_path, tmp_folder)
+
+
 
 # =============================================================================
 # End time
@@ -164,4 +191,5 @@ formatted_end_time = end_time.strftime("%Y %B %d at %H:%M")
 boxymcboxface(message="END OF THE PROGRAM")
 print(f"\t- Execution time: {toc_main - tic_main:0.2f} seconds\n",
       f"\t- Program started: {formatted_start_time}\n",
-      f"\t- Program ended: {formatted_end_time}")
+      f"\t- Program ended: {formatted_end_time}\n",
+      f"\t- Blastoise final file saved at: {final_data_path}")
