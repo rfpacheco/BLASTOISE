@@ -118,12 +118,6 @@ The minimum length required for a sequence to progress in subsequent iterations 
 Enter the `extend_number` value:
 ```
 
-#### 7. **Starting Run Number**
-The starting number for the software runs. If "1" is entered, the first run will be labeled as `1`:
-```text 
-Enter the number of the first run:
-```
-
 ---
 
 ## Results
@@ -131,7 +125,7 @@ Enter the number of the first run:
 The results will be saved in the destination folder you specified, inside the subfolder `execution_data`, with the output file named:
 
 ```text
-Last_Data.csv
+blastoise_df.csv
 ```
 
 You can find all data generated from the software in this folder.
@@ -154,9 +148,9 @@ Below is an example of running **BLASTOISE** with mounted volumes:
     -g data/genome.fasta
     ```
 
-3. Provide the required inputs as prompted (refer to the **User Input** section).
+3. Provide the required inputs as prompted.
 
-4. Retrieve your results from `/<path>/data/execution_data/Last_Data.csv`.
+4. Retrieve your results as a file named ```blastoise_df.csv```
 
 ---
 
