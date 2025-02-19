@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import pandas as pd
+import subprocess
 
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -77,6 +78,9 @@ if __name__ == "__main__":
         dict_path=dict_file_path_out,
         neg_db_df=no_data
     )
+
+# Add right to groups and users
+subprocess.run(["chmod", "-R", "a+w", folder_path], check=True)
 
 boxymcboxface("THE END")
 

@@ -96,6 +96,9 @@ def main(df_path: str, genome_fasta_path: str, example_strand: str) -> NoReturn:
     if os.path.exists(bedops_folder_path):
         os.system(f"rm -rf {bedops_folder_path}")
 
+    # Add right to groups and users
+    subprocess.run(["chmod", "-R", "a+w", merged_path], check=True)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process some genomic 0.1.data.")
     parser.add_argument("-f", "--file", type=str, help="Path to the CSV file containing the sequences data.")
@@ -104,3 +107,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.file, args.dict_path, args.strand)
+
