@@ -27,7 +27,7 @@ args = parser.parse_args()
 # Creating working folder place 
 # =============================================================================
 # Ask the user for the folder name and data location
-folder_name = input("\n\nEnter folder name: ")
+folder_name = input("\n\nEnter folder name: "); folder_name = folder_name.strip()
 data_location = input("Enter path where you want to place all data: ")
 
 data_location = os.path.normpath(data_location)  # Normalize the path to avoid problems with the OS
