@@ -3,8 +3,7 @@ import os
 import shutil
 import time  # to measure the time of the program
 from datetime import datetime
-import pandas as pd
-# import subprocess 
+# import subprocess
 
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
 from modules.aesthetics import boxymcboxface
@@ -44,8 +43,6 @@ identity_1 = input("Enter the identity for the first BLASTn step: "); identity_1
 word_size_param = input("Enter the `word_size` value: "); word_size_param = int(word_size_param)
 min_length_param = input("Enter the `min_length` value: "); min_length_param = int(min_length_param)
 extend_number_param = input("Enter the `extend_number` value: "); extend_number_param = int(extend_number_param)
-first_run = input("Enter the number of the first run: "); first_run = int(first_run)  # user input for the number of runs
-
 
 # =============================================================================
 # Start time
@@ -147,7 +144,7 @@ tic = time.perf_counter()  # Start the timer
 repetitive_blaster(data_input=first_blaster_bedops,
                    genome_fasta=blastn_dict_path_out,  # path to the genome dict
                    folder_path=repetitive_blaster_folder,
-                   numbering=first_run,
+                   numbering=1,  # TODO: Remove this argument or make it a default 1
                    start_time=formatted_start_time,
                    identity_1=identity_1,
                    tic_start=tic_main,
@@ -155,7 +152,7 @@ repetitive_blaster(data_input=first_blaster_bedops,
                    min_length=min_length_param,
                    extend_number=extend_number_param)
 
-# Move "blastose_df.csv" to the main folder
+# Move "blastoise_df.csv" to the main folder
 final_data_path = os.path.join(repetitive_blaster_folder, "blastoise_df.csv")
 new_final_data_path = os.path.join(folder_location, "blastoise_df.csv")
 if os.path.exists(new_final_data_path):
