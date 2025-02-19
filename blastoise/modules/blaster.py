@@ -228,7 +228,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     print("")
     print(f"\t\t- Coincidence data row length: {coincidence_data.shape[0]}\n",
           f"\t\t- New data row length: {new_data.shape[0]}\n",
-          f"\t\t- Old data row length: {old_data_exclusive.shape[0]}")
+          f"\t\t- Previous data row length: {old_data_exclusive.shape[0]}")
 
     old_data_exclusive_less_than_100 = None
 
@@ -243,7 +243,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         new_data_and_old.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)
         print('\t' * 3 + f"- Less than 100 bp: {old_data_exclusive_less_than_100.shape[0]}")
         print('\t' * 3 + f"- New data + less than 100: {new_data_and_old.shape[0]}")
-        print('\t' * 3 + f"- Old data: {old_data_exclusive.shape[0]}")
+        print('\t' * 3 + f"- Previous data: {old_data_exclusive.shape[0]}")
     else:
         new_data_and_old = new_data
 
@@ -251,7 +251,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     if not coincidence_data.empty and not old_data_exclusive.empty:
         coincidence_data = pd.concat([coincidence_data, old_data_exclusive], ignore_index=True)
         coincidence_data.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)
-        print(f"\t\t- Coincidence data + Old data: {coincidence_data.shape[0]}")
+        print(f"\t\t- Coincidence data + Previous data: {coincidence_data.shape[0]}")
     else:
         pass
     print(f"\t\t- Execution time: {toc - tic:0.2f} seconds")

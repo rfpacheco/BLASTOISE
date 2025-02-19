@@ -188,10 +188,10 @@ def bedops_coincidence(last_df, old_df, folder_path, strand, genome_fasta):
     last_in_old = bedops_contrast(last_df_path, old_df_path, 'coincidence')
     print("")
     print("\t\t\t- Coincidence data:")
-    print(f"\t\t\t\t- Last in old: {last_in_old.shape[0]}/{last_length} - {last_in_old.shape[0]/last_length*100:.2f}%")
+    print(f"\t\t\t\t- New data in Previous data: {last_in_old.shape[0]}/{last_length} - {last_in_old.shape[0]/last_length*100:.2f}%")
 
     old_in_last = bedops_contrast(old_df_path, last_df_path, 'coincidence')
-    print(f"\t\t\t\t- Old in last: {old_in_last.shape[0]}/{old_length} - {old_in_last.shape[0]/old_length*100:.2f}%")
+    print(f"\t\t\t\t- Previous data in New data: {old_in_last.shape[0]}/{old_length} - {old_in_last.shape[0]/old_length*100:.2f}%")
     # -----------------------------------------------------------------------------
     # Let's merge
 
@@ -213,7 +213,7 @@ def bedops_coincidence(last_df, old_df, folder_path, strand, genome_fasta):
     print("")
     print("\t\t\t- NOT coincidence data:")
     last_notin_old = bedops_contrast(last_df_path, old_df_path, 'opposite')
-    print(f"\t\t\t\t- Last NOT in old: {last_notin_old.shape[0]}/{last_length} - {last_notin_old.shape[0]/last_length*100:.2f}%")
+    print(f"\t\t\t\t- New data NOT in Previous data: {last_notin_old.shape[0]}/{last_length} - {last_notin_old.shape[0]/last_length*100:.2f}%")
 
     if not last_notin_old.empty:  # If the data frame is not empty
         new_data = get_data_sequence(last_notin_old, strand, genome_fasta)
@@ -222,7 +222,7 @@ def bedops_coincidence(last_df, old_df, folder_path, strand, genome_fasta):
     # -----------------------------------------------------------------------------
     # Now check the elements in Old that are not in Last
     old_notin_last = bedops_contrast(old_df_path, last_df_path, 'opposite')
-    print(f"\t\t\t\t- Old NOT in last: {old_notin_last.shape[0]}/{old_length} - {old_notin_last.shape[0]/old_length*100:.2f}%")
+    print(f"\t\t\t\t- Previous data NOT in New data: {old_notin_last.shape[0]}/{old_length} - {old_notin_last.shape[0]/old_length*100:.2f}%")
 
     if not old_notin_last.empty:  # If the data frame is not empty
         old_data_exclusive = get_data_sequence(old_notin_last, strand, genome_fasta)
