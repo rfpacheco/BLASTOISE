@@ -54,10 +54,10 @@ def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path,
                                               main_folder_path=main_folder_path,
                                               genome_fasta=genome_fasta,
                                               extend_number=extend_number)
-    sequences_1000_fasta_path = os.path.join(chromosme_folder_path, chromosome_ID + "_1000nt.fasta")  # Path to the output FASTA file
+    sequences_1000_fasta_path = os.path.join(chromosme_folder_path, chromosome_ID + f"_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
     print("")
-    print("\t\t2.1. Sequence extension to 1000nt:\n",
+    print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
           f"\t\t\t- Data row length: {sequences_1000.shape[0]}\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------
@@ -73,7 +73,7 @@ def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path,
     fasta_creator(sequences_1000, sequences_1000_fasta_path)
     toc = time.perf_counter()
     print("")
-    print(f"\t\t2.2. Fasta 1000nt file creation:\n",
+    print(f"\t\t2.2. Fasta {extend_number} nt file creation:\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")  
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
