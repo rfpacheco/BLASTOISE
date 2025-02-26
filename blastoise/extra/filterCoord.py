@@ -13,7 +13,7 @@ from extra.functions import sider_filter, coordinates_corrector, json_sider_filt
 from modules.aesthetics import boxymcboxface
 
 
-# ======================================================================================================================
+# ======================================================================
 def parse_arguments():
     parser = argparse.ArgumentParser(description="")
     # noinspection DuplicatedCode
@@ -23,7 +23,7 @@ def parse_arguments():
     parser.add_argument("-rf", "--recaught_file", type=str, required=True, help='Path to the recaught file.')
     return parser.parse_args()
 
-# ======================================================================================================================
+# ======================================================================
 if __name__ == "__main__":
     # Load all arguments
     args = parse_arguments()

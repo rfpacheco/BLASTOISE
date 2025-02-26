@@ -8,7 +8,7 @@ import json
 
 from modules.blaster import blastn_dic
 
-# ======================================================================================================================
+# ======================================================================
 def simple_fasta_creator(sequence, fasta_index, fasta_output_path):
     rec = SeqRecord(Seq(sequence),
                     id="Seq_" + str(fasta_index),
@@ -16,7 +16,7 @@ def simple_fasta_creator(sequence, fasta_index, fasta_output_path):
                     )
     SeqIO.write(rec, fasta_output_path, "fasta")
 
-# ======================================================================================================================
+# ======================================================================
 def csv_to_fasta_creator(csv_data, fasta_output_path):
     matrix = []
     for csv_index, sequence in csv_data.iterrows():
@@ -27,7 +27,7 @@ def csv_to_fasta_creator(csv_data, fasta_output_path):
         matrix.append(rec)
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def blastn_blaster(query_path, dict_path, evalue, word_size):
     cmd = "blastn -word_size " + str(word_size) + " -query " \
@@ -77,7 +77,7 @@ def json_blastn_blaster(query, path_genome, evalue):
 
     return data_df
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def recaught_blast(query_path, dict_path, perc_identity, word_size):
     cmd = "blastn -word_size " + str(word_size) + " -query " \
@@ -94,7 +94,7 @@ def recaught_blast(query_path, dict_path, perc_identity, word_size):
         recaught_df = pd.DataFrame(columns=["qseqid", "sseqid", "pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
     return recaught_df
 
-# ======================================================================================================================
+# ======================================================================
 # TODO: make it simpler or more modular
 # noinspection DuplicatedCode
 def sider_filter(df, dict_path, folder_path, word_size, recaught_file):
@@ -199,7 +199,7 @@ def sider_filter(df, dict_path, folder_path, word_size, recaught_file):
     # Save both data:
     return final_yes_data, final_no_data
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def bedops_merge(input_df, path_folder):
     # Create a temporary bed file
@@ -218,7 +218,7 @@ def bedops_merge(input_df, path_folder):
 
     return data
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def coordinates_corrector(df, dict_path, folder_path):
     main_dict = {}
@@ -287,7 +287,7 @@ def coordinates_corrector(df, dict_path, folder_path):
 
     return os.path.join(folder_path, "main_dict.json")  # return path
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def get_sequence(start_coor, end_coor, strand, chromosome, path_genome):
     cmd = f'blastdbcmd -db {path_genome} -entry {chromosome} -range {start_coor}-{end_coor} -strand {strand} -outfmt %s'
@@ -295,7 +295,7 @@ def get_sequence(start_coor, end_coor, strand, chromosome, path_genome):
     sequence = sequence.stdout.strip()
     return sequence
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def json_sider_filter(json_file, folder_path, dict_path):
     with open(json_file, 'r') as file:
@@ -379,7 +379,7 @@ def json_sider_filter(json_file, folder_path, dict_path):
     print(f'- Total accepted elements: {total_elements_accepted} from the original {len(json_data)} elements.')
     return os.path.join(folder_path, 'filtered_data.json')
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def get_sequence_json_to_csv(start_coor, end_coor, strand, chromosome, path_genome):
     cmd = (
@@ -393,7 +393,7 @@ def get_sequence_json_to_csv(start_coor, end_coor, strand, chromosome, path_geno
     sequence = sequence.stdout.strip()
     return sequence
 
-# ======================================================================================================================
+# ======================================================================
 # noinspection DuplicatedCode
 def sider_json_to_csv(json_file, folder_path, dict_path, neg_db_df):
     print("1. Loading JSON file...")
