@@ -63,6 +63,7 @@ def main(df_path: str, genome_fasta_path: str, example_strand: str) -> NoReturn:
     os.makedirs(bedops_folder_path, exist_ok=True)
 
     bedops_file_path = os.path.join(bedops_folder_path, 'to_join_strands.bed')
+    df.sort_values(by=['sseqid', 'sstart'], inplace=True)  # Important for BEDOPS
     df.to_csv(bedops_file_path, sep='\t', index=False, header=False)
 
     # Bedops merge
