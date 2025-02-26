@@ -8,7 +8,20 @@ import argparse
 import os
 import subprocess
 
+# ======================================================================
+# Defining parse arguments
+# ======================================================================
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Compare two CSV files from a local nucleotide BLAST search, with the columns: sseqid, sstart, send.')
+    parser.add_argument("-f1", "--file1", type=str, required=True, help="Path to the first CSV file.")
+    parser.add_argument("-f2", "--file2", type=str, required=True, help="Path to the second CSV file. Will check if the elements of this file are inside the first file.")
+    parser.add_argument("-o", "--output", type=str, required=True, help="Path to the output directory.")
+    return parser.parse_args()
 
+# ======================================================================
+# Defining needed functions
+# ======================================================================
+# noinspection DuplicatedCode
 def bedods_contrast(base_df_path: str, contrast_df_path: str, bedops_mode: str) -> DataFrame:
     """
     :param base_df_path: Path to the base dataframe file. What we want to find.
@@ -81,44 +94,42 @@ def compare_sequences(df_group1: DataFrameGroupBy, df_group2: DataFrameGroupBy,
     """)
     return compare_dict, not_captured_df
 
-
-
+# ======================================================================
+# Main function
+# ======================================================================
 def main():
-    parser = argparse.ArgumentParser(description='Process some CSV files.')
-    parser.add_argument('--file1', type=str, required=True, help='Path to the software result CSV file.')
-    parser.add_argument('--file2', type=str, required=True, help='Path to the bringaud data CSV file.')
-    parser.add_argument('--not_name', type=str, required=True, help='Name of the not captured sequences file.')
+    args = parse_arguments()
 
-    args = parser.parse_args()
-
-    df_1 = pd.read_csv(args.file1, sep=',', header=0)  # output from software
-    df_2 = pd.read_csv(args.file2, sep=',', header=0)  # bringaud data to compare
-
-    df_1 = df_1[['sseqid', 'sstart', 'send']].copy()  # Take only column 0 ('chrom name'), 1 ('start') and 2 ('end')
-
-    # Create a tmp folder
+    # Prepare all paths & tmp folder
     df_1_path = os.path.expanduser(args.file1)
     df_1_parent_path = os.path.dirname(df_1_path)
-    tmp_folder_path = os.path.join(df_1_parent_path, "tmp_bedops")
+    df_2_path = os.path.expanduser(args.file2)
+    out_path = os.path.expanduser(args.output)
+    tmp_folder_path = os.path.join(out_path, "tmp_bedops")
     os.makedirs(tmp_folder_path, exist_ok=True)
 
-    # Make the compare:
-    ## Frits make a groupby
+    df_1 = pd.read_csv(df_1_path, sep=',', header=0)  # output from software
+    df_2 = pd.read_csv(df_2_path, sep=',', header=0)  # data to compare
+    df_1 = df_1[['sseqid', 'sstart', 'send']].copy()  # Take only column 0 ('chrom name'), 1 ('start') and 2 ('end')
+
+    # Compare part:
     df_1_grouped = df_1.groupby("sseqid")
     df_2_grouped = df_2.groupby("sseqid")
 
-    # remember df_2 is the TP data we want to get in the result data df_1
+    ## Remember: we want to know if df_2 is inside df_1
     compare_dict, not_captured_df = compare_sequences(df_2_grouped, df_1_grouped, df_2, tmp_folder_path)
     for key, value in compare_dict.items():
         print(f"{key}: {value[0]} ({value[1]}%)")
 
-    # Remove all the folder `tmp_folder_path`:
+    ## Remove all the folder `tmp_folder_path`:
     if os.path.exists(tmp_folder_path):
         os.system(f"rm -rf {tmp_folder_path}")
 
     # Save the 'not_captured_df'
-    not_captured_name = f'not_captured-{args.not_name}.csv'
-    not_captured_df_path = os.path.join(df_1_parent_path, not_captured_name)
+    file1_name = os.path.basename(df_1_path).replace(".csv", "")
+    file2_name = os.path.basename(df_2_path).replace(".csv", "")
+    not_captured_name = f"not_captured-{file1_name}-vs-{file2_name}.csv"
+    not_captured_df_path = os.path.join(out_path, not_captured_name)
     not_captured_df.to_csv(not_captured_df_path, sep=',', header=True, index=False)
 
 if __name__ == "__main__":
