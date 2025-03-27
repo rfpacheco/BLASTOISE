@@ -40,7 +40,7 @@ def blastn_blaster(query_path, dict_path, evalue, word_size):
 
 # noinspection DuplicatedCode
 def simple_blastn_blaster(query_path, dict_path):
-    cmd = "blastn -word_size 15" \
+    cmd = "blastn -word_size 11" \
         + " -query " + query_path \
         + " -db " + dict_path \
         + " -outfmt '10 qseqid sseqid sstrand pident qstart qend sstart send evalue bitscore length qlen qcovs slen mismatch gapopen gaps'"
@@ -58,7 +58,7 @@ def simple_blastn_blaster(query_path, dict_path):
 # noinspection DuplicatedCode
 def json_blastn_blaster(query, path_genome, evalue):
     cmd = (
-        f'blastn -word_size 15 '
+        f'blastn -word_size 11 '
         f'-query {query} '
         f'-db {path_genome} '
         f'-evalue {evalue} '
@@ -148,53 +148,58 @@ def sider_filter(df, dict_path, folder_path, word_size, recaught_file):
     yes_data = df[matches]
     no_data = df[~matches]
 
-    # Recaught elements in 'no_data'
-    no_data_recaught_folder_path = os.path.join(folder_path, 'recaught_in_negatives')
-    os.makedirs(no_data_recaught_folder_path, exist_ok=True)
+    if not no_data.empty:  # if no_data is empty
+        # Recaught elements in 'no_data'
+        no_data_recaught_folder_path = os.path.join(folder_path, 'recaught_in_negatives')
+        os.makedirs(no_data_recaught_folder_path, exist_ok=True)
 
-    # Create fasta about the negative files
-    no_data_fasta_path = os.path.join(no_data_recaught_folder_path, 'no_data.fasta')
-    csv_to_fasta_creator(no_data, no_data_fasta_path)
+        # Create fasta about the negative files
+        no_data_fasta_path = os.path.join(no_data_recaught_folder_path, 'no_data.fasta')
+        csv_to_fasta_creator(no_data, no_data_fasta_path)
 
-    # Make a BLASTn dict with that:
-    blastn_dic(no_data_fasta_path, no_data_fasta_path)
+        # Make a BLASTn dict with that:
+        blastn_dic(no_data_fasta_path, no_data_fasta_path)
 
-    # Search for recaught data
-    # TODO: perc identity could be an argument
-    caught_data = recaught_blast(recaught_file, no_data_fasta_path, 60, word_size)
-    # noinspection DuplicatedCode
-    if not caught_data.empty:
-        # Remove ones with an evalue <= 10**-3
-        caught_data = caught_data[caught_data['evalue'] <= 1.0**-3].sort_values(by=['evalue'])
-        print("")
-        print("*"*50)
-        print(f"\nRecaught data: {caught_data.shape[0]} elements")
+        # Search for recaught data
+        # TODO: perc identity could be an argument
+        caught_data = recaught_blast(recaught_file, no_data_fasta_path, 60, word_size)
+        # noinspection DuplicatedCode
+        if not caught_data.empty:
+            # Remove ones with an evalue <= 10**-3
+            caught_data = caught_data[caught_data['evalue'] <= 1.0**-3].sort_values(by=['evalue'])
+            print("")
+            print("*"*50)
+            print(f"\nRecaught data: {caught_data.shape[0]} elements")
 
-        # Create a column with the number in "sseqid"
-        caught_data['index'] = caught_data['sseqid'].str.extract(r'_(\d+)_')
-        caught_data['index'] = pd.to_numeric(caught_data['index'])
+            # Create a column with the number in "sseqid"
+            caught_data['index'] = caught_data['sseqid'].str.extract(r'_(\d+)_')
+            caught_data['index'] = pd.to_numeric(caught_data['index'])
 
-        # Get a list with the index column
-        index_list = caught_data['index'].sort_values().unique().tolist()
+            # Get a list with the index column
+            index_list = caught_data['index'].sort_values().unique().tolist()
 
-        # Extract sequences from the 'no_data'
-        no_data_recaught = no_data[no_data.index.isin(index_list)]
+            # Extract sequences from the 'no_data'
+            no_data_recaught = no_data[no_data.index.isin(index_list)]
 
-        # Join yes_data and no_data_recaught
-        final_yes_data = pd.concat([yes_data, no_data_recaught], axis=0, ignore_index=True)
-        final_yes_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
+            # Join yes_data and no_data_recaught
+            final_yes_data = pd.concat([yes_data, no_data_recaught], axis=0, ignore_index=True)
+            final_yes_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
-        # Remove no_data_recaught from no data
-        final_no_data = pd.concat([no_data, no_data_recaught]).drop_duplicates(keep=False)
+            # Remove no_data_recaught from no data
+            final_no_data = pd.concat([no_data, no_data_recaught]).drop_duplicates(keep=False)
 
-        # Print results:
-        print(f"\n\t - Accepted data + recaught: {final_yes_data.shape[0]} elements")
-        print(f"\t - Rejected data - recaught: {final_no_data.shape[0]} elements")
+            # Print results:
+            print(f"\n\t - Accepted data + recaught: {final_yes_data.shape[0]} elements")
+            print(f"\t - Rejected data - recaught: {final_no_data.shape[0]} elements")
 
+        else:
+            final_yes_data = yes_data
+            final_no_data = no_data
+            print("\n\t - No recaught data")
     else:
         final_yes_data = yes_data
         final_no_data = no_data
-        print("\n\t - No recaught data")
+        print(f"\n\t - No rejected data")
 
     # Save both data:
     return final_yes_data, final_no_data

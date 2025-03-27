@@ -80,7 +80,10 @@ if __name__ == "__main__":
     )
 
 # Add right to groups and users
-subprocess.run(["chmod", "-R", "a+w", folder_path], check=True)
+try:
+    subprocess.run(["chmod", "-R", "a+w", folder_path], check=True)
+except subprocess.CalledProcessError as e:
+    print(f"Error occurred while changing permissions: {e}")
 
 boxymcboxface("THE END")
 
