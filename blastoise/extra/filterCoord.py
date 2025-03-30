@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 
 from modules.blaster import blastn_dic
-from extra.main_functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
+from extra.main_functions import coordinates_corrector, json_sider_filter, sider_json_to_csv
 from modules.aesthetics import boxymcboxface
 
 
@@ -42,22 +42,22 @@ if __name__ == "__main__":
     dict_file_path_out = os.path.join(dict_folder_path, os.path.basename(dict_path))
     blastn_dic(path_input=dict_path, path_output=dict_file_path_out)
 
-    # First SIDER filter
-    boxymcboxface("Filtering SIDER elements")
+    # # First SIDER filter
+    # boxymcboxface("Filtering SIDER elements")
     data = pd.read_csv(csv_path, sep=",", header=0)
-    yes_data, no_data = sider_filter(
-        df=data,
-        dict_path=dict_file_path_out,
-        folder_path=folder_path,
-        word_size=word_size,
-        recaught_file=recaught_file_path
-    )
+    # yes_data, no_data = sider_filter(
+    #     df=data,
+    #     dict_path=dict_file_path_out,
+    #     folder_path=folder_path,
+    #     word_size=word_size,
+    #     recaught_file=recaught_file_path
+    # )
 
     # Correcting coordinates
     ## Getting json file
     boxymcboxface("Correcting coordinates 1/3")
     json_path = coordinates_corrector(
-        df=yes_data,
+        df=data,
         dict_path=dict_file_path_out,
         folder_path=folder_path
     )

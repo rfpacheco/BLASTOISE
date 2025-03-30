@@ -60,7 +60,7 @@ def coordinates_corrector(df, dict_path, folder_path):
                 'qstart'] - 1  # Get the new start coordinate by adding the start_coor and the qstart
             new_end = start_coor + row2[
                 'qend'] - 1  # Get the new end coordinate by adding the start_coor and the qend. Important to be the "start" and not the "end"
-            if abs(new_end - new_start) + 1 > 100:
+            if abs(new_end - new_start) + 1 > 100:  # TODO: change 100 to an argument
                 main_dict[name_id].append(
                     [name_chr, strand_seq, new_start, new_end])  # Append the new coordinates to the main_dict
             else:  # If the length is less than 100

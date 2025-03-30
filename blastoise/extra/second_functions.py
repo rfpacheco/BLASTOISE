@@ -79,7 +79,7 @@ def blastn_blaster(query_path, dict_path, evalue, word_size):
     return blast_data
 
 # noinspection DuplicatedCode
-def simple_blastn_blaster(query_path, dict_path):
+def simple_blastn_blaster(query_path, dict_path):  # TODO: change 11 to argument
     cmd = "blastn -word_size 11" \
         + " -query " + query_path \
         + " -db " + dict_path \
@@ -98,7 +98,7 @@ def simple_blastn_blaster(query_path, dict_path):
 # noinspection DuplicatedCode
 def json_blastn_blaster(query, path_genome, evalue):
     cmd = (
-        f'blastn -word_size 11 '
+        f'blastn -word_size 11 '  # TODO: 11 as argument
         f'-query {query} '
         f'-db {path_genome} '
         f'-evalue {evalue} '
