@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 
 from modules.blaster import blastn_dic
-from extra.functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
+from extra.main_functions import sider_filter, coordinates_corrector, json_sider_filter, sider_json_to_csv
 from modules.aesthetics import boxymcboxface
 
 
