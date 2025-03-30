@@ -10,15 +10,13 @@ from modules.bedops import bedops_main
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def specific_sequence_1000nt(data_input, chromosome_ID, main_folder_path, genome_fasta, extend_number):
+def specific_sequence_1000nt(data_input, main_folder_path, genome_fasta, extend_number):
     """
     Expands sequences in a given DataFrame to a specific length (1000 nucleotides).
 
     Parameters:
     data_input: DataFrame
         The DataFrame containing sequence information.
-    chromosome_ID: int
-        Identifier for the chromosome.
     main_folder_path: str
         Path to the main folder.
     genome_fasta: str

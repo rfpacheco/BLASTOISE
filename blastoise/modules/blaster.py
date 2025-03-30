@@ -127,65 +127,38 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     tic = time.perf_counter()
     # First let's order the data by "sseqid", "sstrand", "sstart".
     data_ordered = data_input.sort_values(by=["sseqid", "sstrand", "sstart"])
-
-    # Now let's group the data by "sseqid". We'll have a pandas groupby object.
-    data_grouped = data_ordered.groupby("sseqid")
     toc = time.perf_counter()
     print("")
     print(f"1. Initial data:\n",
           f"\t- Data row length: {data_input.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
-    # -----------------------------------------------------------------------------
-    # Now let's call  `genome_specific_chromosome_main` for each chromosome_ID in the data using the groupby object.
     terminal_width = shutil.get_terminal_size().columns  # Get the terminal width
 
     print("")
     print(f"2. Individual searching and cleaning:")
-    whole_group = pd.DataFrame()  # This will be the final data frame for each chromosome
-    for _, (chromosome, group) in enumerate(data_grouped):
-        tic = time.perf_counter()
-        now_time = datetime.now()
-        formatted_now_time = now_time.strftime("%Y %B %d at %H:%M")
-        print("")
-        print(f"{' ' * 7}{'-' * 74}")
-        print(f"\t- {chromosome}:")
-        start_time_text = f"Program started: {start_time}"
-        end_time_text = f"Program time now: {formatted_now_time}"
-        run_text = f"RUN {numbering}"
-        print(f"{run_text:>{terminal_width}}")
-        print(f"{start_time_text:>{terminal_width}}")
-        print(f"{end_time_text:>{terminal_width}}")
-
-        data = genome_specific_chromosome_main(data_input=group,
-                                               chromosome_ID=chromosome,
-                                               main_folder_path=folder_path,
-                                               genome_fasta=genome_fasta,
-                                               identity_1=identity_1,
-                                               run_phase=numbering,
-                                               coincidence_data=coincidence_data,
-                                               word_size=word_size,
-                                               min_length=min_length,
-                                               extend_number=extend_number)
-        toc = time.perf_counter()
-        print("")
-        print(f"\t\t- Data row length: {len(data)}\n",  # Not .shape[0] in case the data is empty
-              f"\t\t- Execution time: {toc - tic:0.2f} seconds")
-        whole_group = pd.concat([whole_group, data])
-    print(f"{' ' * 7}{'-' * 74}")
-    print("")
-    print(f"\t- Blast data row length: {whole_group.shape[0]}\n",
-          f"\t- Execution time: {toc - tic:0.2f} seconds\n")
-    # -----------------------------------------------------------------------------   
     tic = time.perf_counter()
+    now_time = datetime.now()
+    formatted_now_time = now_time.strftime("%Y %B %d at %H:%M")
     print("")
-    print(f"4. Global filtering:")
-    whole_group_filtered = global_filters_main(data_input=whole_group,
-                                               genome_fasta=genome_fasta,
-                                               writing_path=folder_path,
-                                               min_length=min_length)
-    toc = time.perf_counter()
-    print("")
-    print(f"\t- Data row length: {whole_group_filtered.shape[0]}\n",
+    print(f"{' ' * 7}{'-' * 74}")
+    start_time_text = f"Program started: {start_time}"
+    end_time_text = f"Program time now: {formatted_now_time}"
+    run_text = f"RUN {numbering}"
+    print(f"{run_text:>{terminal_width}}")
+    print(f"{start_time_text:>{terminal_width}}")
+    print(f"{end_time_text:>{terminal_width}}")
+
+    whole_group = genome_specific_chromosome_main(data_input=data_ordered,
+                                                  main_folder_path=folder_path,
+                                                  genome_fasta=genome_fasta,
+                                                  identity_1=identity_1,
+                                                  run_phase=numbering,
+                                                  coincidence_data=coincidence_data,
+                                                  word_size=word_size,
+                                                  min_length=min_length,
+                                                  extend_number=extend_number)
+
+    print(f"\t- Data row length: {whole_group.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
 
     # -----------------------------------------------------------------------------
@@ -193,7 +166,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     runs_folder = os.path.join(folder_path, "RUNS")  # Creates the folder for the RUNS
     os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
     run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
-    whole_group_filtered.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
+    whole_group.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
     # -----------------------------------------------------------------------------
     # Compare part
     # Prepare folders and path
@@ -201,10 +174,10 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     os.makedirs(comparison_folder, exist_ok=True)
 
     print("")
-    print(f"5. Comparison vs Old Run:")
+    print(f"3. Comparison VS Previous Run:")
     if coincidence_data is not None:
         print("")
-        print(f"\t- Last Run data:\n",
+        print(f"\t- Previous Run data:\n",
               f"\t\t- Coincidence data row length: {coincidence_data.shape[0]}\n",
               f"\t\t- New data row length: {data_input.shape[0]}")
         # This part is important to campere with the last run whole data "whoel_group_fildered", and not only the "new_data" subset.
@@ -212,13 +185,13 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         data_input.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
         print(f"\t\t- Total data row length: {data_input.shape[0]}")
     else:  # when coincidence_data == None
-        print(f"\t- Last Run data:\n",
-              f"\t\t- First run row length: {data_input.shape[0]}")
+        print(f"\t- Previous Run data:\n",
+              f"\t\t- First Run row length: {data_input.shape[0]}")
 
     tic = time.perf_counter()
     print("")
     print(f"\t- Results in this RUN:")
-    coincidence_data, new_data, old_data_exclusive = compare_main(last_df=whole_group_filtered,
+    coincidence_data, new_data, old_data_exclusive = compare_main(last_df=whole_group,
                                                                   old_df=data_input,
                                                                   folder_path=comparison_folder,
                                                                   genome_fasta=genome_fasta)
@@ -232,17 +205,17 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
 
     old_data_exclusive_less_than_100 = None
 
-    if not old_data_exclusive.empty and (old_data_exclusive["length"] < 100).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
-        old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive["length"] < 100]
-        old_data_exclusive = old_data_exclusive[old_data_exclusive["length"] > 100]
+    if not old_data_exclusive.empty and (old_data_exclusive["length"] < min_length).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
+        old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive["length"] < min_length]
+        old_data_exclusive = old_data_exclusive[old_data_exclusive["length"] > min_length]
     else:
         pass
 
     if old_data_exclusive_less_than_100 is not None: # If old_data_exclusive_less_than_100 exists
         new_data_and_old = pd.concat([new_data, old_data_exclusive_less_than_100], ignore_index=True)
         new_data_and_old.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)
-        print('\t' * 3 + f"- Less than 100 bp: {old_data_exclusive_less_than_100.shape[0]}")
-        print('\t' * 3 + f"- New data + less than 100: {new_data_and_old.shape[0]}")
+        print('\t' * 3 + f"- Less than {min_length} bp: {old_data_exclusive_less_than_100.shape[0]}")
+        print('\t' * 3 + f"- New data + less than {min_length}: {new_data_and_old.shape[0]}")
         print('\t' * 3 + f"- Previous data: {old_data_exclusive.shape[0]}")
     else:
         new_data_and_old = new_data
@@ -272,9 +245,10 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
             ['send', 'sstart']
         ].values
 
+
         coincidence_data.to_csv(os.path.join(folder_path, "blastoise_df.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
         print("")
-        print(f"6. Stopping:")
+        print(f"4. Stopping:")
         print(f"\t- No new data found.")
         print(f"\t- BLASTOISE final data row length: {coincidence_data.shape[0]}")
 

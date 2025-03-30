@@ -12,15 +12,13 @@ from modules.bedops import bedops_main  # New module 19/04/2024
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path, genome_fasta, identity_1, run_phase, word_size, min_length, extend_number, coincidence_data=None):
+def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, identity_1, run_phase, word_size, min_length, extend_number, coincidence_data=None):
     """
     Processes genomic data specific to a chromosome and performs sequence extension, filtering, and BLASTn sequence alignment.
 
     Parameters:
         data_input : DataFrame
             Input data with sequences and corresponding information.
-        chromosome_ID : str
-            Identifier for the chromosome to process.
         main_folder_path : str
             Path to the main working directory.
         genome_fasta : str
@@ -42,32 +40,30 @@ def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path,
         DataFrame
             Filtered data frame after BLASTn and applied filters.
     """
-    from modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the ciruclar import. Need to be at the start of function.
+    from modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the circular import. Need to be at the start of function.
 
-    chromosme_folder_path = os.path.join(main_folder_path, chromosome_ID)  # For "chromosome_ID" it creates a folder in the main folder.
-    os.makedirs(chromosme_folder_path, exist_ok=True)  # Folder
+    run_phase_extension_path = os.path.join(main_folder_path, f"run_{str(run_phase)}")
+    os.makedirs(run_phase_extension_path, exist_ok=True)  # Folder
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     # Extend sequence to 1000 nt. Saved into a pandas Data Frame. It modifies the original data_input
     sequences_1000 = specific_sequence_1000nt(data_input=data_input, 
-                                              chromosome_ID=chromosome_ID, 
                                               main_folder_path=main_folder_path,
                                               genome_fasta=genome_fasta,
                                               extend_number=extend_number)
-    sequences_1000_fasta_path = os.path.join(chromosme_folder_path, chromosome_ID + f"_{extend_number}nt.fasta")  # Path to the output FASTA file
+    sequences_1000_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
     print("")
     print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
           f"\t\t\t- Data row length: {sequences_1000.shape[0]}\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
-    # -----------------------------------------------------------------------------
-    # If coincidence_data is not None,
+    # -----------------------------------------------------------------------------s
+    # If coincidence_data is not None. We add the previous data to the new one, so we don't lose the previous data.
     if coincidence_data is not None:
-        coincidence_data = coincidence_data[coincidence_data["sseqid"] == chromosome_ID].copy()  # Select only the chromosome_ID
-        sequences_1000 = pd.concat([sequences_1000, coincidence_data], ignore_index=True)
+        sequences_1000 = pd.concat([sequences_1000, coincidence_data], ignore_index=True).copy()
         sequences_1000.sort_values(by=["sstrand", "sseqid", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
     else:
-        pass   
+        pass
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     fasta_creator(sequences_1000, sequences_1000_fasta_path)
@@ -91,7 +87,7 @@ def genome_specific_chromosome_main(data_input, chromosome_ID, main_folder_path,
     tic = time.perf_counter()
     filtered_data = global_filters_main(data_input=second_blaster,
                                         genome_fasta=genome_fasta,
-                                        writing_path=chromosme_folder_path,
+                                        writing_path=run_phase_extension_path,
                                         min_length=min_length)
     # filtered_data = columns_to_numeric(filtered_data, ["pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
     toc = time.perf_counter()
