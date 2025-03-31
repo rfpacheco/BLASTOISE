@@ -7,6 +7,23 @@ import subprocess
 
 # ======================================================================
 def simple_fasta_creator(sequence, fasta_index, fasta_output_path):
+    """
+    Create a simple FASTA file with a single sequence.
+
+    This function generates a FASTA file containing a single sequence and
+    writes it to the specified file path. Each sequence is assigned a unique
+    identifier based on the provided fasta_index.
+
+    Args:
+        sequence (str): The nucleotide or protein sequence to include in the FASTA
+            file. Must be a valid sequence.
+        fasta_index (int): An integer used to create the sequence identifier.
+        fasta_output_path (str): The file path where the FASTA file will be
+            written.
+
+    Returns:
+        None
+    """
     rec = SeqRecord(Seq(sequence),
                     id="Seq_" + str(fasta_index),
                     description=""
@@ -15,9 +32,24 @@ def simple_fasta_creator(sequence, fasta_index, fasta_output_path):
 
 # ======================================================================
 def csv_to_fasta_creator(csv_data, fasta_output_path):
+    """
+    Convert CSV data into a FASTA format file.
+
+    This function reads a CSV-like data structure, extracts specific sequence information,
+    and writes it to a FASTA file format. It iterates through the rows of the provided
+    dataframe, converts each sequence into a SeqRecord object, and appends it to a list.
+    Finally, the list of SeqRecords is saved to the specified output file in FASTA format.
+
+    Arguments:
+        csv_data : pandas.DataFrame
+            A dataframe containing the sequence data. It should include at least two
+            columns, 'sseq' for the sequence string and 'sseqid' for sequence identifier.
+        fasta_output_path : str
+            The path to the output FASTA file where the converted sequences will be saved.
+    """
     matrix = []
     for csv_index, sequence in csv_data.iterrows():
-        rec = SeqRecord(Seq(sequence['sseq']),
+        rec = SeqRecord(Seq(sequence["sseq"]),
                         id=f"Seq_{csv_index}_{sequence['sseqid']}",
                         description=""
                         )
@@ -25,43 +57,65 @@ def csv_to_fasta_creator(csv_data, fasta_output_path):
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
 # ======================================================================
-# noinspection DuplicatedCode
 def get_sequence(start_coor, end_coor, strand, chromosome, path_genome):
-    cmd = f'blastdbcmd -db {path_genome} -entry {chromosome} -range {start_coor}-{end_coor} -strand {strand} -outfmt %s'
-    sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True, executable='/usr/bin/bash')
-    sequence = sequence.stdout.strip()
-    return sequence
+    """
+    Retrieve a DNA sequence from a genome database using BLAST+ commands.
 
-# ======================================================================
-# noinspection DuplicatedCode
-def get_sequence_json_to_csv(start_coor, end_coor, strand, chromosome, path_genome):
-    cmd = (
-        f'blastdbcmd -db {path_genome} '
-        f'-entry {chromosome} '
-        f'-range {start_coor}-{end_coor} '
-        f'-strand {strand} '
-        f'-outfmt %s'
-    )
-    sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True, executable='/usr/bin/bash')
+    This function fetches a genomic sequence from a specified chromosome
+    and coordinate range based on the strand orientation. The function
+    builds a `blastdbcmd` command to interact with the genome database and
+    extract the required sequence. The output is captured and returned as
+    a string with whitespace stripped.
+
+    Args:
+        start_coor (int): The start coordinate of the desired sequence range.
+        end_coor (int): The end coordinate of the desired sequence range.
+        strand (str): The strand orientation ('plus' or 'minus').
+        chromosome (str): The chromosome identifier in the genome database.
+        path_genome (str): The file path to the BLAST genome database.
+
+    Returns:
+        str: The retrieved genomic sequence as a string.
+
+    Raises:
+        None
+    """
+    cmd = f'blastdbcmd -db {path_genome} -entry {chromosome} -range {start_coor}-{end_coor} -strand {strand} -outfmt %s'
+    sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True, executable="/usr/bin/bash")
     sequence = sequence.stdout.strip()
     return sequence
 
 # ======================================================================================================================
-# noinspection DuplicatedCode
 def bedops_merge(input_df, path_folder):
+    """
+    Process input data by creating a temporary BED file, executing the bedops merge
+    command, and processing its output into a pandas DataFrame. This function is
+    used for merging genomic intervals using the BEDOPS tool in a Python workflow.
+
+    Args:
+        input_df (pd.DataFrame): Input DataFrame containing at least 'qstart'
+            and 'qend' columns, which represent genomic interval start and end
+            positions.
+        path_folder (str): Path to the folder where the temporary BED file will
+            be created and processed.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the merged interval data with columns
+            'sseqid', 'qstart', and 'qend'.
+    """
     # Create a temporary bed file
     path_bedops_file = os.path.join(path_folder, "tmp.bed")
-    data_bedops = input_df[['qstart', 'qend']].copy()  # in qstart and qend I don't have the "minus" coordinates problem
-    data_bedops.insert(0, 'new_column', 'test')  # Add a new column with every row with the same value 'test'
+    data_bedops = input_df[["qstart", "qend"]].copy()  # in qstart and qend I don't have the "minus" coordinates problem
+    data_bedops.insert(0, "new_column", "test")  # Add a new column with every row with the same value 'test'
     data_bedops.to_csv(path_bedops_file, sep="\t", header=False, index=False)
 
     # Call and process the bedops merge command
     cmd = f"bedops --merge {path_bedops_file}"
     data = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
-                          executable='/usr/bin/bash')
+                          executable="/usr/bin/bash")
     data = data.stdout  # Get the output
-    data = pd.DataFrame([x.split("\t") for x in data.split("\n") if x], columns=['sseqid', 'qstart', 'qend'])
-    data[['qstart', 'qend']] = data[['qstart', 'qend']].apply(pd.to_numeric)  # Convert to numeric
+    data = pd.DataFrame([x.split("\t") for x in data.split("\n") if x], columns=["sseqid", "qstart", "qend"])
+    data[["qstart", "qend"]] = data[["qstart", "qend"]].apply(pd.to_numeric)  # Convert to numeric
 
     return data
 
@@ -70,49 +124,38 @@ def bedops_merge(input_df, path_folder):
 # ======================================================================
 def general_blastn_blaster(query_path, dict_path, word_size, perc_identity=None, evalue=None):
     """
-        Executes a BLASTN command-line query, processes its output, and returns
-        the results as a Pandas DataFrame.
+    Executes a BLASTN command with the specified parameters and processes the output into a
+    structured DataFrame.
 
-        This function builds and executes a BLASTN command using the provided query
-        file and database path, while allowing customization of parameters like
-        word size, percentage identity, and E-value. The results from the BLASTN
-        query are parsed into a Pandas DataFrame for easier subsequent analysis.
+    Parameters:
+        query_path (str): The path to the file containing the query sequences.
+        dict_path (str): The path to the dictionary database for the BLASTN search.
+        word_size (int): The word size for the BLASTN algorithm, specifying the size of
+            initial matches during the search.
+        perc_identity (Optional[float]): The minimum percentage identity required for the matches
+            (default is None and does not apply this filter if not provided).
+        evalue (Optional[float]): The e-value threshold for reporting matches. If not provided,
+            all matches are returned.
 
-        Parameters:
-            query_path (str): Path to the query file for BLAST analysis.
-            dict_path (str): Path to the database against which to run the BLAST
-                analysis.
-            word_size (int): Word size for the BLAST search, specifying the minimum
-                length for exact matches.
-            perc_identity (Optional[float]): Percentage identity threshold for
-                matches (if provided, it is included in the BLAST query).
-            evalue (Optional[float]): E-value threshold for matches (if provided,
-                it is included in the BLAST query).
+    Returns:
+        pandas.DataFrame: A DataFrame containing the BLASTN search results. The DataFrame includes
+            the following columns (all numeric columns are converted to numeric types):
+            - "qseqid": Query sequence ID
+            - "sseqid": Subject sequence ID
+            - "sstrand": Strand of the subject sequence
+            - "qstart": Start position on the query sequence for the alignment
+            - "qend": End position on the query sequence for the alignment
+            - "sstart": Start position on the subject sequence for the alignment
+            - "send": End position on the subject sequence for the alignment
+            - "evalue": E-value of the alignment
+            - "bitscore": Bit score of the alignment
+            - "length": Length of the aligned region
+            - "qlen": Length of the query sequence
+            - "slen": Length of the subject sequence
+            If no results are found, an empty DataFrame with these columns is returned.
 
-        Returns:
-            pd.DataFrame: A Pandas DataFrame containing the BLAST output with the
-            following columns:
-                - qseqid: Query sequence ID.
-                - sseqid: Subject sequence ID.
-                - sstrand: Strand of the subject sequence.
-                - qstart: Start position in the query sequence.
-                - qend: End position in the query sequence.
-                - sstart: Start position in the subject sequence.
-                - send: End position in the subject sequence.
-                - evalue: Expect value for the match.
-                - bitscore: Score of the match in bits.
-                - length: Alignment length denoting the length of the match.
-                - qlen: Length of the query sequence.
-                - slen: Length of the subject sequence.
-
-        Raises:
-            TypeError: If parameters do not match the expected type or are missing.
-            ValueError: If the BLAST query execution or processing fails.
-
-        Notes:
-            This function uses the BLASTN command-line tool, and 'blastn' must be
-            available and properly configured in the system path or environment. It
-            runs the command through a subprocess with Bash as the shell.
+    Raises:
+        subprocess.SubprocessError: If the BLASTN subprocess encounters an issue during execution.
     """
     cmd = f"blastn -word_size {word_size} -query {query_path} -db {dict_path}"
 
