@@ -43,18 +43,7 @@ if __name__ == "__main__":
     blastn_dic(path_input=dict_path, path_output=dict_file_path_out)
 
     # # First SIDER filter
-    # boxymcboxface("Filtering SIDER elements")
     data = pd.read_csv(csv_path, sep=",", header=0)
-    # yes_data, no_data = sider_filter(
-    #     df=data,
-    #     dict_path=dict_file_path_out,
-    #     folder_path=folder_path,
-    #     word_size=word_size,
-    #     recaught_file=recaught_file_path
-    # )
-
-    # Correcting coordinates
-    ## Getting json file
     boxymcboxface("Correcting coordinates 1/3")
     json_path = coordinates_corrector(
         df=data,
@@ -76,16 +65,17 @@ if __name__ == "__main__":
         json_file=filtered_json_path,
         folder_path=folder_path,
         dict_path=dict_file_path_out,
-        neg_db_df=no_data
+        recaught_file=recaught_file_path
     )
 
-# Add right to groups and users
-try:
-    subprocess.run(["chmod", "-R", "a+w", folder_path], check=True)
-except subprocess.CalledProcessError as e:
-    print(f"Error occurred while changing permissions: {e}")
+    # Add right to groups and users
+    try:
+        subprocess.run(["chmod", "-R", "a+w", folder_path], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred while changing permissions: {e}")
 
 boxymcboxface("THE END")
+
 
 
 

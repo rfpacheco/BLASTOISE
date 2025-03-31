@@ -98,7 +98,7 @@ def simple_blastn_blaster(query_path, dict_path):  # TODO: change 11 to argument
 # noinspection DuplicatedCode
 def json_blastn_blaster(query, path_genome, evalue):
     cmd = (
-        f'blastn -word_size 11 '  # TODO: 11 as argument
+        f'blastn -word_size 15 '  # TODO: could be a parameter
         f'-query {query} '
         f'-db {path_genome} '
         f'-evalue {evalue} '
@@ -116,3 +116,20 @@ def json_blastn_blaster(query, path_genome, evalue):
         return pd.DataFrame()
 
     return data_df
+
+
+# noinspection DuplicatedCode
+def recaught_blast(query_path, dict_path, perc_identity, word_size):
+    cmd = "blastn -word_size " + str(word_size) + " -query " \
+        + query_path + " -db " \
+        + dict_path \
+        + " -perc_identity " + str(perc_identity) \
+        + " -outfmt '10 qseqid sseqid pident length qstart qend sstart send evalue bitscore qlen slen'"
+    recaught_df = subprocess.check_output(cmd, shell=True, universal_newlines=True)  # Important the E value
+    recaught_df = pd.DataFrame([x.split(",") for x in recaught_df.split("\n") if x])
+    if not recaught_df.empty:
+        recaught_df.columns = ["qseqid", "sseqid", "pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"]
+        recaught_df[['pident', 'length', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen', 'slen']] = recaught_df[['pident', 'length', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen', 'slen']].apply(pd.to_numeric)
+    else:
+        recaught_df = pd.DataFrame(columns=["qseqid", "sseqid", "pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
+    return recaught_df
