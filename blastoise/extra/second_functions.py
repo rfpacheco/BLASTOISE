@@ -68,68 +68,82 @@ def bedops_merge(input_df, path_folder):
 # ======================================================================
 # BLAST FUNCTIONS
 # ======================================================================
-# noinspection DuplicatedCode
-def blastn_blaster(query_path, dict_path, evalue, word_size):
-    cmd = "blastn -word_size " + str(word_size) + " -query " \
-          + query_path + " -db " \
-          + dict_path \
-          + " -evalue " + str(evalue) \
-          + " -outfmt 10"
-    blast_data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
-    return blast_data
+def general_blastn_blaster(query_path, dict_path, word_size, perc_identity=None, evalue=None):
+    """
+        Executes a BLASTN command-line query, processes its output, and returns
+        the results as a Pandas DataFrame.
 
-# noinspection DuplicatedCode
-def simple_blastn_blaster(query_path, dict_path, word_size):  # TODO: change 11 to argument
-    cmd = "blastn -word_size" + str(word_size) \
-        + " -query " + query_path \
-        + " -db " + dict_path \
-        + " -outfmt '10 qseqid sseqid sstrand pident qstart qend sstart send evalue bitscore length qlen qcovs slen mismatch gapopen gaps'"
-    data = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True, executable='/usr/bin/bash')  # Important the E value
+        This function builds and executes a BLASTN command using the provided query
+        file and database path, while allowing customization of parameters like
+        word size, percentage identity, and E-value. The results from the BLASTN
+        query are parsed into a Pandas DataFrame for easier subsequent analysis.
+
+        Parameters:
+            query_path (str): Path to the query file for BLAST analysis.
+            dict_path (str): Path to the database against which to run the BLAST
+                analysis.
+            word_size (int): Word size for the BLAST search, specifying the minimum
+                length for exact matches.
+            perc_identity (Optional[float]): Percentage identity threshold for
+                matches (if provided, it is included in the BLAST query).
+            evalue (Optional[float]): E-value threshold for matches (if provided,
+                it is included in the BLAST query).
+
+        Returns:
+            pd.DataFrame: A Pandas DataFrame containing the BLAST output with the
+            following columns:
+                - qseqid: Query sequence ID.
+                - sseqid: Subject sequence ID.
+                - sstrand: Strand of the subject sequence.
+                - qstart: Start position in the query sequence.
+                - qend: End position in the query sequence.
+                - sstart: Start position in the subject sequence.
+                - send: End position in the subject sequence.
+                - evalue: Expect value for the match.
+                - bitscore: Score of the match in bits.
+                - length: Alignment length denoting the length of the match.
+                - qlen: Length of the query sequence.
+                - slen: Length of the subject sequence.
+
+        Raises:
+            TypeError: If parameters do not match the expected type or are missing.
+            ValueError: If the BLAST query execution or processing fails.
+
+        Notes:
+            This function uses the BLASTN command-line tool, and 'blastn' must be
+            available and properly configured in the system path or environment. It
+            runs the command through a subprocess with Bash as the shell.
+    """
+    cmd = f"blastn -word_size {word_size} -query {query_path} -db {dict_path}"
+
+    if perc_identity is not None:
+        cmd += f" -perc_identity {perc_identity}"
+
+    if evalue is not None:
+        cmd += f" -evalue {evalue}"
+
+    # Use the more detailed output format from simple_blastn_blaster
+    cmd += " -outfmt '10 qseqid sseqid sstrand qstart qend sstart send evalue bitscore length qlen slen'"
+
+    data = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
+                          executable='/usr/bin/bash')
     data = data.stdout
-    data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
-    if not data.empty:  # If the dataframe is not empty
-        data.columns = ["qseqid", "sseqid", "sstrand", "pident", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "length", "qlen", "qcovs", "slen", "mismatch", "gapopen", "gaps"]
-        data[['pident',  'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'length', 'qlen', 'qcovs', 'slen', 'mismatch', 'gapopen', 'gaps']] = data[['pident',  'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'length', 'qlen', 'qcovs', 'slen', 'mismatch', 'gapopen', 'gaps']].apply(pd.to_numeric)
-    else:  # If the dataframe is empty
-        data = pd.DataFrame(columns=["qseqid", "sseqid", "sstrand", "pident", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "length", "qlen", "qcovs", "slen", "mismatch", "gapopen", "gaps"])  # Create an empty dataframe
-    return data
 
+    # Parse the output into a DataFrame
+    data_df = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
 
-# noinspection DuplicatedCode
-def json_blastn_blaster(query, path_genome, evalue):
-    cmd = (
-        f'blastn -word_size 15 '  # TODO: could be a parameter
-        f'-query {query} '
-        f'-db {path_genome} '
-        f'-evalue {evalue} '
-        f'-outfmt 10'
-    )
-    data = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True, executable='/usr/bin/bash')
-    data = data.stdout
-    data_df = pd.DataFrame(
-        [x.split(',') for x in data.split('\n') if x],
-        columns=['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
-    )
     if not data_df.empty:
-        data_df[['pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']] = data_df[['pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']].apply(pd.to_numeric)  # Convert to numeric
-    else:  # If empty, return an empty dataframe
-        return pd.DataFrame()
+        data_df.columns = ["qseqid", "sseqid", "sstrand", "qstart", "qend", "sstart", "send",
+                           "evalue", "bitscore", "length", "qlen", "slen"]
+
+        # Convert numeric columns to numeric type
+        numeric_cols = ["qstart", "qend", "sstart", "send", "evalue", "bitscore",
+                        "length", "qlen", "slen"]
+        data_df[numeric_cols] = data_df[numeric_cols].apply(pd.to_numeric)
+    else:
+        # Create an empty DataFrame with the correct columns
+        data_df = pd.DataFrame(columns=["qseqid", "sseqid", "sstrand", "qstart", "qend", "sstart", "send",
+                                        "evalue", "bitscore", "length", "qlen", "slen"]
+        )
 
     return data_df
-
-
-# noinspection DuplicatedCode
-def recaught_blast(query_path, dict_path, perc_identity, word_size):
-    cmd = "blastn -word_size " + str(word_size) + " -query " \
-        + query_path + " -db " \
-        + dict_path \
-        + " -perc_identity " + str(perc_identity) \
-        + " -outfmt '10 qseqid sseqid pident length qstart qend sstart send evalue bitscore qlen slen'"
-    recaught_df = subprocess.check_output(cmd, shell=True, universal_newlines=True)  # Important the E value
-    recaught_df = pd.DataFrame([x.split(",") for x in recaught_df.split("\n") if x])
-    if not recaught_df.empty:
-        recaught_df.columns = ["qseqid", "sseqid", "pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"]
-        recaught_df[['pident', 'length', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen', 'slen']] = recaught_df[['pident', 'length', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen', 'slen']].apply(pd.to_numeric)
-    else:
-        recaught_df = pd.DataFrame(columns=["qseqid", "sseqid", "pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
-    return recaught_df

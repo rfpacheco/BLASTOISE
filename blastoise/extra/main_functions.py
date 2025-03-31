@@ -7,7 +7,7 @@ import json
 from modules.blaster import blastn_dic
 # noinspection PyUnresolvedReferences
 from extra.second_functions import simple_blastn_blaster, get_sequence, json_blastn_blaster, get_sequence_json_to_csv, \
-    bedops_merge, recaught_blast, csv_to_fasta_creator
+    bedops_merge, recaught_blast, csv_to_fasta_creator, general_blastn_blaster
 
 
 def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
@@ -24,7 +24,7 @@ def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
         print(f'Analyzing row {index + 1}/{df.shape[0]} with name_id {name_id}')
 
         # Call the blastn function
-        blastn_df = simple_blastn_blaster(query_path=query, dict_path=dict_path, word_size=word_size) # TODO: simplify blastn function
+        blastn_df = general_blastn_blaster(query_path=query, dict_path=dict_path, word_size=word_size) # TODO: simplify blastn function
 
         # Filter the blastn_df
         # remove the row with the same `sstart` and `send` values than `start_coor` and `end_coor` in plus way
@@ -78,7 +78,7 @@ def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
 
 # ======================================================================
 # noinspection DuplicatedCode
-def json_sider_filter(json_file, folder_path, dict_path):
+def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
     with open(json_file, 'r') as file:
         json_data = json.load(file)  # Loading json file into a python dict
         # In the dict for each element:
@@ -101,8 +101,7 @@ def json_sider_filter(json_file, folder_path, dict_path):
         print('')
         print(f'Analyzing element {index + 1}/{len(json_data)} ==> {key}')
         if len(value) == 1:
-            json_data[key][0].append(
-                'Accepted')  # If only one element, then it is accepted, since I don't want to check these, only the fragmented ones.
+            json_data[key][0].append('Accepted')  # If only one element, then it is accepted, since I don't want to check these, only the fragmented ones.
             print(f'\tAccepted ==> Not fragmented element')
             accepted_elements_not_fragmented += 1
             continue  # Skip to the next iteration
@@ -117,12 +116,12 @@ def json_sider_filter(json_file, folder_path, dict_path):
                 ## Prepare data
                 name_id = f'{key}_{i}'
                 query = f"<(echo -e '>{name_id}\n{sequence}')"  # create bash tmp file
-                evalue = 1.0E-09  # TODO: could be made into a parameter
 
                 # Run BLASTn
-                blastn_df = json_blastn_blaster(query=query,
-                                                path_genome=dict_path,
-                                                evalue=evalue)
+                blastn_df = general_blastn_blaster(query_path=query,
+                                                   dict_path=dict_path,
+                                                   word_size=word_size,
+                                                   evalue=evalue)
                 # Check BLASTn lines
                 if not blastn_df.empty:
                     if blastn_df['sseqid'].nunique() >= 5:
@@ -137,9 +136,6 @@ def json_sider_filter(json_file, folder_path, dict_path):
                     json_data[key][i].append('Rejected')
                     print(f'\tRejected ==> Fragmented element {i + 1} of {len(value)}')
                     rejected_elements_fragmented += 1
-
-    # Recaught methods
-
 
     # Save the data
     with open(os.path.join(folder_path, 'filtered_data.json'), 'w') as file:
@@ -167,7 +163,7 @@ def json_sider_filter(json_file, folder_path, dict_path):
 
 # ======================================================================
 # noinspection DuplicatedCode
-def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file):
+def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file, word_size, perc_identity):
     print("1. Loading JSON file...")
     with open(json_file, 'r') as file:
         data_dict = json.load(file)  # With this I have a dictionary python data type
@@ -230,17 +226,17 @@ def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file):
     ## Create the BALSTn dict
     blastn_dic(path_input=fasta_file_path, path_output=dict_path)
     ## Recaught the data
-    caught_data = recaught_blast(
+    caught_data = general_blastn_blaster(
         query_path=recaught_file,
         dict_path=dict_path,
-        perc_identity=60,  # TODO: change into a parameter
-        word_size=15  # TODO: change into a parameter
+        perc_identity=perc_identity,
+        word_size=word_size
     )
 
     ## If caught data is not empty
     if not caught_data.empty:
         # Remove ones with an evalue <= 10**-3
-        caught_data = caught_data[caught_data['evalue'] <= 1.0 ** -3].sort_values(by=['evalue'])
+        caught_data = caught_data[caught_data['evalue'] <= 1e-3].sort_values(by=['evalue'])  # TODO: may be a parameter
         print("")
         print("*" * 50)
         print(f"\nRecaught data: {caught_data.shape[0]} elements")

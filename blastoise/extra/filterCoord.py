@@ -22,6 +22,8 @@ def parse_arguments():
     parser.add_argument("-rf", "--recaught_file", type=str, required=True, help='Path to the recaught file.')
     parser.add_argument("-ws", "--word_size", type=int, required=True, help='word_size value of BLASTN')
     parser.add_argument("-min", "--min_length", type=int, required=True, help='Minimum length of the sequence to be considered.')
+    parser.add_argument("-e", "--evalue", type=float, required=True, help='evalue threshold for BLASTN.')
+    parser.add_argument("-i", "--identity", type=int, required=True, help='Minimum identity of the sequence to be considered.')
     return parser.parse_args()
 
 # ======================================================================
@@ -33,6 +35,8 @@ if __name__ == "__main__":
     recaught_file_path = os.path.expanduser(args.recaught_file)
     word_size = args.word_size
     min_length = args.min_length
+    evalue = args.evalue
+    identity = args.identity
 
     # Prepare subfolder
     csv_parent_path = os.path.dirname(csv_path)
@@ -61,6 +65,8 @@ if __name__ == "__main__":
         json_file=json_path,
         folder_path=folder_path,
         dict_path=dict_file_path_out,
+        word_size=word_size,
+        evalue=evalue
     )
 
     ## from json to csv
@@ -69,7 +75,9 @@ if __name__ == "__main__":
         json_file=filtered_json_path,
         folder_path=folder_path,
         dict_path=dict_file_path_out,
-        recaught_file=recaught_file_path
+        recaught_file=recaught_file_path,
+        word_size=word_size,
+        perc_identity=identity
     )
 
     # Add right to groups and users
