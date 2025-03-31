@@ -102,7 +102,6 @@ def main():
 
     # Prepare all paths & tmp folder
     df_1_path = os.path.expanduser(args.file1)
-    df_1_parent_path = os.path.dirname(df_1_path)
     df_2_path = os.path.expanduser(args.file2)
     out_path = os.path.expanduser(args.output)
     tmp_folder_path = os.path.join(out_path, "tmp_bedops")
@@ -110,7 +109,7 @@ def main():
 
     df_1 = pd.read_csv(df_1_path, sep=',', header=0)  # output from software
     df_2 = pd.read_csv(df_2_path, sep=',', header=0)  # data to compare
-    df_1 = df_1[['sseqid', 'sstart', 'send']].copy()  # Take only column 0 ('chrom name'), 1 ('start') and 2 ('end')
+    df_1 = df_1[["sseqid", "sstart", "send"]].copy()  # Take only column 0 ('chrom name'), 1 ('start') and 2 ('end')
 
     # Compare part:
     df_1_grouped = df_1.groupby("sseqid")
