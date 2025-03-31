@@ -12,7 +12,7 @@ import subprocess
 # Defining parse arguments
 # ======================================================================
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Compare two CSV files from a local nucleotide BLAST search, with the columns: sseqid, sstart, send.')
+    parser = argparse.ArgumentParser(description='Compare two CSV files comming from a local nucleotide BLAST search, with the columns: sseqid, sstart, send.')
     parser.add_argument("-f1", "--file1", type=str, required=True, help="Path to the first CSV file.")
     parser.add_argument("-f2", "--file2", type=str, required=True, help="Path to the second CSV file. Will check if the elements of this file are inside the first file.")
     parser.add_argument("-o", "--output", type=str, required=True, help="Path to the output directory.")
