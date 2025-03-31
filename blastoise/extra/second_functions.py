@@ -79,8 +79,8 @@ def blastn_blaster(query_path, dict_path, evalue, word_size):
     return blast_data
 
 # noinspection DuplicatedCode
-def simple_blastn_blaster(query_path, dict_path):  # TODO: change 11 to argument
-    cmd = "blastn -word_size 11" \
+def simple_blastn_blaster(query_path, dict_path, word_size):  # TODO: change 11 to argument
+    cmd = "blastn -word_size" + str(word_size) \
         + " -query " + query_path \
         + " -db " + dict_path \
         + " -outfmt '10 qseqid sseqid sstrand pident qstart qend sstart send evalue bitscore length qlen qcovs slen mismatch gapopen gaps'"

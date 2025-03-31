@@ -10,12 +10,10 @@ from extra.second_functions import simple_blastn_blaster, get_sequence, json_bla
     bedops_merge, recaught_blast, csv_to_fasta_creator
 
 
-# ======================================================================
-# noinspection DuplicatedCode
-def coordinates_corrector(df, dict_path, folder_path):
+def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
     main_dict = {}
     for index, row in df.iterrows():
-        # 3.1) Prepare the query data
+        # Prepare the query data
         name_id = f"{row['sseqid']}_{row['sstrand']}_{row['sstart']}-{row['send']}"  # Create the name_id with the original info of the seq.
         seq = row['sseq']
         query = f"<(echo -e '>{name_id}\n{seq}')"  # Create the query with the name_id and the seq in a bash tmp file
@@ -25,16 +23,14 @@ def coordinates_corrector(df, dict_path, folder_path):
         name_chr = row['sseqid']  # Get the name of the chromosome for later
         print(f'Analyzing row {index + 1}/{df.shape[0]} with name_id {name_id}')
 
-        # 3.2) Call the blastn function
-        blastn_df = simple_blastn_blaster(query_path=query, dict_path=dict_path)  # Call the blastn function  # TODO: simplify blastn function
+        # Call the blastn function
+        blastn_df = simple_blastn_blaster(query_path=query, dict_path=dict_path, word_size=word_size) # TODO: simplify blastn function
 
-        # 3.3) Filter the blastn_df
-        # remove the row with the same sstart and send values than start_coor and end_coor in plus way
+        # Filter the blastn_df
+        # remove the row with the same `sstart` and `send` values than `start_coor` and `end_coor` in plus way
         blastn_df = blastn_df[~(
-                ((blastn_df["sstart"] >= start_coor) & (
-                        blastn_df["sstart"] <= end_coor)) |  # (sstart is within the start and end coordinates OR
-                ((blastn_df["send"] <= end_coor) & (
-                        blastn_df["send"] >= start_coor)) &  # send is within the start and end coordinates) AND
+                ((blastn_df["sstart"] >= start_coor) & (blastn_df["sstart"] <= end_coor)) |  # `sstart` is within the start and end coordinates OR
+                ((blastn_df["send"] <= end_coor) & (blastn_df["send"] >= start_coor)) &  # send is within the start and end coordinates) AND
                 (blastn_df["sseqid"] == name_chr) &  # sseqid matches name_chr AND
                 (blastn_df["sstrand"] == "plus")  # sstrand is "plus"
         )].copy()
@@ -46,7 +42,7 @@ def coordinates_corrector(df, dict_path, folder_path):
                 (blastn_df["sseqid"] == name_chr) &
                 (blastn_df["sstrand"] == "minus"))].copy()
 
-        # 3.4) Call bedops merge function
+        # Call bedops merge function
         blastn_df.sort_values(by=['qstart'],
                               inplace=True)  # Sort the blastn_df by sstart. IMPORTANT for the bedops_merge function
         bedops_df = bedops_merge(input_df=blastn_df, path_folder=folder_path)
@@ -61,13 +57,13 @@ def coordinates_corrector(df, dict_path, folder_path):
                 'qstart'] - 1  # Get the new start coordinate by adding the start_coor and the qstart
             new_end = start_coor + row2[
                 'qend'] - 1  # Get the new end coordinate by adding the start_coor and the qend. Important to be the "start" and not the "end"
-            if abs(new_end - new_start) + 1 > 100:  # TODO: change 100 to an argument
+            if abs(new_end - new_start) + 1 >= min_length:
                 main_dict[name_id].append(
                     [name_chr, strand_seq, new_start, new_end])  # Append the new coordinates to the main_dict
-            else:  # If the length is less than 100
+            else:  # If the length is less than `min_length`
                 continue  # Continue to the next iteration
 
-        # 3.6) Print the results (just for output info)
+        # Print the results (just for output info)
         print(f'\tFINISHED ==> {len(main_dict[name_id])} new sequences:')
         for seq in main_dict[name_id]:
             print(f'\t\t{seq[0]}:{seq[1]}:{seq[2]}-{seq[3]}')
@@ -75,6 +71,7 @@ def coordinates_corrector(df, dict_path, folder_path):
 
     # 4) Save the dict as a JSON file
     with open(os.path.join(folder_path, "main_dict.json"), "w") as file:
+        # noinspection PyTypeChecker
         json.dump(main_dict, file, indent=4)  # Save the main_dict as a JSON file
 
     return os.path.join(folder_path, "main_dict.json")  # return path
@@ -146,6 +143,7 @@ def json_sider_filter(json_file, folder_path, dict_path):
 
     # Save the data
     with open(os.path.join(folder_path, 'filtered_data.json'), 'w') as file:
+        # noinspection PyTypeChecker
         json.dump(json_data, file, indent=4)
 
     # Print summary

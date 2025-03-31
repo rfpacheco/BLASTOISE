@@ -19,8 +19,9 @@ def parse_arguments():
     # noinspection DuplicatedCode
     parser.add_argument("-f", "--file", type=str, required=True, help='Path to the input CSV file.')
     parser.add_argument("-d", "--dict_path", type=str, required=True, help='Path to the genome fasta file.')
-    parser.add_argument("-ws", "--word_size", type=str, required=True, help='word_size value of BLASTN')
     parser.add_argument("-rf", "--recaught_file", type=str, required=True, help='Path to the recaught file.')
+    parser.add_argument("-ws", "--word_size", type=int, required=True, help='word_size value of BLASTN')
+    parser.add_argument("-min", "--min_length", type=int, required=True, help='Minimum length of the sequence to be considered.')
     return parser.parse_args()
 
 # ======================================================================
@@ -48,11 +49,12 @@ if __name__ == "__main__":
     json_path = coordinates_corrector(
         df=data,
         dict_path=dict_file_path_out,
-        folder_path=folder_path
+        folder_path=folder_path,
+        word_size=word_size
     )
 
     ## sider filter to new coordinates
-    boxymcboxface("Correcting coordinates 2/3")
+    boxymcboxface("Applying filter 2/3")
     filtered_json_path = json_sider_filter(
         json_file=json_path,
         folder_path=folder_path,
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     )
 
     ## from json to csv
-    boxymcboxface("Correcting coordinates 3/3")
+    boxymcboxface("Re-caught data and output files 3/3")
     sider_json_to_csv(
         json_file=filtered_json_path,
         folder_path=folder_path,
