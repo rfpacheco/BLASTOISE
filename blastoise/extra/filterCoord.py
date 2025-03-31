@@ -30,8 +30,9 @@ if __name__ == "__main__":
     args = parse_arguments()
     csv_path = os.path.expanduser(args.file)
     dict_path = os.path.expanduser(args.dict_path)
-    word_size = args.word_size
     recaught_file_path = os.path.expanduser(args.recaught_file)
+    word_size = args.word_size
+    min_length = args.min_length
 
     # Prepare subfolder
     csv_parent_path = os.path.dirname(csv_path)
@@ -50,7 +51,8 @@ if __name__ == "__main__":
         df=data,
         dict_path=dict_file_path_out,
         folder_path=folder_path,
-        word_size=word_size
+        word_size=word_size,
+        min_length=min_length
     )
 
     ## sider filter to new coordinates
