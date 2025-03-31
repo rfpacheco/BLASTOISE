@@ -202,15 +202,15 @@ def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
     total_elements_accepted = accepted_elements_not_fragmented + accepted_elements_fragmented  # fragmented or not fragmented
     print("")
     print("=" * 50)
-    print(f"- Total elements analyzed: {total_elements_counter} from {len(json_data)} original elements.")
+    print(f"- Total elements analyzed: {total_elements_counter} (with fragmentation) from {len(json_data)} original elements.")
     print(f"\t- Total accepted fragmented elements: {accepted_elements_fragmented}/{total_elements_counter}")
     print(f"\t\t- {accepted_elements_fragmented / total_elements_counter * 100:.2f} % of the total fragmented elements elements.")
     print(f"\t- Total rejected fragmented elements: {rejected_elements_fragmented}/{total_elements_counter}")
     print(f"\t\t- {rejected_elements_fragmented / total_elements_counter * 100:.2f} % of the total fragmented elements elements.")
     print(f"\t- Total accepted not fragmented elements: {accepted_elements_not_fragmented}/{total_elements_counter}")
-    print("\t\t- {accepted_elements_not_fragmented / total_elements_counter * 100:.2f} % of the total not fragmented elements elements.")
+    print(f"\t\t- {accepted_elements_not_fragmented / total_elements_counter * 100:.2f} % of the total not fragmented elements elements.")
     print("")
-    print(f"- Total accepted elements: {total_elements_accepted} from the original {len(json_data)} elements.")
+    print(f"- Total accepted elements: {total_elements_accepted} from {total_elements_counter} elements.")
 
     return os.path.join(folder_path, "filtered_data.json")
 
