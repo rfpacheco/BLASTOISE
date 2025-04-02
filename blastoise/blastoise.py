@@ -191,10 +191,6 @@ print(f"\t- Execution time: {toc_main - tic_main:0.2f} seconds\n",
       f"\t- Program ended: {formatted_end_time}\n",
       f"\t- Blastoise final file saved at: {final_data_path}")
 
-
-# Add right to groups and users
-subprocess.run(["chmod", "-R", "a+w", data_location], check=True)
-
 # Exit program
 boxymcboxface("BLASTING OUT!")
 print(f"""
@@ -227,5 +223,9 @@ print(f"""
                  O | | o   O | | o   O | | o   O | | o   O | | o
                    O o       O o       O o       O o       O o     
 """)
+
+# Add right to groups and users
+subprocess.run(["chmod", "-R", "a+w", data_location], check=True)
+
 
 
