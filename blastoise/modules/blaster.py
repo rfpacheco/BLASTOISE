@@ -158,6 +158,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
                                                   min_length=min_length,
                                                   extend_number=extend_number)
 
+    toc = time.perf_counter()
     print(f"\t- Data row length: {whole_group.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
 
