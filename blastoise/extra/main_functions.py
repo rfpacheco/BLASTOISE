@@ -156,42 +156,36 @@ def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
     for index, (key, value) in enumerate(json_data.items(), start=0):
         print("")
         print(f"Analyzing element {index + 1}/{len(json_data)} ==> {key}")
-        if len(value) == 1:
-            json_data[key][0].append('Accepted')  # If only one element, then it is accepted, since I don't want to check these, only the fragmented ones.
-            print(f"\tAccepted ==> Not fragmented element")
-            accepted_elements_not_fragmented += 1
-            continue  # Skip to the next iteration
-        else:  # If more than one element
-            for i, element in enumerate(value, start=0):
-                sequence = get_sequence(start_coor=element[2],
-                                        end_coor=element[3],
-                                        strand=element[1],
-                                        chromosome=element[0],
-                                        path_genome=dict_path)
-                # Make a BLASTn with this sequence with the filter:
-                ## Prepare data
-                name_id = f"{key}_{i}"
-                query = f"<(echo -e '>{name_id}\n{sequence}')"  # create bash tmp file
+        for i, element in enumerate(value, start=0):
+            sequence = get_sequence(start_coor=element[2],
+                                    end_coor=element[3],
+                                    strand=element[1],
+                                    chromosome=element[0],
+                                    path_genome=dict_path)
+            # Make a BLASTn with this sequence with the filter:
+            ## Prepare data
+            name_id = f"{key}_{i}"
+            query = f"<(echo -e '>{name_id}\n{sequence}')"  # create bash tmp file
 
-                # Run BLASTn
-                blastn_df = general_blastn_blaster(query_path=query,
-                                                   dict_path=dict_path,
-                                                   word_size=word_size,
-                                                   evalue=evalue)  # First evalue filter
-                # Check BLASTn lines
-                if not blastn_df.empty:
-                    if blastn_df["sseqid"].nunique() >= 5:
-                        json_data[key][i].append('Accepted')
-                        print(f"\tAccepted ==> Fragmented element {i + 1} of {len(value)}")
-                        accepted_elements_fragmented += 1
-                    else:  # If not accepted
-                        json_data[key][i].append('Rejected')
-                        print(f"\tRejected ==> Fragmented element {i + 1} of {len(value)}")
-                        rejected_elements_fragmented += 1
-                else:  # If empty, then it is rejected
+            # Run BLASTn
+            blastn_df = general_blastn_blaster(query_path=query,
+                                               dict_path=dict_path,
+                                               word_size=word_size,
+                                               evalue=evalue)  # First evalue filter
+            # Check BLASTn lines
+            if not blastn_df.empty:
+                if blastn_df["sseqid"].nunique() >= 5:
+                    json_data[key][i].append('Accepted')
+                    print(f"\tAccepted ==> Fragmented element {i + 1} of {len(value)}")
+                    accepted_elements_fragmented += 1
+                else:  # If not accepted
                     json_data[key][i].append('Rejected')
                     print(f"\tRejected ==> Fragmented element {i + 1} of {len(value)}")
                     rejected_elements_fragmented += 1
+            else:  # If empty, then it is rejected
+                json_data[key][i].append('Rejected')
+                print(f"\tRejected ==> Fragmented element {i + 1} of {len(value)}")
+                rejected_elements_fragmented += 1
 
     # Save the data
     with open(os.path.join(folder_path, "filtered_data.json"), 'w') as file:
