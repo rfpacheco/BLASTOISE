@@ -24,8 +24,9 @@ def fasta_creator(data_input, fasta_output_path):
     matrix = []
     for index, (_, sequence) in enumerate(data_input.iterrows()):
         # index += 1 # To start the index in 1
+        original_data = f"{sequence['sseqid']}-{sequence['sstart']}-{sequence['send']}-{sequence['sstrand']}-"
         rec = SeqRecord(Seq(sequence.loc["sseq"]),  # In the 5 position is the seq
-                        id="Seq_" + str(index),
+                        id="Seq_" + str(index) + "_" + original_data,
                         description=""
                         )
         matrix.append(rec)
