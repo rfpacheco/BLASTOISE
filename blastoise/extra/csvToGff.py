@@ -46,7 +46,7 @@ if __name__ == '__main__':
                 "score": ".",
                 "strand": row["sstrand"] if "sstrand" in row and pd.notna(row["sstrand"]) else ".",
                 "frame": '.',
-                "attribute": f"ID={row['qseqid']}_{hash(index) + 1}_{data.shape[0]}"
+                "attribute": f"ID={row['qseqid'] if 'qseqid' in row else index}_{hash(index) + 1}_{data.shape[0]}"
             }
         )
 
