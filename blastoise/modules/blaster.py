@@ -9,8 +9,6 @@ from datetime import datetime
 
 from modules.aesthetics import boxymcboxface  # Some aesthetics function
 from modules.identifiers import genome_specific_chromosome_main
-from modules.filters import global_filters_main
-# from modules.files_manager import columns_to_numeric  # TODO: check if remove
 from modules.compare import compare_main
 
 # -----------------------------------------------------------------------------
@@ -19,24 +17,22 @@ from modules.compare import compare_main
 
 def blastn_dic(path_input, path_output):
     """
-    Creation af a BLAST database of our whole genome. It uses the BLAST :sup:`R` command line, see BLAST
-    `Command Line Application User Manual`_ for more information.
+    Executes the BLAST `makeblastdb` command to create a nucleotide database using the provided input
+    file and outputs the result to the specified output path.
 
+    This function is a wrapper around the BLAST `makeblastdb` tool and is designed to create a
+    BLAST dictionary based on the input nucleotide file. The sequence IDs are preserved using
+    the `parse_seqids` flag. If an error occurs during the execution of the command, it will
+    be logged.
 
-    The generation of the proper database will be placed in the directory where ``path_input`` is.
-    It is recommended to use a dedicated folder to this FASTA file so the database is written next to it.
+    Arguments:
+        path_input (str): The path to the input nucleotide file.
+        path_output (str): The path where the BLAST database files will be saved.
 
-    :param path_input: path to a FASTA file.
-    :type path_input: string
-
-    :param path_output: path to the output folder where the BLAST database will be created.
-    :type path_output: string
-
-    :return: a BLAST database.
-    :rtype: Multiples files (**.nhr**, **.nin**, **.nog**, **.nsd**, **.nsi** and **.nsq** extensions)
+    Raises:
+        Exception: If an error occurs during the creation of the BLAST dictionary, it logs the
+        error message.
     """
-
-    # Remember is "path.input.dic_path" for "argparse".
     try:
         # "parse_seqids" is used to keep the sequence ID in the output.
         cmd = f"makeblastdb -in {path_input} -dbtype nucl -parse_seqids -out {path_output}"
@@ -63,14 +59,14 @@ def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
             sseqid: Subject sequence ID.
             pident: Percentage of identical matches.
             length: Alignment length.
-            qstart: Start of alignment in query.
-            qend: End of alignment in query.
-            sstart: Start of alignment in subject.
-            send: End of alignment in subject.
+            qstart: Start of alignment in a query.
+            qend: End of alignment in a query.
+            sstart: Start of alignment in a subject.
+            send: End of alignment in a subject.
             evalue: Expectation value.
             bitscore: Bit score.
-            qlen: Length of query sequence.
-            slen: Length of subject sequence.
+            qlen: Length of a query sequence.
+            slen: Length of a subject sequence.
             sstrand: Strand of the subject sequence.
             sseq: Aligned part of the subject sequence.
     """
@@ -90,7 +86,7 @@ def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
 # -----------------------------------------------------------------------------
 
 
-def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_time, identity_1, tic_start, word_size, min_length, extend_number, coincidence_data=None):
+def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_time, identity_1, tic_start, word_size, min_length, extend_number, limit_len, coincidence_data=None):
     """
     Processes and filters genomic data by grouping, analyzing chromosomes, and comparing results with previous runs.
 
@@ -156,6 +152,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
                                                   coincidence_data=coincidence_data,
                                                   word_size=word_size,
                                                   min_length=min_length,
+                                                  limit_len=limit_len,
                                                   extend_number=extend_number)
 
     toc = time.perf_counter()
@@ -181,7 +178,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         print(f"\t- Previous Run data:\n",
               f"\t\t- Coincidence data row length: {coincidence_data.shape[0]}\n",
               f"\t\t- New data row length: {data_input.shape[0]}")
-        # This part is important to campere with the last run whole data "whoel_group_fildered", and not only the "new_data" subset.
+        # This part is important to compare with the last run whole data "whoel_group_fildered", and not only the "new_data" subset.
         data_input = pd.concat([coincidence_data, data_input], ignore_index=True)
         data_input.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
         print(f"\t\t- Total data row length: {data_input.shape[0]}")
@@ -235,7 +232,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     os.makedirs(stopping_folder, exist_ok=True)
 
     if new_data.shape[0] == 0:
-        coincidence_data = coincidence_data[['sseqid', 'length', 'sstart', 'send', 'sstrand', 'sseq']].copy()  # #Take only needed columns:
+        coincidence_data = coincidence_data[['sseqid', 'length', 'sstart', 'send', 'sstrand', 'sseq']].copy()  # #Take only the necessary columns:
         
         # Make it so 'sstart' is always < than 'send'
         coincidence_data.loc[
@@ -273,5 +270,6 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
                            word_size=word_size,
                            min_length=min_length,
                            extend_number=extend_number,
+                           limit_len=limit_len,
                            coincidence_data=coincidence_data)
                         

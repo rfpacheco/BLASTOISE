@@ -4,7 +4,7 @@ import pandas as pd
 
 from modules.files_manager import fasta_creator, columns_to_numeric
 # from modules.blaster import blastn_dic  # IMPORTANT -> Since "blaster.py" is importing "identifiers.py" I can't make "identifiers.py" import "blaster.py" --> ERROR: CIRCULAR IMPORT
-from modules.seq_modifier import specific_sequence_1000nt, specific_sequence_corrected
+from modules.seq_modifier import specific_sequence_1000nt
 from modules.filters import global_filters_main
 from modules.bedops import bedops_main  # New module 19/04/2024
 
@@ -12,33 +12,26 @@ from modules.bedops import bedops_main  # New module 19/04/2024
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, identity_1, run_phase, word_size, min_length, extend_number, coincidence_data=None):
+def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, identity_1, run_phase, word_size, min_length, extend_number, limit_len, coincidence_data=None):
     """
-    Processes genomic data specific to a chromosome and performs sequence extension, filtering, and BLASTn sequence alignment.
+    Processes genomic data by extending sequences, creating FASTA files, and filtering BLASTn results. The function handles
+    genomic sequence analysis, including extending sequences to a defined length, executing BLASTn comparisons, and filtering
+    results based on provided parameters.
 
     Parameters:
-        data_input : DataFrame
-            Input data with sequences and corresponding information.
-        main_folder_path : str
-            Path to the main working directory.
-        genome_fasta : str
-            Path to the genome FASTA file.
-        identity_1 : float
-            Threshold value for sequence identity in BLASTn.
-        run_phase : int
-            Phase identifier for the pipeline run.
-        word_size : int
-            Word size parameter for BLASTn.
-        min_length : int
-            Minimum length threshold for sequence filtering.
-        extend_number : int
-            Number of nucleotides to extend the sequence.
-        coincidence_data : DataFrame, optional
-            Optional data with coincident sequences to include in the analysis (default is None).
+        data_input (pd.DataFrame): Input data detailing sequences and relevant genomic annotations.
+        main_folder_path (str): The main directory path used to save outputs and intermediate files.
+        genome_fasta (str): Path to the reference genome FASTA file used for BLASTn queries.
+        identity_1 (float): Minimum percentage identity threshold for BLASTn comparisons.
+        run_phase (int): Indicator for the current run phase used in naming folders.
+        word_size (int): Word size parameter for BLASTn, influencing sequence alignment sensitivity.
+        min_length (int): Minimum alignment length required to retain BLASTn results.
+        extend_number (int): Number of nucleotides to extend each sequence.
+        limit_len (int): Maximum length of the sequence.
+        coincidence_data (pd.DataFrame, optional): Previously computed data to be combined with the current input. Defaults to None.
 
     Returns:
-        DataFrame
-            Filtered data frame after BLASTn and applied filters.
+        pd.DataFrame: Filtered data from BLASTn results after sequence extension and processing.
     """
     from modules.blaster import blastn_dic, blastn_blaster  # Delayed import --> to break the circular import. Need to be at the start of function.
 
@@ -55,9 +48,9 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
         pass
 
     sequences_1000 = specific_sequence_1000nt(data_input=data_input, 
-                                              main_folder_path=main_folder_path,
                                               genome_fasta=genome_fasta,
-                                              extend_number=extend_number)
+                                              extend_number=extend_number,
+                                              limit_len=limit_len)
     sequences_1000_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
     print("")
