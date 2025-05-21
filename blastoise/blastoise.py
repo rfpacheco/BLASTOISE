@@ -39,10 +39,20 @@ folder_location = os.path.expanduser(folder_location)
 os.makedirs(folder_location, exist_ok=True)
 print(f"{'.'*20} Folder {folder_name} created in {data_location}")
 
-identity_1 = input("Enter the identity for the first BLASTn step: "); identity_1 = int(identity_1)  # user input for the identity #
-word_size_param = input("Enter the `word_size` value: "); word_size_param = int(word_size_param)
-min_length_param = input("Enter the `min_length` value: "); min_length_param = int(min_length_param)
-extend_number_param = input("Enter the `extend_number` value: "); extend_number_param = int(extend_number_param)
+identity_1 = input("Enter the identity for the first BLASTn step: ")
+identity_1 = int(identity_1)  # user input for the identity #
+
+word_size_param = input("Enter the `word_size` value: ")
+word_size_param = int(word_size_param)
+
+min_length_param = input("Enter the `min_length` value: ")
+min_length_param = int(min_length_param)
+
+extend_number_param = input("Enter the `extend_number` value: ")
+extend_number_param = int(extend_number_param)
+
+limit_length_param = input("Enter the `limit_length` value: ")
+limit_length_param = int(limit_length_param)
 
 # =============================================================================
 # Start time
@@ -58,7 +68,7 @@ print(f"{'.'*20} Program started: {formatted_start_time}")
 data_path = os.path.expanduser(args.data)
 genome_path = os.path.expanduser(args.genome)
 
-# Create subdirectory for original data
+# Create a subdirectory for original data
 original_data_folder = os.path.join(folder_location, "original_data")
 os.makedirs(original_data_folder, exist_ok=True)
 
@@ -105,7 +115,6 @@ toc = time.perf_counter()  # Stop the timer
 print(f"1. Initial data:\n",
       f"\t- Data row length: {first_blaster.shape[0]}\n",
       f"\t- Execution time: {toc - tic:0.2f} seconds")
-# first_blaster.to_csv(os.path.join(folder_location, "First_Blaster.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
 
 # =============================================================================
 # Use BEDOPS to merge the first BLASTn data
@@ -118,8 +127,6 @@ first_blaster_bedops = bedops_main(data_input=first_blaster,
 toc = time.perf_counter()  # Stop the timers
 print(f"\t\t- Data row length: {first_blaster_bedops.shape[0]}\n",
       f"\t\t- Execution time: {toc - tic:0.2f} seconds")
-
-# first_blaster_bedops.to_csv(os.path.join(folder_location, "First_Blaster_BEDOPS.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
 
 # =============================================================================
 # Call the second and last BLASTn
@@ -136,7 +143,7 @@ print("")
 print(f"2. Fasta file creation:\n",
       f"\t- Execution time: {toc - tic:0.2f} seconds")
 
-# Create new folder for all the data
+# Create a new folder for all the data
 repetitive_blaster_folder = os.path.join(folder_location, "execution_data")
 os.makedirs(repetitive_blaster_folder, exist_ok=True)
 
@@ -150,7 +157,8 @@ repetitive_blaster(data_input=first_blaster_bedops,
                    tic_start=tic_main,
                    word_size=word_size_param,
                    min_length=min_length_param,
-                   extend_number=extend_number_param)
+                   extend_number=extend_number_param,
+                   limit_len=limit_length_param)
 
 # Move "blastoise_df.csv" to the main folder
 final_data_path = os.path.join(repetitive_blaster_folder, "blastoise_df.csv")
@@ -167,14 +175,14 @@ os.makedirs(tmp_folder, exist_ok=True)
 
 for file_or_folder in os.listdir(folder_location):
     # Skip the 'tmpBlastoise' folder itself
-    if file_or_folder not in ("original_data", "tmpBlastoise", "blastoise_df.csv"):  # Except for "tmpBlastoise" & "blastoise_df.csv"
+    if file_or_folder not in ("original_data", "tmpBlastoise", "blastoise_df.csv"):  # Except for "tmpBlastoise" and "blastoise_df.csv"
         full_path = os.path.join(folder_location, file_or_folder)
         destination_path = os.path.join(tmp_folder, os.path.basename(full_path))
         if os.path.exists(destination_path):  # If the destination exists
             if os.path.isdir(destination_path):
                 shutil.rmtree(destination_path)  # Safely remove directory at destination
             else:
-                os.remove(destination_path)  # Safely remove file at destination
+                os.remove(destination_path)  # Safely remove a file at destination
         shutil.move(full_path, tmp_folder)
 
 
