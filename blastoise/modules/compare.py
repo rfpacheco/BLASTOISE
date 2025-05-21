@@ -5,6 +5,27 @@ from modules.bedops import bedops_coincidence
 from modules.files_manager import df_columns_restore, columns_to_numeric
 
 def compare_main(last_df, old_df, folder_path, genome_fasta):
+    """
+    Processes and compares genomic dataframes for visualization and analysis based on
+    BEDOPS tool outputs for both plus and minus DNA strands.
+
+    Parameters:
+    last_df: pandas.DataFrame
+        The latest dataframe containing genomic data to compare.
+    old_df: pandas.DataFrame
+        The older dataframe containing genomic data to compare against.
+    folder_path: str
+        Path to the folder where result files will be stored.
+    genome_fasta: str
+        Path to the genome FASTA file for reference in BEDOPS processing.
+
+    Returns:
+    tuple
+        A tuple containing:
+        - coincidence_data (pandas.DataFrame): Dataframe with regions common between last_df and old_df. It will contain the data already present in old_df. However, this data may be modified by new coordinates with last_df
+        - new_data (pandas.DataFrame): Dataframe with regions exclusive to the latest dataframe.
+        - old_data_exclusive (pandas.DataFrame): Dataframe with regions exclusive to the older dataframe.
+    """
     # -----------------------------------------------------------------------------
     # Select data
     last_df_plus = last_df[last_df["sstrand"] == "plus"].copy()
