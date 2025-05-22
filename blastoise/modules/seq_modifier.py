@@ -4,7 +4,7 @@ import subprocess
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def specific_sequence_1000nt(data_input, genome_fasta, extend_number, limit_len):
+def sequence_extension(data_input, genome_fasta, extend_number, limit_len):
     """
     Adjusts subject sequences in a data frame to meet a specified length requirement.
 

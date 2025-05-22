@@ -3,8 +3,7 @@ import time
 import pandas as pd
 
 from modules.files_manager import fasta_creator, columns_to_numeric
-# from modules.blaster import blastn_dic  # IMPORTANT -> Since "blaster.py" is importing "identifiers.py" I can't make "identifiers.py" import "blaster.py" --> ERROR: CIRCULAR IMPORT
-from modules.seq_modifier import specific_sequence_1000nt
+from modules.seq_modifier import sequence_extension
 from modules.filters import global_filters_main
 from modules.bedops import bedops_main  # New module 19/04/2024
 
@@ -47,10 +46,10 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     else:
         pass
 
-    sequences_1000 = specific_sequence_1000nt(data_input=data_input, 
-                                              genome_fasta=genome_fasta,
-                                              extend_number=extend_number,
-                                              limit_len=limit_len)
+    sequences_1000 = sequence_extension(data_input=data_input,
+                                        genome_fasta=genome_fasta,
+                                        extend_number=extend_number,
+                                        limit_len=limit_len)
     sequences_1000_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
     print("")
