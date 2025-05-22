@@ -82,20 +82,19 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
 
 def bedops_main(data_input, genome_fasta):
     """
-    Processes genomic data to generate and manipulate BEDOPS files, retrieve sequences,
-    and structure the resulting data into a standardized DataFrame format.
+    Processes genomic data to create strand-specific sorted BEDOPS files, merges ranges using
+    BEDOPS tool, retrieves genomic sequences, and formats the final output as a DataFrame
+    with relevant columns and data.
 
-    Parameters:
-        data_input (pd.DataFrame): The input DataFrame containing genomic data to process. Must include specific
-            columns such as 'sstrand', 'sseqid', 'sstart', 'send', etc.
-        genome_fasta (str): Path to the genome FASTA file to extract sequences using BEDOPS outputs.
+    Arguments:
+        data_input (pd.DataFrame): Input data containing genome coordinates and strand
+            information. Expected to have specific columns like 'sstrand', 'sseqid',
+            'sstart', 'send', etc.
+        genome_fasta (str): Path to the genome FASTA file used for sequence retrieval.
 
     Returns:
-        pd.DataFrame: A new DataFrame with processed genomic data comprising 15 columns. Returns
-            an empty DataFrame if the input data or intermediate computation yields no result.
-
-    Raises:
-        None
+        pd.DataFrame: A processed DataFrame containing genomic ranges with associated
+            sequence data and additional calculated attributes such as sequence length.
     """
     # -----------------------------------------------------------------------------
     # 1) Filter and sort data
