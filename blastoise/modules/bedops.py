@@ -106,8 +106,33 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
 
 
 def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
+    """
+    Processes and identifies overlapping and non-overlapping genomic data between
+    two datasets using BEDOPS tools, sorts and merges the results, and retrieves
+    their sequences based on the genomic strand and a given genome FASTA file.
 
+    Parameters:
+    main_data (pd.DataFrame):
+        The primary dataset containing genomic data to be analyzed.
+    data_for_contrast (pd.DataFrame): 
+        The secondary dataset used for comparison against the main dataset.
+    strand (str):
+        The genomic strand orientation for which sequences need to be extracted
+        ('+' or '-').
+    genome_fasta (str):
+        Path to the genome FASTA file for sequence extraction.
 
+    Returns:
+    tuple
+        A tuple containing:
+        - coincidence_data (pd.DataFrame):
+            Data overlapping in both `main_data` and `data_for_contrast`
+            after merging.
+        - new_data (pd.DataFrame):
+            Data unique to `main_data` (not found in `data_for_contrast`). 
+        - only_in_contrast_data (pd.DataFrame):
+            Data unique to `data_for_contrast` (not found in `main_data`).
+    """
     main_data = main_data.sort_values(by=['sseqid', 'sstart'])  # Sort the data frame by the start coordinate
     data_for_contrast = data_for_contrast.sort_values(by=['sseqid', 'sstart'])  # Sort the data frame by the start coordinate
     main_data_len = main_data.shape[0] # Get length of the main data
