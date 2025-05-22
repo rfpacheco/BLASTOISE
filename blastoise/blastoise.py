@@ -12,13 +12,13 @@ from modules.bedops import bedops_main
 
 # Initiate parser
 parser = argparse.ArgumentParser(
-    prog="BLASTOISE",
-    description="This is a program to search for repetitive sequences in SIDERs elements in Leishmania spp.",
+    prog='BLASTOISE',
+    description='This is a program to search for repetitive sequences in SIDERs elements in Leishmania spp.',
 )
 
 # Let's get the user input data
-parser.add_argument("-d", "--data", type=str, required=True, help="Path to the input data file")
-parser.add_argument("-g", "--genome", type=str, required=True, help="Path to the genome file")
+parser.add_argument('-d', '--data', type=str, required=True, help='Path to the input data file')
+parser.add_argument('-g', "--genome", type=str, required=True, help='Path to the genome file')
 
 # Parsing the arguments
 args = parser.parse_args()
@@ -27,8 +27,8 @@ args = parser.parse_args()
 # Creating working folder place 
 # =============================================================================
 # Ask the user for the folder name and data location
-folder_name = input("\n\nEnter folder name: "); folder_name = folder_name.strip()
-data_location = input("Enter path where you want to place all data: ")
+folder_name = input('\n\nEnter folder name: '); folder_name = folder_name.strip()
+data_location = input('Enter path where you want to place all data: ')
 
 data_location = os.path.normpath(data_location)  # Normalize the path to avoid problems with the OS
 data_location = os.path.expanduser(data_location)
@@ -39,19 +39,19 @@ folder_location = os.path.expanduser(folder_location)
 os.makedirs(folder_location, exist_ok=True)
 print(f"{'.'*20} Folder {folder_name} created in {data_location}")
 
-identity_1 = input("Enter the identity for the first BLASTn step: ")
+identity_1 = input('Enter the identity for the first BLASTn step: ')
 identity_1 = int(identity_1)  # user input for the identity #
 
-word_size_param = input("Enter the `word_size` value: ")
+word_size_param = input('Enter the `word_size` value: ')
 word_size_param = int(word_size_param)
 
-min_length_param = input("Enter the `min_length` value: ")
+min_length_param = input('Enter the `min_length` value: ')
 min_length_param = int(min_length_param)
 
-extend_number_param = input("Enter the `extend_number` value: ")
+extend_number_param = input('Enter the `extend_number` value: ')
 extend_number_param = int(extend_number_param)
 
-limit_length_param = input("Enter the `limit_length` value: ")
+limit_length_param = input('Enter the `limit_length` value: ')
 limit_length_param = int(limit_length_param)
 
 # =============================================================================
@@ -59,7 +59,7 @@ limit_length_param = int(limit_length_param)
 # =============================================================================
 start_time = datetime.now()
 tic_main = time.perf_counter()  # Start the timer
-formatted_start_time = start_time.strftime("%Y %B %d at %H:%M")
+formatted_start_time = start_time.strftime('%Y %B %d at %H:%M')
 print(f"{'.'*20} Program started: {formatted_start_time}")
 # =============================================================================
 # Take original data used and copy it inside the folder
@@ -69,7 +69,7 @@ data_path = os.path.expanduser(args.data)
 genome_path = os.path.expanduser(args.genome)
 
 # Create a subdirectory for original data
-original_data_folder = os.path.join(folder_location, "original_data")
+original_data_folder = os.path.join(folder_location, 'original_data')
 os.makedirs(original_data_folder, exist_ok=True)
 
 # Check if the files exist and copy them
@@ -94,7 +94,7 @@ args_genome_path = os.path.join(original_data_folder, os.path.basename(args.geno
 # First blaster automatization
 # =============================================================================
 # Create folder for main BLASTN dictionary
-blastn_dict_path = os.path.join(folder_location, "dict_data")
+blastn_dict_path = os.path.join(folder_location, 'dict_data')
 os.makedirs(blastn_dict_path, exist_ok=True)
 blastn_dict_path_out = os.path.join(blastn_dict_path, os.path.basename(args.genome))
 
@@ -103,14 +103,14 @@ blastn_dic(path_input=args.genome,
            path_output=blastn_dict_path_out)
 
 # Call the first BLASTn
-boxymcboxface(message="First BLASTn step initiated")
+boxymcboxface(message='First BLASTn step initiated')
 
 tic = time.perf_counter()  # Start the timer
 first_blaster = blastn_blaster(query_path=args_data_path,
                                dict_path=blastn_dict_path_out, 
                                perc_identity=identity_1,
                                word_size=word_size_param)  # It has the data frame for the first blaster
-first_blaster = columns_to_numeric(first_blaster, ["pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
+first_blaster = columns_to_numeric(first_blaster, ['length', 'sstart', 'send'])
 toc = time.perf_counter()  # Stop the timer
 print(f"1. Initial data:\n",
       f"\t- Data row length: {first_blaster.shape[0]}\n",
