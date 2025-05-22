@@ -6,7 +6,7 @@ from Bio.SeqRecord import SeqRecord
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def fasta_creator(data_input, fasta_output_path):
+def fasta_creator(data_input, fasta_output_path, id_names=None):
     """
     Creates a FASTA file from a given data input, which includes sequences and related metadata.
 
@@ -24,12 +24,21 @@ def fasta_creator(data_input, fasta_output_path):
     Returns:
         None
     """
+    if id_names is None:
+        id_names = data_input
+
     matrix = []
     for index, (_, sequence) in enumerate(data_input.iterrows()):
         # index += 1 # To start the index in 1
-        original_data = f"{sequence['sseqid']}-{sequence['sstart']}-{sequence['send']}-{sequence['sstrand']}"
+        data_input_string = f"{sequence['sseqid']}-{sequence['sstart']}-{sequence['send']}-{sequence['sstrand']}"
+
+        if id_names is not None:
+            # If there are the original coordinates and the extended ones, record them both
+            original = f"{id_names.iloc[index]['sseqid']}-{id_names.iloc[index]['sstart']}-{id_names.iloc[index]['send']}-{id_names.iloc[index]['sstrand']}"
+            data_input_string = f"{data_input_string}_{original}" # The first is the extended, the second is the original
+
         rec = SeqRecord(Seq(sequence.loc["sseq"]),  # In the 5 position is the seq
-                        id="Seq_" + str(index) + "_" + original_data,
+                        id="Seq-" + str(index) + "_" + data_input_string,
                         description=""
                         )
         matrix.append(rec)
