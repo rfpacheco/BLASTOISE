@@ -54,13 +54,6 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
           f"\t\t\t- Data row length: {sequences_extended.shape[0]}\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
-    # -----------------------------------------------------------------------------s
-    # If coincidence_data is not None. We add the previous data to the new one, so we don't lose the previous data.
-    # if coincidence_data is not None:
-    #     sequences_extended = pd.concat([sequences_extended, coincidence_data], ignore_index=True).copy()
-    #     sequences_extended.sort_values(by=["sstrand", "sseqid", "sstart"], inplace=True) # Sort the data frame by the start coordinate
-    # else:
-    #     pass
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     fasta_creator(sequences_extended, sequences_extended_fasta_path)
