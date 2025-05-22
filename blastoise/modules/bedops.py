@@ -37,7 +37,8 @@ def get_data_sequence(data, strand, genome_fasta):
         end = row['send']
         cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
 
-        sequence = subprocess.check_output(cmd, universal_newlines=True).replace('\n', '')
+        sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
+                                  executable="/usr/bin/bash").stdout.strip()
 
         sequences.append({
             'sseqid': sseqid,
@@ -73,7 +74,9 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
 
     # Check which elements in 'base_df' are inside 'contrast_df'
     cmd_coincidence = f"bedops {cmd_mode} {base_df_path} {contrast_df_path}"
-    check_coincidence = subprocess.check_output(cmd_coincidence, shell=True, universal_newlines=True)
+    check_coincidence = subprocess.run(cmd_coincidence, shell=True, capture_output=True, text=True,
+                                       universal_newlines=True,
+                                       executable="/usr/bin/bash").stdout.strip()
     check_coincidence = pd.DataFrame([x.split("\t") for x in check_coincidence.split("\n") if x],
                              columns=["sseqid", "sstart", "send"])
     check_coincidence = columns_to_numeric(check_coincidence, ["sstart", "send"])
