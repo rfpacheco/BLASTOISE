@@ -5,8 +5,6 @@ import pandas as pd
 from modules.files_manager import fasta_creator, columns_to_numeric
 from modules.seq_modifier import sequence_extension
 from modules.filters import global_filters_main
-from modules.bedops import bedops_main  # New module 19/04/2024
-
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

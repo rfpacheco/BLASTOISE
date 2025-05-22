@@ -74,8 +74,7 @@ def global_filters_main(data_input, genome_fasta, writing_path, min_length):
     final_data = data_filtered.copy()
     if not data_filtered.empty:  # Checks if the data is empty. If it is, it will skip the next part of the code
         data_bedops = bedops_main(data_input=data_filtered,
-                                  genome_fasta=genome_fasta,
-                                  writing_path_input=writing_path)
+                                  genome_fasta=genome_fasta)
         final_data = data_bedops.copy()
     else:
         pass  # Skip the next part of the code

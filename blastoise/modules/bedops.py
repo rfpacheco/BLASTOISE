@@ -10,8 +10,8 @@ def get_data_sequence(data, strand, genome_fasta):
     """
     Fetches nucleotide sequences from a specified genome database using BLAST commands.
 
-    This function retrieves specified sequence ranges from a genome database in fasta format.
-    The input strand direction is specified and BLAST commands are executed to obtain the
+    This function retrieves specified sequence ranges from a genome database in a fasta format.
+    The input strand direction is specified, and BLAST commands are executed to obtain the
     sequences based on the provided data.
 
     Args:
@@ -80,42 +80,43 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
     return check_coincidence
 
 
-def bedops_main(data_input, genome_fasta, writing_path_input):
+def bedops_main(data_input, genome_fasta):
     """
-    Processes genomic data by filtering, sorting, and merging BEDOPS files, and obtaining sequences.
-    The resulting data is restructured and returned as a formatted DataFrame.
+    Processes genomic data to generate and manipulate BEDOPS files, retrieve sequences,
+    and structure the resulting data into a standardized DataFrame format.
 
-    Args:
-        data_input (pandas.DataFrame): The input data frame containing genomic information.
-        genome_fasta (str): Path to the genome FASTA file.
-        writing_path_input (str): Directory where BEDOPS files will be written.
+    Parameters:
+        data_input (pd.DataFrame): The input DataFrame containing genomic data to process. Must include specific
+            columns such as 'sstrand', 'sseqid', 'sstart', 'send', etc.
+        genome_fasta (str): Path to the genome FASTA file to extract sequences using BEDOPS outputs.
 
     Returns:
-        pandas.DataFrame: A DataFrame with processed and formatted genomic data.
+        pd.DataFrame: A new DataFrame with processed genomic data comprising 15 columns. Returns
+            an empty DataFrame if the input data or intermediate computation yields no result.
+
+    Raises:
+        None
     """
     # -----------------------------------------------------------------------------
     # 1) Filter and sort data
     # -----------------------------------------------------------------------------
-    columns_ids = data_input.columns  # gets the columns names
-    df_plus = data_input[data_input["sstrand"] == "plus"]  # filters the "+" strand
-    df_minus = data_input[data_input["sstrand"] == "minus"]  # filters the "-" strand
+    columns_ids = data_input.columns  # gets the column names
+    df_plus = data_input[data_input['sstrand'] == 'plus']  # filters the "+" strand
+    df_minus = data_input[data_input['sstrand'] == 'minus']  # filters the "-" strand
 
     # Sort the data by the start coordinate
-    df_plus = df_plus.sort_values(by=["sseqid", "sstart"])  # sorts the "+" strand by the start coordinate
-    df_minus = df_minus.sort_values(by=["sseqid", "sstart"])  # sorts the "-" strand by the start coordinate
+    df_plus = df_plus.sort_values(by=['sseqid', 'sstart'])  # sorts the "+" strand by the start coordinate
+    df_minus = df_minus.sort_values(by=['sseqid', 'sstart'])  # sorts the "-" strand by the start coordinate
 
     # -----------------------------------------------------------------------------
-    # 2) BEDOPS files creation:
+    # 2) BEDOPS files creation in tmp BASH:
     # -----------------------------------------------------------------------------
     #  row[1] == Chromosome ID, row[10] == Start coordinate, row[11] == End coordinate
-    plus_path = os.path.join(writing_path_input, os.path.basename(writing_path_input) + "_plus.bed")
-    minus_path = os.path.join(writing_path_input, os.path.basename(writing_path_input) + "_minus.bed")
+    plus_bedops_bash = "<(echo -e '" + '\n'.join(
+        [f"{row['sseqid']}\t{row['sstart']}\t{row['send']}" for _, row in df_plus.iterrows()]) + "')"
+    minus_bedops_bash = "<(echo -e '" + '\n'.join(
+        [f"{row['sseqid']}\t{row['send']}\t{row['sstart']}" for _, row in df_minus.iterrows()]) + "')"
     
-    df_plus[["sseqid", "sstart", "send"]].to_csv(plus_path, sep="\t", header=False, index=False)  # creates a BED file for the "+" strand
-    # In the minus strand it's important to change the order of the coordinates, because "bedops" reads them like "plus" strand.
-    # If not, it will not merge them.
-    df_minus[["sseqid", "send", "sstart"]].to_csv(minus_path, sep="\t", header=False, index=False)  # creates a BED file for the "-" strand
-
     # -----------------------------------------------------------------------------
     # 3) BEDOPS function call with subprocess.
     # -----------------------------------------------------------------------------
@@ -125,48 +126,57 @@ def bedops_main(data_input, genome_fasta, writing_path_input):
     # shell=True to have the input of .check_output() as a string.
     # universal_newlines=True to have the EoL character as "\n" (Unix-like systems).
     # The output will be a variable of strings.
-    df_plus_bedops = subprocess.check_output(f"bedops --merge {plus_path}", shell=True, universal_newlines=True)  # merges the "+" strand BED file
-    df_minus_bedops = subprocess.check_output(f"bedops --merge {minus_path}", shell=True, universal_newlines=True)  # merges the "-" strand BED file
+    cmd = f"bedops --merge {plus_bedops_bash}"
+    result_plus = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                                 universal_newlines=True, executable="/usr/bin/bash")
+    df_plus_bedops = result_plus.stdout
+
+    cmd = f"bedops --merge {minus_bedops_bash}"
+    result_minus = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                                  universal_newlines=True, executable="/usr/bin/bash")
+    df_minus_bedops = result_minus.stdout
 
      # Now let's transform then into Data Frames
     df_plus_bedops = pd.DataFrame([x.split("\t") for x in df_plus_bedops.split("\n") if x],
-                                    columns=["sseqid", "sstart", "send"])  # transforms the "+" strand BEDOPS output into a Data Frame
+                                  columns=['sseqid', 'sstart', 'send'])  # transforms the "+" strand BEDOPS output into a Data Frame
     df_minus_bedops = pd.DataFrame([x.split("\t") for x in df_minus_bedops.split("\n") if x],
-                                    columns=["sseqid", "sstart", "send"])  # transforms the "-" strand BEDOPS output into a Data Frame
+                                   columns=['sseqid', 'sstart', 'send'])  # transforms the "-" strand BEDOPS output into a Data Frame
     # -----------------------------------------------------------------------------
     # 4) Call `blastdbcmd` to get the sequences with the function get_data_sequence()
     # -----------------------------------------------------------------------------
     if df_plus_bedops.empty:  # In case the original data is empty, the code needs to keep going
-        df_plus_bedops_wseq = pd.DataFrame()  # creates an empty Data Frame
+        df_plus_bedops_seq = pd.DataFrame()  # creates an empty Data Frame
     else:  # If the original data is not empty, tit uses get_data_sequence
-        df_plus_bedops_wseq = get_data_sequence(df_plus_bedops, "plus", genome_fasta)
+        df_plus_bedops_seq = get_data_sequence(df_plus_bedops, 'plus', genome_fasta)
 
     # The same for the minus strand:
     if df_minus_bedops.empty:
-        df_minus_bedops_wseq = pd.DataFrame()
+        df_minus_bedops_seq = pd.DataFrame()
     else:   
-        df_minus_bedops_wseq = get_data_sequence(df_minus_bedops, "minus", genome_fasta)
+        df_minus_bedops_seq = get_data_sequence(df_minus_bedops, 'minus', genome_fasta)
 
  
-    # Let's reorderthe `df_minus_bedps_wseq` data frame:
-    df_minus_bedops_wseq[["sstart", "send"]] = df_minus_bedops_wseq[["send", "sstart"]].copy()  # swap only values
+    # Let's reorder the `df_minus_bedops_seq` data frame:
+    df_minus_bedops_seq[['sstart', 'send']] = df_minus_bedops_seq[['send', 'sstart']].copy()  # swap only values
+
     # -----------------------------------------------------------------------------
     # 5) Processing data
     # -----------------------------------------------------------------------------
     # Join both data frames
-    all_data = pd.concat([df_plus_bedops_wseq, df_minus_bedops_wseq], ignore_index=True)  # joins both Data Frames
+    all_data = pd.concat([df_plus_bedops_seq, df_minus_bedops_seq], ignore_index=True)  # joins both Data Frames
 
     # Adding sequence length to the DataFrame:
     if not all_data.empty:
-        new_column = np.array([len(x) for x in all_data.loc[:, "sseq"]], dtype=np.int64)  # creates a list with the length of each sequence
-        all_data.insert(1, "length", new_column)  # inserts the new column with the sequence length. Column index are shifted.
+        new_column = np.array([len(x) for x in all_data.loc[:, 'sseq']], dtype=np.int64)  # Creates a list with the length of each sequence
+        all_data.insert(1, 'length', new_column)  # Inserts the new column with the sequence length. Column index is shifted.
         # -----------------------------------------------------------------------------
         # 6) Correctly modeling the output Data Frame to 15 columns and output as CSV file.
         # -----------------------------------------------------------------------------
-        new_data = pd.DataFrame(index=range(all_data.shape[0]), columns=columns_ids)  # creates a new Data Frame with 15 columns. The rows depend on the .shape[0]
+        new_data = pd.DataFrame(index=range(all_data.shape[0]), columns=columns_ids)  # Creates a new Data Frame with 15 columns. The rows depend on the .shape[0]
 
-        new_data.loc[:,["sseqid", "length", "sstart", "send", "sstrand", "sseq"]] = all_data.loc[:,["sseqid", "length", "sstart", "send", "sstrand", "sseq"]].copy()
-        new_data = columns_to_numeric(new_data, ["pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
+        columns_needed = ['sseqid', 'sstart', 'send', 'sstrand', 'sseq', 'length']
+        new_data.loc[:, columns_needed] = all_data.loc[:, columns_needed].copy()
+        new_data = columns_to_numeric(new_data, ['length', 'sstart', 'send'])
         
         return new_data  # returns the new Data Frame
     else:
