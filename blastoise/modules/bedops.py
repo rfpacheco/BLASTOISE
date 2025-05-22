@@ -2,8 +2,10 @@
 import pandas as pd
 import numpy as np
 import subprocess
+import tempfile
+import os
 
-from modules.files_manager import columns_to_numeric
+from modules.files_manager import columns_to_numeric, end_always_greater_than_start
 
 def get_data_sequence(data, strand, genome_fasta):
     """
@@ -68,8 +70,15 @@ def get_bedops_bash_file(data):
     Returns:
         str: A formatted string representing the BEDOPS-compatible input.
     """
-    bedops_file = "<(echo -e '" + '\n'.join(
-        [f"{row['sseqid']}\t{row['sstart']}\t{row['send']}" for _, row in data.iterrows()]) + "')"
+
+# Create a temporary file to store the BEDOPS-compatible data
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+        # Write each row of the DataFrame into the temporary file in BEDOPS format
+        for _, row in data.iterrows():
+            temp_file.write(f"{row['sseqid']}\t{row['sstart']}\t{row['send']}\t{row['sstrand']}\n")
+
+        # Store the name of the temporary file for use in the BEDOPS command
+        bedops_file = temp_file.name
 
     return bedops_file
 
@@ -98,8 +107,13 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
     check_coincidence = subprocess.run(cmd_coincidence, shell=True, capture_output=True, text=True,
                                        universal_newlines=True,
                                        executable='/usr/bin/bash').stdout.strip()
+    if bedops_mode == 'merge':
+        columns_needed = ['sseqid', 'sstart', 'send']
+    else:
+        columns_needed = ['sseqid', 'sstart', 'send', 'sstrand']
+
     check_coincidence = pd.DataFrame([x.split("\t") for x in check_coincidence.split("\n") if x],
-                                     columns=['sseqid', 'sstart', 'send'])
+                                     columns=columns_needed)
     check_coincidence = columns_to_numeric(check_coincidence, ['sstart', 'send'])
 
     return check_coincidence
@@ -185,6 +199,12 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
         only_in_contrast_data = pd.DataFrame()
 
     # -----------------------------------------------------------------------------
+    # Remove temp files from "get_bedops_bash_file()" function
+    os.remove(main_data_bedops)
+    os.remove(contrast_data_bedops)
+    os.remove(main_exists_in_contrast_data_bedops)
+    os.remove(contrast_exists_in_main_data_bedops)
+
     return coincidence_data, new_data, only_in_contrast_data
 
 
@@ -244,8 +264,14 @@ def bedops_main(data_input, genome_fasta):
     # Now let's transform then into Data Frames
     df_plus_bedops = pd.DataFrame([x.split("\t") for x in df_plus_bedops.split("\n") if x],
                                   columns=['sseqid', 'sstart', 'send'])  # transforms the "+" strand BEDOPS output into a Data Frame
+    df_plus_bedops = columns_to_numeric(df_plus_bedops, ['sstart', 'send'])
+
     df_minus_bedops = pd.DataFrame([x.split("\t") for x in df_minus_bedops.split("\n") if x],
                                    columns=['sseqid', 'sstart', 'send'])  # transforms the "-" strand BEDOPS output into a Data Frame
+    df_minus_bedops = columns_to_numeric(df_minus_bedops, ['sstart', 'send'])
+
+    # Let's get 'sstart' and 'send' as numeric data
+
     # -----------------------------------------------------------------------------
     # 4) Call `blastdbcmd` to get the sequences with the function get_data_sequence()
     # -----------------------------------------------------------------------------
@@ -259,10 +285,8 @@ def bedops_main(data_input, genome_fasta):
         df_minus_bedops_seq = pd.DataFrame()
     else:
         df_minus_bedops_seq = get_data_sequence(df_minus_bedops, 'minus', genome_fasta)
-
-
-    # Let's reorder the `df_minus_bedops_seq` data frame:
-    df_minus_bedops_seq[['sstart', 'send']] = df_minus_bedops_seq[['send', 'sstart']].copy()  # swap only values
+        # Let's reorder the `df_minus_bedops_seq` data frame:
+        df_minus_bedops_seq = end_always_greater_than_start(df_minus_bedops_seq)
 
     # -----------------------------------------------------------------------------
     # 5) Processing data
@@ -281,7 +305,7 @@ def bedops_main(data_input, genome_fasta):
 
         columns_needed = ['sseqid', 'sstart', 'send', 'sstrand', 'sseq', 'length']
         new_data.loc[:, columns_needed] = all_data.loc[:, columns_needed].copy()
-        new_data = columns_to_numeric(new_data, ['length', 'sstart', 'send'])
+        new_data = columns_to_numeric(new_data, ['length', 'sstart', 'send']) # TODO: is it needed?
 
         return new_data  # returns the new Data Frame
     else:

@@ -40,13 +40,9 @@ def sequence_extension(data_input, genome_fasta, extend_number, limit_len):
     """
     # -----------------------------------------------------------------------------
     for index2, (index, element) in enumerate(data_input.iterrows()):
-        if "plus" in element["sstrand"]:
-            lower_coor = int(element["sstart"])
-            upper_coor = int(element["send"])
-        else:  # If it's the "-" strand
-            lower_coor = int(element["send"])
-            upper_coor = int(element["sstart"])
-        
+        lower_coor = int(element["sstart"])
+        upper_coor = int(element["send"])
+
         subject_len = upper_coor - lower_coor + 1 # Calculate the nucleotide size of the element
         if subject_len < limit_len:  # If the sequence is less than 1000 nt, there's room to expand it
             lower_coor = lower_coor - extend_number # Extends the lower sequences by `extend_number`

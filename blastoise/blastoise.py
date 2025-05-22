@@ -7,7 +7,7 @@ import subprocess
 
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
 from modules.aesthetics import boxymcboxface
-from modules.files_manager import fasta_creator, columns_to_numeric
+from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start
 from modules.bedops import bedops_main
 
 # Initiate parser
@@ -19,6 +19,12 @@ parser = argparse.ArgumentParser(
 # Let's get the user input data
 parser.add_argument('-d', '--data', type=str, required=True, help='Path to the input data file')
 parser.add_argument('-g', "--genome", type=str, required=True, help='Path to the genome file')
+parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file')
+parser.add_argument('-i', '--identity', type=int, required=True, help='Identity percentage for first BLASTn step')
+parser.add_argument('-ws', '--word_size', type=int, required=True, help='Word size value for BLASTn')
+parser.add_argument('-min', '--min_length', type=int, required=True, help='Minimum length value for filtering')
+parser.add_argument('-ext', '--extend', type=int, required=True, help='Extension number value')
+parser.add_argument('-lim', '--limit', type=int, required=True, help='Length limit value')
 
 # Parsing the arguments
 args = parser.parse_args()
@@ -27,32 +33,41 @@ args = parser.parse_args()
 # Creating working folder place 
 # =============================================================================
 # Ask the user for the folder name and data location
-folder_name = input('\n\nEnter folder name: '); folder_name = folder_name.strip()
-data_location = input('Enter path where you want to place all data: ')
+# folder_name = input('\n\nEnter folder name: '); folder_name = folder_name.strip()
+# data_location = input('Enter path where you want to place all data: ')
 
-data_location = os.path.normpath(data_location)  # Normalize the path to avoid problems with the OS
+# data_location = os.path.normpath(data_location)  # Normalize the path to avoid problems with the OS
+# data_location = os.path.expanduser(data_location)
+# folder_location = os.path.join(data_location, folder_name)  # Create the folder location
+# folder_location = os.path.expanduser(folder_location)
+
+# Place where everything will be
+data_location = args.output
+data_location = os.path.normpath(data_location)
 data_location = os.path.expanduser(data_location)
-folder_location = os.path.join(data_location, folder_name)  # Create the folder location
-folder_location = os.path.expanduser(folder_location)
+
+# Folder where the "data_location" is
+folder_location = os.path.dirname(data_location)
+folder_name = os.path.basename(data_location)
 
 # Create the folder with the given name
 os.makedirs(folder_location, exist_ok=True)
 print(f"{'.'*20} Folder {folder_name} created in {data_location}")
 
-identity_1 = input('Enter the identity for the first BLASTn step: ')
-identity_1 = int(identity_1)  # user input for the identity #
+# identity_1 = input('Enter the identity for the first BLASTn step: ')
+identity_1 = args.identity
 
-word_size_param = input('Enter the `word_size` value: ')
-word_size_param = int(word_size_param)
+# word_size_param = input('Enter the `word_size` value: ')
+word_size_param = args.word_size
 
-min_length_param = input('Enter the `min_length` value: ')
-min_length_param = int(min_length_param)
+# min_length_param = input('Enter the `min_length` value: ')
+min_length_param = args.min_length
 
-extend_number_param = input('Enter the `extend_number` value: ')
-extend_number_param = int(extend_number_param)
+# extend_number_param = input('Enter the `extend_number` value: ')
+extend_number_param = args.extend
 
-limit_length_param = input('Enter the `limit_length` value: ')
-limit_length_param = int(limit_length_param)
+# limit_length_param = input('Enter the `limit_length` value: ')
+limit_length_param = args.limit
 
 # =============================================================================
 # Start time
@@ -111,6 +126,8 @@ first_blaster = blastn_blaster(query_path=args_data_path,
                                perc_identity=identity_1,
                                word_size=word_size_param)  # It has the data frame for the first blaster
 first_blaster = columns_to_numeric(first_blaster, ['length', 'sstart', 'send'])
+first_blaster = end_always_greater_than_start(first_blaster)
+
 toc = time.perf_counter()  # Stop the timer
 print(f"1. Initial data:\n",
       f"\t- Data row length: {first_blaster.shape[0]}\n",

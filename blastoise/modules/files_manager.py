@@ -67,3 +67,24 @@ def df_columns_restore(data_input, data_model):
     new_data.loc[:,["sseqid", "length", "sstart", "send", "sstrand", "sseq"]] = data_input.loc[:,["sseqid", "length", "sstart", "send", "sstrand", "sseq"]].copy()
     
     return new_data
+
+
+def end_always_greater_than_start(data_input):
+    """
+    Ensures that the 'send' value is always greater than 'sstart' value by swapping them if needed.
+    
+    Args:
+        data_input (pandas.DataFrame): DataFrame containing 'sstart' and 'send' columns
+        
+    Returns:
+        pandas.DataFrame: DataFrame with 'sstart' and 'send' values properly ordered
+    """
+    data_input.loc[
+        data_input[data_input['sstart'] > data_input['send']].index,
+        ['sstart', 'send']
+    ] = data_input.loc[
+        data_input[data_input['sstart'] > data_input['send']].index,
+        ['send', 'sstart']
+    ].values
+
+    return data_input

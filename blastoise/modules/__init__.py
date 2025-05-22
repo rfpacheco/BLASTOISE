@@ -6,8 +6,8 @@ __all__ = [
     "seq_modifier",
     "filters",
     "bedops",
-    "stopping",
-    "compare"
+    "compare",
+    "strand_location"
 ]
 
 # noinspection PyUnresolvedReferences

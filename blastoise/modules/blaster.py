@@ -10,6 +10,7 @@ from datetime import datetime
 from modules.aesthetics import boxymcboxface  # Some aesthetics function
 from modules.identifiers import genome_specific_chromosome_main
 from modules.compare import compare_main
+from modules.files_manager import end_always_greater_than_start
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -237,13 +238,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         coincidence_data = coincidence_data[['sseqid', 'length', 'sstart', 'send', 'sstrand', 'sseq']].copy()  # #Take only the necessary columns:
         
         # Make it so 'sstart' is always < than 'send'
-        coincidence_data.loc[
-            coincidence_data[coincidence_data['sstart'] > coincidence_data['send']].index,
-            ['sstart', 'send']
-        ] = coincidence_data.loc[
-            coincidence_data[coincidence_data['sstart'] > coincidence_data['send']].index,
-            ['send', 'sstart']
-        ].values
+        coincidence_data = end_always_greater_than_start(coincidence_data)
 
 
         coincidence_data.to_csv(os.path.join(folder_path, "blastoise_df.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file

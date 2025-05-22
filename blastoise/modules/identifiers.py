@@ -2,9 +2,10 @@ import os
 import time
 import pandas as pd
 
-from modules.files_manager import fasta_creator, columns_to_numeric
+from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start
 from modules.seq_modifier import sequence_extension
 from modules.filters import global_filters_main
+from modules.strand_location import set_strand_direction
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -68,6 +69,8 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
                                     perc_identity=identity_1,
                                     word_size=word_size)
     second_blaster = columns_to_numeric(second_blaster)
+    second_blaster = end_always_greater_than_start(second_blaster)
+
     toc = time.perf_counter()
     print("")
     print(f"\t\t2.3. BLASTn against genome:\n",
@@ -93,10 +96,13 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     removed_count = matches_mask.sum()
     second_blaster_not_extended = second_blaster_not_extended[~matches_mask]
     print(f"\t\t\t- Removed {removed_count} self-matches from extended sequences")
+    # -----------------------------------------------------------------------------
+    # Let's set the strand orientation
+    second_blaster_not_extended_oriented = set_strand_direction(data_input=second_blaster_not_extended)
 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
-    filtered_data = global_filters_main(data_input=second_blaster_not_extended,
+    filtered_data = global_filters_main(data_input=second_blaster_not_extended_oriented,
                                         genome_fasta=genome_fasta,
                                         writing_path=run_phase_extension_path,
                                         min_length=min_length)
