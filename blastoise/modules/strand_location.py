@@ -47,11 +47,6 @@ def set_strand_direction(data_input):
     original_contrast_data.columns = ['sseqid', 'sstart', 'send', 'sstrand'] # Change column names
     original_contrast_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     original_contrast_data.drop_duplicates(inplace=True)
-    
-
-
-    # Let's split it in "plus" and "minus"
-    # original_contrast_plus, original_contrast_minus = plus_and_minus_dataframe_splitter(original_contrast_data, 'sstrand')
 
     # Do the same with the new data
     new_data = data_input[['sseqid', 'sstart', 'send', 'sstrand']].copy()
@@ -66,7 +61,6 @@ def set_strand_direction(data_input):
     # And where there is not a coincidence
     new_data_no_overlaps_contrast = bedops_contrast(new_bedops, original_bedops, 'opposite')
     
-
     # `new_data_no_overlaps_contrast` are considered new elements. Let's save them correctly.
     # From 'new_data', extract the elements that have the same 'sseqid, 'sstart', 'send' and 'sstrand' as in
     # `new_data_no_overlaps_contrast`

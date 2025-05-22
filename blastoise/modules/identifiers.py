@@ -45,7 +45,8 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     else:
         pass
 
-    sequences_extended = sequence_extension(data_input=data_input,
+    data_to_extend = data_input.copy()
+    sequences_extended = sequence_extension(data_input=data_to_extend,
                                             genome_fasta=genome_fasta,
                                             extend_number=extend_number,
                                             limit_len=limit_len)
@@ -57,7 +58,9 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
-    fasta_creator(sequences_extended, sequences_extended_fasta_path)
+
+    # In the sequence name, we save the coordinates BEFORE the extension
+    fasta_creator(sequences_extended, sequences_extended_fasta_path, id_names=data_input)
     toc = time.perf_counter()
     print("")
     print(f"\t\t2.2. Fasta {extend_number} nt file creation:\n",
@@ -80,18 +83,28 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     # Removing extended coordinates in `second_blaster` from the data of `sequence_1000`
     second_blaster_not_extended = second_blaster.copy()  # Copy data from the blaster
     # Split sequence name to get original coordinates
-    split_cols = second_blaster_not_extended['qseqid'].str.split('-', expand=True) # Split sequence identifier into components by hyphen delimiter
-    # Remember these coordinates are from the EXTENDED version
-    second_blaster_not_extended['og_sseqid'] = split_cols[0].str.split('_').str[-1] # Extract the original sequence ID - take the last part after underscore split
-    second_blaster_not_extended['og_sstart'] = pd.to_numeric(split_cols[1]) # Convert start position string to numeric, store in the original start column
-    second_blaster_not_extended['og_send'] = pd.to_numeric(split_cols[2]) # Convert end position string to numeric, store in the original end column
-    second_blaster_not_extended['og_sstrand'] = split_cols[3] # Get strand orientation from the last component, store in the original strand column
+    # First split will be the index number
+    # Second split will be the extended coordinates
+    # Third split will be the original coordinates
+    split_cols = second_blaster_not_extended['qseqid'].str.split('_', expand=True) # Split sequence identifier into components by hyphen delimiter
+
+    # Take care of the EXTENDED coordinates
+    second_blaster_not_extended['ext_sseqid'] = split_cols[1].str.split('-').str[0] # Extract the extended sequence ID - take the last part after underscore split
+    second_blaster_not_extended['ext_sstart'] = pd.to_numeric(split_cols[1].str.split('-').str[1]) # Convert start position string to numeric, store in the extended start column
+    second_blaster_not_extended['ext_send'] = pd.to_numeric(split_cols[1].str.split('-').str[2]) # Convert end position string to numeric, store in the extended end column
+    second_blaster_not_extended['ext_sstrand'] = split_cols[1].str.split('-').str[3] # Get strand orientation from the last component, store in the extended strand column
+
+    # Take care of the ORIGINAL coordinates
+    second_blaster_not_extended['og_sseqid'] = split_cols[2].str.split('-').str[0]
+    second_blaster_not_extended['og_sstart'] = pd.to_numeric(split_cols[2].str.split('-').str[1])
+    second_blaster_not_extended['og_send'] = pd.to_numeric(split_cols[2].str.split('-').str[2])
+    second_blaster_not_extended['og_sstrand'] = split_cols[2].str.split('-').str[3]
 
     # Remove matches where original and current coordinates are identical
-    matches_mask = (second_blaster_not_extended['og_sseqid'] == second_blaster_not_extended['sseqid']) & \
-                   (second_blaster_not_extended['og_sstart'] == second_blaster_not_extended['sstart']) & \
-                   (second_blaster_not_extended['og_send'] == second_blaster_not_extended['send']) & \
-                   (second_blaster_not_extended['og_sstrand'] == second_blaster_not_extended['sstrand'])
+    matches_mask = (second_blaster_not_extended['ext_sseqid'] == second_blaster_not_extended['sseqid']) & \
+                   (second_blaster_not_extended['ext_sstart'] == second_blaster_not_extended['sstart']) & \
+                   (second_blaster_not_extended['ext_send'] == second_blaster_not_extended['send']) & \
+                   (second_blaster_not_extended['ext_sstrand'] == second_blaster_not_extended['sstrand'])
 
     # noinspection PyUnresolvedReferences
     removed_count = matches_mask.sum()

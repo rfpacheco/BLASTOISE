@@ -80,6 +80,7 @@ def get_bedops_bash_file(data):
         # Store the name of the temporary file for use in the BEDOPS command
         bedops_file = temp_file.name
 
+    # TODO: remember to os.remove every object created with this function
     return bedops_file
 
 def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
