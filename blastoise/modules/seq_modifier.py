@@ -41,48 +41,57 @@ def specific_sequence_1000nt(data_input, genome_fasta, extend_number, limit_len)
     # -----------------------------------------------------------------------------
     for index2, (index, element) in enumerate(data_input.iterrows()):
         if "plus" in element["sstrand"]:
-            lower_coor = int(element["sstart"])  # We get the start of the sequence
-            upper_coor = int(element["send"])  # We get the end of the sequence
+            lower_coor = int(element["sstart"])
+            upper_coor = int(element["send"])
         else:  # If it's the "-" strand
             lower_coor = int(element["send"])
             upper_coor = int(element["sstart"])
         
-        subject_length = upper_coor - lower_coor + 1
-        if subject_length < extend_number:  # If the sequence is less than 1000 nt, we'll expand it.
-            leftover_length = extend_number - subject_length  # We get the difference between 1000 and the length of the sequence
-            leftover_length_halved = leftover_length / 2  # We divide it by 2 to get the half of the difference
-            # leftover_length_halved = math.ceil(leftover_length_halved) # We round up the number
-            lower_coor = lower_coor - leftover_length_halved  # We subtract the half of the difference to the start
-            upper_coor = upper_coor + leftover_length_halved  # We add the half of the difference to the end
+        subject_len = upper_coor - lower_coor + 1 # Calculate the nucleotide size of the element
+        if subject_len < limit_len:  # If the sequence is less than 1000 nt, there's room to expand it
+            lower_coor = lower_coor - extend_number # Extends the lower sequences by `extend_number`
+            upper_coor = upper_coor + extend_number # Extends the upper sequence by `extend_number`
 
-            # Check if the coordinates are not out of the genome
-            if lower_coor <= 0:
+            # Take into account that the numbers cannot be negative neither go against the limit length of the sequence
+            if lower_coor <= 0:  # Because in BLASTn, 0 does not exist, it starts in 1
                 lower_coor = 1
-                upper_coor += leftover_length_halved  # Since `new_start` is 1, we add the half of the difference to the end
+
+            # `upper_coor` does not need to change, because BLASTn won't extract longer values that the maximum sequence length.
+            # but let's calculate, to take into account the sizes.
+            cmd = f"blastdbcmd -db {genome_fasta} -entry {element['sseqid']} -outfmt '%l'" # Command to extract the max len
+            chrom_max_len = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip() # Extract the max len
+            chrom_max_len = int(chrom_max_len) # Convert to int
+            if upper_coor > chrom_max_len:
+                upper_coor = chrom_max_len
             
-            # We get the sequence from the whole genome
-            cmd = f"blastdbcmd -db {genome_fasta} -entry {element['sseqid']} -range {int(lower_coor)}-{int(upper_coor)} -strand {element['sstrand']} -outfmt %s"
-            seq = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+            new_subject_len = upper_coor - lower_coor + 1 # Calculate the nucleotide size of the element after extension.
+            if new_subject_len < limit_len:  # If the sequence is still less than `limit_len` after the adjustment, continue the extension
+               # Get the sequence, but extended
+                cmd = f"blastdbcmd -db {genome_fasta} -entry {element['sseqid']} -range {int(lower_coor)}-{int(upper_coor)} -strand {element['sstrand']} -outfmt %s"
+                seq = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
 
-            # Now with the data let's modify the data frame
-            data_input.loc[index, "pident"] = np.nan
-            data_input.loc[index, "length"] = np.nan
-            data_input.loc[index, "qstart"] = np.nan
-            data_input.loc[index, "qend"] = np.nan
+                # Now with the data let's modify the data frame
+                # IMPORTANT: it will modify the `data_input` data frame as a "pointer".
+                # Fill with NaN values where there's no data
+                data_input.loc[index, "pident"] = np.nan
+                data_input.loc[index, "length"] = np.nan
+                data_input.loc[index, "qstart"] = np.nan
+                data_input.loc[index, "qend"] = np.nan
 
-            if "plus" in element["sstrand"]:
-                data_input.loc[index, "sstart"] = int(lower_coor)
-                data_input.loc[index, "send"] = int(upper_coor)
-            else:
-                data_input.loc[index, "sstart"] = int(upper_coor)
-                data_input.loc[index, "send"] = int(lower_coor)
+                # Now we can update the coordinates and the sequence. Depending on the strand
+                if "plus" in element["sstrand"]:
+                    data_input.loc[index, "sstart"] = int(lower_coor)
+                    data_input.loc[index, "send"] = int(upper_coor)
+                else:
+                    data_input.loc[index, "sstart"] = int(upper_coor)
+                    data_input.loc[index, "send"] = int(lower_coor)
 
-            data_input.loc[index, "evalue"] = np.nan
-            data_input.loc[index, "bitscore"] = np.nan
-            data_input.loc[index, "qlen"] = np.nan
-            data_input.loc[index, "slen"] = len(seq)
-            data_input.loc[index, "sseq"] = seq
-        else:  # If the sequence is already 1000 nt, we just pass
-            pass
-        
+                data_input.loc[index, "evalue"] = np.nan
+                data_input.loc[index, "bitscore"] = np.nan
+                data_input.loc[index, "qlen"] = np.nan
+                data_input.loc[index, "slen"] = len(seq)
+                data_input.loc[index, "sseq"] = seq
+            else:  # If the new seq is going to reach the `limit_len`. Don't extend it. It won't modify the data.
+                pass
+
     return data_input
