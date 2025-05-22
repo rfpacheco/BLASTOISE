@@ -83,7 +83,7 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
 def bedops_main(data_input, genome_fasta):
     """
     Processes genomic data to create strand-specific sorted BEDOPS files, merges ranges using
-    BEDOPS tool, retrieves genomic sequences, and formats the final output as a DataFrame
+    the BEDOPS tool, retrieves genomic sequences, and formats the final output as a DataFrame
     with relevant columns and data.
 
     Arguments:
