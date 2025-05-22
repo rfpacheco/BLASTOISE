@@ -44,33 +44,33 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     else:
         pass
 
-    sequences_1000 = sequence_extension(data_input=data_input,
-                                        genome_fasta=genome_fasta,
-                                        extend_number=extend_number,
-                                        limit_len=limit_len)
-    sequences_1000_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
+    sequences_extended = sequence_extension(data_input=data_input,
+                                            genome_fasta=genome_fasta,
+                                            extend_number=extend_number,
+                                            limit_len=limit_len)
+    sequences_extended_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
     print("")
     print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
-          f"\t\t\t- Data row length: {sequences_1000.shape[0]}\n",
+          f"\t\t\t- Data row length: {sequences_extended.shape[0]}\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------s
     # If coincidence_data is not None. We add the previous data to the new one, so we don't lose the previous data.
     # if coincidence_data is not None:
-    #     sequences_1000 = pd.concat([sequences_1000, coincidence_data], ignore_index=True).copy()
-    #     sequences_1000.sort_values(by=["sstrand", "sseqid", "sstart"], inplace=True) # Sort the data frame by the start coordinate
+    #     sequences_extended = pd.concat([sequences_extended, coincidence_data], ignore_index=True).copy()
+    #     sequences_extended.sort_values(by=["sstrand", "sseqid", "sstart"], inplace=True) # Sort the data frame by the start coordinate
     # else:
     #     pass
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
-    fasta_creator(sequences_1000, sequences_1000_fasta_path)
+    fasta_creator(sequences_extended, sequences_extended_fasta_path)
     toc = time.perf_counter()
     print("")
     print(f"\t\t2.2. Fasta {extend_number} nt file creation:\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")  
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
-    second_blaster = blastn_blaster(query_path=sequences_1000_fasta_path,
+    second_blaster = blastn_blaster(query_path=sequences_extended_fasta_path,
                                     dict_path=genome_fasta,
                                     perc_identity=identity_1,
                                     word_size=word_size)
