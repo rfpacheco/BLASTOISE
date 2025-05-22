@@ -8,42 +8,47 @@ from modules.files_manager import columns_to_numeric
 
 def get_data_sequence(data, strand, genome_fasta):
     """
-    This function gets the sequence of the data from the fasta file. It will keep the Chromosome ID, start coordinate, end coordinate and strand.
+    Fetches nucleotide sequences from a specified genome database using BLAST commands.
 
-    :param data: A pandas data frame with the data read of the BED files.
-    :type data: pandas.core.frame.DataFrame
+    This function retrieves specified sequence ranges from a genome database in fasta format.
+    The input strand direction is specified and BLAST commands are executed to obtain the
+    sequences based on the provided data.
 
-    :param strand: The strand of the sequence. It can be "plus" or "minus".
-    :type strand: str
+    Args:
+        data (DataFrame): A pandas DataFrame containing the sequence details. It must
+        contain the columns 'sseqid', 'sstart', and 'send'.
 
-    :param genome_fasta: Path to the whole genome sequence in FASTA format.
-    :type genome_fasta: string
+        strand (str): A string indicating the strand direction for sequence retrieval, typically
+        'plus' or 'minus'.
+
+        genome_fasta (str): The file path to the genome database in fasta format to query against.
+
+    Returns:
+        DataFrame: A pandas DataFrame containing the retrieved sequences. The DataFrame includes
+        columns for 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'.
+
+    Raises:
+        subprocess.CalledProcessError: If the `blastdbcmd` tool encounters an error during execution.
     """
     sequences = []
     for _, row in data.iterrows():
-        sseqid = row["sseqid"]
-        start = row["sstart"]
-        end = row["send"]
-        cmd = [
-            "blastdbcmd",
-            "-db", genome_fasta,
-            "-entry", sseqid,
-            "-range", f"{start}-{end}",
-            "-strand", strand,
-            "-outfmt", "%s"
-        ]
+        sseqid = row['sseqid']
+        start = row['sstart']
+        end = row['send']
+        cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
 
         sequence = subprocess.check_output(cmd, universal_newlines=True).replace('\n', '')
 
         sequences.append({
-            "sseqid": sseqid,
-            "sstart": start,
-            "send": end,
-            "sstrand": strand,
-            "sseq": sequence
+            'sseqid': sseqid,
+            'sstart': start,
+            'send': end,
+            'sstrand': strand,
+            'sseq': sequence
         })
 
     sequences_df = pd.DataFrame(sequences)
+
     return sequences_df
 
 def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
