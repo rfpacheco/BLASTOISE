@@ -81,6 +81,7 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     second_blaster_not_extended = second_blaster.copy()  # Copy data from the blaster
     # Split sequence name to get original coordinates
     split_cols = second_blaster_not_extended['qseqid'].str.split('-', expand=True) # Split sequence identifier into components by hyphen delimiter
+    # Remember these coordinates are from the EXTENDED version
     second_blaster_not_extended['og_sseqid'] = split_cols[0].str.split('_').str[-1] # Extract the original sequence ID - take the last part after underscore split
     second_blaster_not_extended['og_sstart'] = pd.to_numeric(split_cols[1]) # Convert start position string to numeric, store in the original start column
     second_blaster_not_extended['og_send'] = pd.to_numeric(split_cols[2]) # Convert end position string to numeric, store in the original end column

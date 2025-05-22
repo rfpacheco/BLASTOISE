@@ -40,8 +40,8 @@ def sequence_extension(data_input, genome_fasta, extend_number, limit_len):
     """
     # -----------------------------------------------------------------------------
     for index2, (index, element) in enumerate(data_input.iterrows()):
-        lower_coor = int(element["sstart"])
-        upper_coor = int(element["send"])
+        lower_coor = int(element['sstart'])
+        upper_coor = int(element['send'])
 
         subject_len = upper_coor - lower_coor + 1 # Calculate the nucleotide size of the element
         if subject_len < limit_len:  # If the sequence is less than 1000 nt, there's room to expand it
@@ -69,24 +69,10 @@ def sequence_extension(data_input, genome_fasta, extend_number, limit_len):
                 # Now with the data let's modify the data frame
                 # IMPORTANT: it will modify the `data_input` data frame as a "pointer".
                 # Fill with NaN values where there's no data
-                data_input.loc[index, "pident"] = np.nan
-                data_input.loc[index, "length"] = np.nan
-                data_input.loc[index, "qstart"] = np.nan
-                data_input.loc[index, "qend"] = np.nan
-
-                # Now we can update the coordinates and the sequence. Depending on the strand
-                if "plus" in element["sstrand"]:
-                    data_input.loc[index, "sstart"] = int(lower_coor)
-                    data_input.loc[index, "send"] = int(upper_coor)
-                else:
-                    data_input.loc[index, "sstart"] = int(upper_coor)
-                    data_input.loc[index, "send"] = int(lower_coor)
-
-                data_input.loc[index, "evalue"] = np.nan
-                data_input.loc[index, "bitscore"] = np.nan
-                data_input.loc[index, "qlen"] = np.nan
-                data_input.loc[index, "slen"] = len(seq)
-                data_input.loc[index, "sseq"] = seq
+                data_input.loc[index, 'length'] = new_subject_len
+                data_input.loc[index, 'sstart'] = int(lower_coor)
+                data_input.loc[index, 'send'] = int(upper_coor)
+                data_input.loc[index, 'sseq'] = seq
             else:  # If the new seq is going to reach the `limit_len`. Don't extend it. It won't modify the data.
                 pass
 

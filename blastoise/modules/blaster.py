@@ -191,10 +191,9 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     tic = time.perf_counter()
     print("")
     print(f"\t- Results in this RUN:")
-    coincidence_data, new_data, old_data_exclusive = compare_main(last_df=whole_group,
-                                                                  old_df=data_input,
-                                                                  folder_path=comparison_folder,
-                                                                  genome_fasta=genome_fasta)
+    coincidence_data, new_data, old_data_exclusive = compare_main(whole_group,
+                                                                  data_input,
+                                                                  genome_fasta)
     toc = time.perf_counter()
 
 
