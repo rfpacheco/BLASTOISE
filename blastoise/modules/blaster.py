@@ -117,25 +117,25 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     """
 
     # Call the aesthetics function RUN identifier.
-    boxymcboxface("RUN " + str(numbering))
+    boxymcboxface('RUN ' + str(numbering))
     tic_main = time.perf_counter()  # Start the timer
 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     # First let's order the data by "sseqid", "sstrand", "sstart".
-    data_ordered = data_input.sort_values(by=["sseqid", "sstrand", "sstart"])
+    data_ordered = data_input.sort_values(by=['sseqid', 'sstrand', 'sstart'])
     toc = time.perf_counter()
     print("")
-    print(f"1. Initial data:\n",
+    print('1. Initial data:\n',
           f"\t- Data row length: {data_input.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
     terminal_width = shutil.get_terminal_size().columns  # Get the terminal width
 
     print("")
-    print(f"2. Individual searching and cleaning:")
+    print('2. Individual searching and cleaning:')
     tic = time.perf_counter()
     now_time = datetime.now()
-    formatted_now_time = now_time.strftime("%Y %B %d at %H:%M")
+    formatted_now_time = now_time.strftime('%Y %B %d at %H:%M')
     print("")
     print(f"{' ' * 7}{'-' * 74}")
     start_time_text = f"Program started: {start_time}"
@@ -204,6 +204,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
 
     old_data_exclusive_less_than_100 = None
 
+    # noinspection PyUnresolvedReferences
     if not old_data_exclusive.empty and (old_data_exclusive["length"] < min_length).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
         old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive["length"] < min_length]
         old_data_exclusive = old_data_exclusive[old_data_exclusive["length"] >= min_length]
