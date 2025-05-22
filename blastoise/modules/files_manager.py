@@ -1,5 +1,3 @@
-import os
-import csv
 import pandas as pd
 
 from Bio import SeqIO
@@ -10,16 +8,21 @@ from Bio.SeqRecord import SeqRecord
 # -----------------------------------------------------------------------------
 def fasta_creator(data_input, fasta_output_path):
     """
-    This function will create a FASTA file from the input CSV file. For this it will use the **Biopyton** module.
+    Creates a FASTA file from a given data input, which includes sequences and related metadata.
 
-    :param path_input: pandas data frame
-    :type path_input: pandas data frame
+    This function reads data from the provided input, constructs sequence records using
+    the Biopython library, and writes them to an output file in FASTA format. Each record
+    contains an ID constructed from metadata extracted from the input data and an associated
+    sequence.
 
-    :param fasta_output_path: Path to where we want to save the FASTA file.
-    :type fasta_output_path: string
+    Args:
+        data_input (pandas.DataFrame): Input data containing sequence information. Assumes
+            the input DataFrame includes a 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'
+            column for the necessary metadata.
+        fasta_output_path (str): File path where the resulting FASTA file will be written.
 
-    :return: All the data from the CSV in a FASTA format.
-    :rtype: FASTA File
+    Returns:
+        None
     """
     matrix = []
     for index, (_, sequence) in enumerate(data_input.iterrows()):
@@ -30,18 +33,29 @@ def fasta_creator(data_input, fasta_output_path):
                         description=""
                         )
         matrix.append(rec)
+    # TODO: in futuro may change to bash tmp file with <(echo -e '>{name_id}\n{seq}')
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
-def columns_to_numeric(data_input, columns_to_convert = ["pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"]):
+def columns_to_numeric(data_input, columns_to_convert=None):
     """
-    This function will convert the columns of a pandas DataFrame to numeric values.
+    Convert specified columns of a DataFrame to numeric datatype.
 
-    :param data_input: pandas data frame
-    :type data_input: pandas data frame
+    This function takes a DataFrame and a list of column names and converts the
+    specified columns to a numeric datatype using `pd.to_numeric`. If no columns
+    are specified, it defaults to converting the columns: 'length', 'sstart',
+    and 'send'. Any non-convertible values are coerced into NaN.
 
-    :return: pandas data frame with numeric values
-    :rtype: pandas data frame
+    Parameters:
+        data_input (pandas.DataFrame): The pandas DataFrame containing the data to be transformed.
+        columns_to_convert (list[str], optional): A list of column names to be converted to numeric data type.
+            Defaults to ['length', 'sstart', 'send'].
+
+    Returns:
+        pandas.DataFrame: The modified DataFrame with specified columns converted to numeric.
     """
+    if columns_to_convert is None:
+        columns_to_convert = ['length', 'sstart', 'send']
+
     for column in columns_to_convert:
         data_input[column] = pd.to_numeric(data_input[column], errors='coerce')
     return data_input
