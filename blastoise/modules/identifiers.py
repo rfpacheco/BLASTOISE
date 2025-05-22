@@ -67,7 +67,7 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
                                     dict_path=genome_fasta,
                                     perc_identity=identity_1,
                                     word_size=word_size)
-    second_blaster = columns_to_numeric(second_blaster, ["pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen"])
+    second_blaster = columns_to_numeric(second_blaster)
     toc = time.perf_counter()
     print("")
     print(f"\t\t2.3. BLASTn against genome:\n",
