@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 import subprocess
-import os
 
 from modules.files_manager import columns_to_numeric
 
@@ -70,7 +69,7 @@ def get_bedops_bash_file(data):
         str: A formatted string representing the BEDOPS-compatible input.
     """
     bedops_file = "<(echo -e '" + '\n'.join(
-        [f"{row['sseqid']}\t{row['sstart']}\t{row['send']}" for _, row in df_plus.iterrows()]) + "')"
+        [f"{row['sseqid']}\t{row['sstart']}\t{row['send']}" for _, row in data.iterrows()]) + "')"
 
     return bedops_file
 
@@ -82,8 +81,8 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
         base_df_path (str): Path to the base BED file.
         contrast_df_path (str): Path to the contrast BED file.
         bedops_mode (str): Mode of operation for the BEDOPS command.
-                           Supported modes are 'coincidence' (checks which elements in base are in contrast),
-                           'opposite' (checks which elements in base are not in contrast),
+                           Supported modes are 'coincidence' (checks which elements in the base are in contrast),
+                           'opposite' (checks which elements in the base are not in contrast),
                            and 'merge' (merges overlapping intervals).
 
         Returns:
@@ -94,77 +93,74 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
                        'merge': '--merge'}
     cmd_mode = bedops_mode_map.get(bedops_mode)
 
-    # Check which elements in 'base_df' are inside 'contrast_df'
+    # Shows the elements in `base_df` that overlap with `contrast_df`
     cmd_coincidence = f"bedops {cmd_mode} {base_df_path} {contrast_df_path}"
     check_coincidence = subprocess.run(cmd_coincidence, shell=True, capture_output=True, text=True,
                                        universal_newlines=True,
-                                       executable="/usr/bin/bash").stdout.strip()
+                                       executable='/usr/bin/bash').stdout.strip()
     check_coincidence = pd.DataFrame([x.split("\t") for x in check_coincidence.split("\n") if x],
-                             columns=["sseqid", "sstart", "send"])
-    check_coincidence = columns_to_numeric(check_coincidence, ["sstart", "send"])
+                                     columns=['sseqid', 'sstart', 'send'])
+    check_coincidence = columns_to_numeric(check_coincidence, ['sstart', 'send'])
+
     return check_coincidence
 
 
-def bedops_coincidence(main_data, data_for_contrast, folder_path, strand, genome_fasta):
+def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
 
 
     main_data = main_data.sort_values(by=['sseqid', 'sstart'])  # Sort the data frame by the start coordinate
     data_for_contrast = data_for_contrast.sort_values(by=['sseqid', 'sstart'])  # Sort the data frame by the start coordinate
-    last_length = main_data.shape[0]
-    old_length = data_for_contrast.shape[0]
+    main_data_len = main_data.shape[0] # Get length of the main data
+    data_contrast_len = data_for_contrast.shape[0] # Get length of the contrast data
 
-    main_data_path = os.path.join(f"{folder_path}_1.1_last.bed")
-    data_for_contrast_path = os.path.join(f"{folder_path}_1.2_old.bed")
+    main_data_bedops = get_bedops_bash_file(main_data) # get a tmp bash file for the main data
+    contrast_data_bedops = get_bedops_bash_file(data_for_contrast) # get a tmp bash file for contrast data
 
-    main_data[["sseqid", "sstart","send"]].to_csv(main_data_path, sep="\t", header=False, index=False)
-    data_for_contrast[["sseqid", "sstart","send"]].to_csv(data_for_contrast_path, sep="\t", header=False, index=False)
-
-    last_in_old = bedops_contrast(main_data_path, data_for_contrast_path, 'coincidence')
+    # Check elements in the "main data" that overlap in the "contrast" data
+    main_exists_in_contrast_data = bedops_contrast(main_data_bedops, contrast_data_bedops, 'coincidence')
     print("")
     print("\t\t\t- Coincidence data:")
-    print(f"\t\t\t\t- New data in Previous data: {last_in_old.shape[0]}/{last_length} - {last_in_old.shape[0]/last_length*100:.2f}%")
+    print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
 
-    old_in_last = bedops_contrast(data_for_contrast_path, main_data_path, 'coincidence')
-    print(f"\t\t\t\t- Previous data in New data: {old_in_last.shape[0]}/{old_length} - {old_in_last.shape[0]/old_length*100:.2f}%")
+    contrast_exists_in_main_data = bedops_contrast(contrast_data_bedops, main_data_bedops, 'coincidence')
+    print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
     # -----------------------------------------------------------------------------
-    # Let's merge
+    # There would be elements that are in both datas. The next step is to merge them.
+    main_exists_in_contrast_data_bedops = get_bedops_bash_file(main_exists_in_contrast_data)
+    contrast_exists_in_main_data_bedops = get_bedops_bash_file(contrast_exists_in_main_data)
 
+    merged_data = bedops_contrast(main_exists_in_contrast_data_bedops, contrast_exists_in_main_data_bedops, 'merge')
+    print(f"\t\t\t\t- Merged data: {merged_data.shape[0]}")
 
-    old_in_last_path = os.path.join(f"{folder_path}_2.1_Old_in_Last.bed")
-    last_in_old_path = os.path.join(f"{folder_path}_2.2_Last_in_Old.bed")
-
-    old_in_last[["sseqid", "sstart", "send"]].to_csv(old_in_last_path, sep="\t", header=False, index=False)
-    last_in_old[["sseqid", "sstart", "send"]].to_csv(last_in_old_path, sep="\t", header=False, index=False)
-
-    merged_last_old = bedops_contrast(old_in_last_path, last_in_old_path, 'merge')
-    print(f"\t\t\t\t- Merged data: {merged_last_old.shape[0]}")
-
-    # Now recapture the elements with the genome
-    coincidence_data = get_data_sequence(merged_last_old, strand, genome_fasta)
+    # Now get teh sequence for the `merged_data`
+    coincidence_data = get_data_sequence(merged_data, strand, genome_fasta)
     # -----------------------------------------------------------------------------
     # -----------------------------------------------------------------------------
-    # Now let's check the elements that are not in df2 (the first input). They would be the new elements.
+    # Check elements from `main_data` that DO NOT overlap with `data_for_contrast`-
+    # Because these elements are not in the contrast data, they will be novice elements.
     print("")
     print("\t\t\t- NOT coincidence data:")
-    last_notin_old = bedops_contrast(main_data_path, data_for_contrast_path, 'opposite')
-    print(f"\t\t\t\t- New data NOT in Previous data: {last_notin_old.shape[0]}/{last_length} - {last_notin_old.shape[0]/last_length*100:.2f}%")
+    # noinspection DuplicatedCode
+    main_not_exists_in_contrast_data = bedops_contrast(main_data_bedops, contrast_data_bedops, 'opposite')
+    print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_not_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
 
-    if not last_notin_old.empty:  # If the data frame is not empty
-        new_data = get_data_sequence(last_notin_old, strand, genome_fasta)
+    if not main_not_exists_in_contrast_data.empty:  # If the data frame has data
+        new_data = get_data_sequence(main_not_exists_in_contrast_data, strand, genome_fasta)
     else:  # If the data frame is empty
         new_data = pd.DataFrame()
     # -----------------------------------------------------------------------------
     # Now check the elements in Old that are not in Last
-    old_notin_last = bedops_contrast(data_for_contrast_path, main_data_path, 'opposite')
-    print(f"\t\t\t\t- Previous data NOT in New data: {old_notin_last.shape[0]}/{old_length} - {old_notin_last.shape[0]/old_length*100:.2f}%")
+    # noinspection DuplicatedCode
+    contrast_not_exists_in_main_data = bedops_contrast(contrast_data_bedops, main_data_bedops, 'opposite')
+    print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_not_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
 
-    if not old_notin_last.empty:  # If the data frame is not empty
-        old_data_exclusive = get_data_sequence(old_notin_last, strand, genome_fasta)
+    if not contrast_not_exists_in_main_data.empty:  # If the data frame has lines
+        only_in_contrast_data = get_data_sequence(contrast_not_exists_in_main_data, strand, genome_fasta)
     else:  # If the data frame is empty
-        old_data_exclusive = pd.DataFrame()
+        only_in_contrast_data = pd.DataFrame()
 
     # -----------------------------------------------------------------------------
-    return coincidence_data, new_data, old_data_exclusive
+    return coincidence_data, new_data, only_in_contrast_data
 
 
 def bedops_main(data_input, genome_fasta):

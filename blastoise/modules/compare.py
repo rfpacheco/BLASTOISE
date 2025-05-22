@@ -40,7 +40,7 @@ def compare_main(last_df, old_df, folder_path, genome_fasta):
     # Call BEDOPS on plus
     print("")
     print("\t\t- '+' strand:")
-    coincidence_plus, new_data_plus, old_data_exclusive_plus= bedops_coincidence(last_df_plus, old_df_plus, plus_path, "plus", genome_fasta)
+    coincidence_plus, new_data_plus, old_data_exclusive_plus= bedops_coincidence(last_df_plus, old_df_plus, "plus", genome_fasta)
     if not new_data_plus.empty:  # If the data frame is not empty
         new_data_plus = df_columns_restore(new_data_plus, last_df)  # Restore the columns
         new_data_plus = columns_to_numeric(new_data_plus)  # Convert columns to numeric
@@ -59,7 +59,7 @@ def compare_main(last_df, old_df, folder_path, genome_fasta):
     # And now call BEDOPS on minus
     print("")
     print("\t\t- '-' strand:")
-    coincidence_minus, new_data_minus, old_data_exclusive_minus = bedops_coincidence(last_df_minus, old_df_minus, minus_path, "minus", genome_fasta)
+    coincidence_minus, new_data_minus, old_data_exclusive_minus = bedops_coincidence(last_df_minus, old_df_minus, "minus", genome_fasta)
     # Restore the coordinates
     if not new_data_minus.empty:  # If the data frame is not empty
         new_data_minus[["sstart", "send"]] = new_data_minus[["send", "sstart"]]  # restore "new_data_minus" coordinates
