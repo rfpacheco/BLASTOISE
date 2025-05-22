@@ -71,14 +71,15 @@ def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
             sseq: Aligned part of the subject sequence.
     """
 
-    cmd = "blastn -word_size " + str(word_size) + " -query " \
-        + query_path + " -db " \
-        + dict_path \
-        + " -perc_identity " + str(perc_identity) \
-        + " -outfmt '10 qseqid sseqid pident length qstart qend sstart send evalue bitscore qlen slen sstrand sseq'"
-    data = subprocess.check_output(cmd, shell=True, universal_newlines=True)  # Important the E value
+    cmd = (f"blastn "
+           f"-word_size {word_size} "
+           f"-query {query_path} "
+           f"-db {dict_path} "
+           f"-perc_identity {perc_identity} "
+           f"-outfmt '10 qseqid sseqid length sstart send sstrand sseq'")
+    data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
-    data.columns = ["qseqid", "sseqid", "pident", "length", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qlen", "slen", "sstrand", "sseq"]
+    data.columns = ['qseqid', 'sseqid', 'length', 'sstart', 'send', 'sstrand', 'sseq']
     return data
     
 
