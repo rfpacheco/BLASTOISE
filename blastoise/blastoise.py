@@ -119,7 +119,7 @@ print(f"1. Initial data:\n",
 # =============================================================================
 # Use BEDOPS to merge the first BLASTn data
 # =============================================================================
-print("\t- Filtering data:")
+print('\t- Filtering data:')
 tic = time.perf_counter()  # Start the timer
 first_blaster_bedops = bedops_main(data_input=first_blaster,
                                    genome_fasta=blastn_dict_path_out)
@@ -131,26 +131,26 @@ print(f"\t\t- Data row length: {first_blaster_bedops.shape[0]}\n",
 # Call the second and last BLASTn
 # =============================================================================
 # 1) Create fasta file for the second BLASTn from first_blaster data frame
-fasta_file_path = os.path.join(folder_location, "First_Blaster.fasta")  # Path to the fasta file to create
+fasta_file_path = os.path.join(folder_location, 'First_Blaster.fasta')  # Path to the fasta file to create
 
 # Now let's create the fasta file
 tic = time.perf_counter()  # Start the timer
 fasta_creator(data_input=first_blaster_bedops,
               fasta_output_path=fasta_file_path)
 toc = time.perf_counter()  # Stop the timer
-print("")
+print('')
 print(f"2. Fasta file creation:\n",
       f"\t- Execution time: {toc - tic:0.2f} seconds")
 
 # Create a new folder for all the data
-repetitive_blaster_folder = os.path.join(folder_location, "execution_data")
+repetitive_blaster_folder = os.path.join(folder_location, 'execution_data')
 os.makedirs(repetitive_blaster_folder, exist_ok=True)
 
 tic = time.perf_counter()  # Start the timer
 repetitive_blaster(data_input=first_blaster_bedops,
                    genome_fasta=blastn_dict_path_out,  # path to the genome dict
                    folder_path=repetitive_blaster_folder,
-                   numbering=1,  # TODO: Remove this argument or make it a default 1
+                   numbering=1,
                    start_time=formatted_start_time,
                    identity_1=identity_1,
                    tic_start=tic_main,
