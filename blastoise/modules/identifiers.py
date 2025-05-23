@@ -63,7 +63,7 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
 
 
     print("")
-    print(f"\t\t2.2. Fasta {extend_number} nt file creation:\n"),
+    print(f"\t\t2.2. Fasta {extend_number} nt file creation:")
     sequences_extended_with_sseq = get_data_sequence(sequences_extended, genome_fasta)
     fasta_creator(sequences_extended_with_sseq, sequences_extended_fasta_path, id_names=data_input)
     toc = time.perf_counter()
