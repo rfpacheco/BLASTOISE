@@ -85,7 +85,7 @@ def global_filters_main(data_input, genome_fasta, writing_path, min_length):
                                   genome_fasta=genome_fasta)
         final_data = data_bedops.copy()
         toc = time.perf_counter()
-        print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
+        print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     else:
         pass  # Skip the next part of the code
 

@@ -69,7 +69,7 @@ def bedops_contrast(base_df_path, contrast_df_path, bedops_mode):
 
     check_coincidence = pd.DataFrame([x.split("\t") for x in check_coincidence.split("\n") if x],
                                      columns=columns_needed)
-    check_coincidence = columns_to_numeric(check_coincidence, ['sstart', 'send'])
+    check_coincidence[['sstart', 'send']] = check_coincidence[['sstart', 'send']].astype(int)
 
     return check_coincidence
 
@@ -240,5 +240,9 @@ def bedops_main(data_input, genome_fasta):
 
     # Join both data frames
     all_data = pd.concat([df_plus_bedops, df_minus_bedops], ignore_index=True)
+
+    # remove temp files
+    os.remove(plus_bedops_bash)
+    os.remove(minus_bedops_bash)
 
     return all_data

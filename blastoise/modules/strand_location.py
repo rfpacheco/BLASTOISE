@@ -28,7 +28,7 @@ def set_overlapping_status(data_input, contrast_data_bedops):
                 extended_sequence = bedops_contrast(sequence_for_bedops,
                                                     contrast_overlaps_with_row_df_bedops,
                                                     'merge')
-                data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
+                data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']].astype(int)
                 os.remove(contrast_overlaps_with_row_df_bedops)
             else:  # They are not in the same strand
                 data_input.loc[index, :] = pd.NA
@@ -48,7 +48,7 @@ def set_overlapping_status(data_input, contrast_data_bedops):
                     extended_sequence = bedops_contrast(sequence_for_bedops,
                                                         contrast_overlaps_with_row_df_bedops,
                                                         'merge')
-                    data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
+                    data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']].astype(int)
                     os.remove(contrast_overlaps_with_row_df_bedops)
                 else:  # They are not in the same strand
                     data_input.loc[index, :] = pd.NA
@@ -58,6 +58,8 @@ def set_overlapping_status(data_input, contrast_data_bedops):
         os.remove(sequence_for_bedops)
 
     data_input.dropna(inplace=True)
+    data_input['sstart'] = data_input['sstart'].astype(int)
+    data_input['send'] = data_input['send'].astype(int)
 
     # Remove temp files
 
@@ -66,7 +68,7 @@ def set_overlapping_status(data_input, contrast_data_bedops):
 
 def set_strand_direction(data_input):
     # First, let's take the original data with coordinates
-    original_contrast_data = data_input[['og_sseqid', 'og_sstart', 'og_send', 'og_sstrand',]].copy()
+    original_contrast_data = data_input[['og_sseqid', 'og_sstart', 'og_send', 'og_sstrand']].copy()
     original_contrast_data.columns = ['sseqid', 'sstart', 'send', 'sstrand'] # Change column names
     original_contrast_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     original_contrast_data.drop_duplicates(inplace=True)
