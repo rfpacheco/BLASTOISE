@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import time
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast
 
@@ -74,6 +75,7 @@ def set_strand_direction(data_input):
     new_data = data_input[['sseqid', 'sstart', 'send', 'sstrand']].copy()
     new_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     new_data.drop_duplicates(inplace=True)
+    print(f"\t\t\t- Data to analyze: {new_data.shape[0]}")
     # new_plus, new_minus = plus_and_minus_dataframe_splitter(new_data, 'sstrand')
 
     # Let's check if the new sequences overlap with the original
@@ -82,22 +84,28 @@ def set_strand_direction(data_input):
 
     # And where there is not a coincidence
     new_data_no_overlaps_contrast = bedops_contrast(new_bedops, original_bedops, 'opposite')
-    
+
     # `new_data_no_overlaps_contrast` are considered new elements. Let's save them correctly.
     # From 'new_data', extract the elements that have the same 'sseqid, 'sstart', 'send' and 'sstrand' as in
     # `new_data_no_overlaps_contrast`
     new_elements = pd.merge(new_data, new_data_no_overlaps_contrast,
                             on=['sseqid', 'sstart', 'send', 'sstrand'],
                             how='inner')
+    print(f"\t\t\t- New elements: {new_elements.shape[0]}")
 
     # And the rest elements, which for sure, overlap
     leftover_elements = pd.merge(new_data, new_data_no_overlaps_contrast,
                                  on=['sseqid', 'sstart', 'send', 'sstrand'],
                                  how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
+    print(f"\t\t\t- Overlapping elements: {leftover_elements.shape[0]}")
 
     # Now we need to check if the overlapping is in the same strand as the original data
     if not leftover_elements.empty:
+        tic = time.perf_counter()
+        print(f"\t\t\t- Checking strand orientation in overlapping elements:")
         leftover_elements = set_overlapping_status(leftover_elements, original_bedops)
+        toc = time.perf_counter()
+        print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
     # Combine new elements and processed leftover elements
     result = pd.concat([new_elements, leftover_elements])

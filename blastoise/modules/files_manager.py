@@ -1,4 +1,5 @@
 import pandas as pd
+import subprocess
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -44,6 +45,52 @@ def fasta_creator(data_input, fasta_output_path, id_names=None):
         matrix.append(rec)
     # TODO: in futuro may change to bash tmp file with <(echo -e '>{name_id}\n{seq}')
     SeqIO.write(matrix, fasta_output_path, "fasta")
+
+def get_data_sequence(data, strand, genome_fasta):
+    """
+    Fetches nucleotide sequences from a specified genome database using BLAST commands.
+
+    This function retrieves specified sequence ranges from a genome database in a fasta format.
+    The input strand direction is specified, and BLAST commands are executed to obtain the
+    sequences based on the provided data.
+
+    Args:
+        data (DataFrame): A pandas DataFrame containing the sequence details. It must
+        contain the columns 'sseqid', 'sstart', and 'send'.
+
+        strand (str): A string indicating the strand direction for sequence retrieval, typically
+        'plus' or 'minus'.
+
+        genome_fasta (str): The file path to the genome database in fasta format to query against.
+
+    Returns:
+        DataFrame: A pandas DataFrame containing the retrieved sequences. The DataFrame includes
+        columns for 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'.
+
+    Raises:
+        subprocess.CalledProcessError: If the `blastdbcmd` tool encounters an error during execution.
+    """
+    sequences = []
+    for _, row in data.iterrows():
+        sseqid = row['sseqid']
+        start = row['sstart']
+        end = row['send']
+        cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
+
+        sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
+                                  executable="/usr/bin/bash").stdout.strip()
+
+        sequences.append({
+            'sseqid': sseqid,
+            'sstart': start,
+            'send': end,
+            'sstrand': strand,
+            'sseq': sequence
+        })
+
+    sequences_df = pd.DataFrame(sequences)
+
+    return sequences_df
 
 def columns_to_numeric(data_input, columns_to_convert=None):
     """

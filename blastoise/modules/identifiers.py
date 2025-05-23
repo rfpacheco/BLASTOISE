@@ -2,7 +2,7 @@ import os
 import time
 import pandas as pd
 
-from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start
+from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start, get_data_sequence
 from modules.seq_modifier import sequence_extension
 from modules.filters import global_filters_main
 from modules.strand_location import set_strand_direction
@@ -46,20 +46,21 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
         pass
 
     data_to_extend = data_input.copy()
+    print("")
+    print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
+          f"\t\t\t- Data row length: {data_to_extend.shape[0]}\n")
     sequences_extended = sequence_extension(data_input=data_to_extend,
                                             genome_fasta=genome_fasta,
                                             extend_number=extend_number,
                                             limit_len=limit_len)
     sequences_extended_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
-    print("")
-    print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
-          f"\t\t\t- Data row length: {sequences_extended.shape[0]}\n",
-          f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
+    print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
 
     # In the sequence name, we save the coordinates BEFORE the extension
+
     fasta_creator(sequences_extended, sequences_extended_fasta_path, id_names=data_input)
     toc = time.perf_counter()
     print("")
@@ -125,15 +126,15 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
+    print("")
+    print("\t\t2.4. Filtering data:\n")
     filtered_data = global_filters_main(data_input=second_blaster_not_extended_oriented,
                                         genome_fasta=genome_fasta,
                                         writing_path=run_phase_extension_path,
                                         min_length=min_length)
 
     toc = time.perf_counter()
-    print("")
-    print("\t\t2.4. Filtering BLASTn against genome:\n",
-          f"\t\t\t- Data row length: {len(filtered_data)}\n",  # Not .shape[0] in case it's empty
+    print(f"\t\t\t- Data row length: {len(filtered_data)}\n",  # Not .shape[0] in case it's empty
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
     return filtered_data  # Returns the data frame

@@ -1,3 +1,5 @@
+import time
+
 from Bio import SeqIO
 
 from modules.bedops import bedops_main
@@ -66,17 +68,24 @@ def global_filters_main(data_input, genome_fasta, writing_path, min_length):
     DataFrame: The processed data after applying filters and `bedops_main` function.
     """
 
+    print("\t\t\t- Setting length:")
     data_input["length"] = abs(data_input["send"] - data_input["sstart"]) + 1
 
+    print("\t\t\t- Filtering by length:")
     data_filtered = data_input[data_input["length"].astype(int) >= min_length]  # Filter by length; here it was a 100 before
 
+    print("\t\t\t- Removing dashes from coordinates:")
     data_filtered = data_filtered.apply(lambda x: x.replace("-", ""))  # Filter dashes
 
     final_data = data_filtered.copy()
     if not data_filtered.empty:  # Checks if the data is empty. If it is, it will skip the next part of the code
+        tic = time.perf_counter()
+        print("\t\t\t- Processing with BEDOPS:")
         data_bedops = bedops_main(data_input=data_filtered,
                                   genome_fasta=genome_fasta)
         final_data = data_bedops.copy()
+        toc = time.perf_counter()
+        print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     else:
         pass  # Skip the next part of the code
 
