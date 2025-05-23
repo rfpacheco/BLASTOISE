@@ -80,6 +80,7 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
           f"\t\t\t- Data row length: {second_blaster.shape[0]}\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------
+    tic = time.perf_counter()
     # Removing extended coordinates in `second_blaster` from the data of `sequence_1000`
     second_blaster_not_extended = second_blaster.copy()  # Copy data from the blaster
     # Split sequence name to get original coordinates
@@ -110,9 +111,17 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     removed_count = matches_mask.sum()
     second_blaster_not_extended = second_blaster_not_extended[~matches_mask]
     print(f"\t\t\t- Removed {removed_count} self-matches from extended sequences")
+    toc = time.perf_counter()
+    print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------
     # Let's set the strand orientation
+    print("")
+    print(f"\t\t 2.4. Setting strand orientation")
+    print(f"\t\t\t- Data row length: {second_blaster_not_extended.shape[0]}")
+    tic = time.perf_counter()
     second_blaster_not_extended_oriented = set_strand_direction(data_input=second_blaster_not_extended)
+    toc = time.perf_counter()
+    print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()

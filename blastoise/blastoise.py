@@ -41,14 +41,14 @@ args = parser.parse_args()
 # folder_location = os.path.join(data_location, folder_name)  # Create the folder location
 # folder_location = os.path.expanduser(folder_location)
 
-# Place where everything will be
-data_location = args.output
-data_location = os.path.normpath(data_location)
-data_location = os.path.expanduser(data_location)
+output_path = args.output
+output_path = os.path.normpath(output_path)
+output_path = os.path.expanduser(output_path)
 
-# Folder where the "data_location" is
-folder_location = os.path.dirname(data_location)
-folder_name = os.path.basename(data_location)
+# Folder name
+folder_name = os.path.basename(output_path)
+data_location = os.path.dirname(output_path)
+folder_location = os.path.join(data_location, folder_name)
 
 # Create the folder with the given name
 os.makedirs(folder_location, exist_ok=True)

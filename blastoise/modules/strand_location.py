@@ -21,23 +21,45 @@ def set_overlapping_status(data_input, contrast_data_bedops):
 
         # If they are in the same strand, should extend.
         # Compare the pandas.Series
-        if row_df['sstrand'].name == contrast_overlaps_with_row_df['sstrand'].name:
-            contrast_overlaps_with_row_df_bedops = get_bedops_bash_file(contrast_overlaps_with_row_df)
-            extended_sequence = bedops_contrast(sequence_for_bedops,
-                                                contrast_overlaps_with_row_df_bedops,
-                                                'merge')
-            data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
-            os.remove(contrast_overlaps_with_row_df_bedops)
-        else:  # They are not in the same strand
-            data_input.loc[index, :] = pd.NA
+        if contrast_overlaps_with_row_df.shape[0] == 1:
+            if row_df['sstrand'].iloc[0] == contrast_overlaps_with_row_df['sstrand'].iloc[0]:
+                contrast_overlaps_with_row_df_bedops = get_bedops_bash_file(contrast_overlaps_with_row_df)
+                extended_sequence = bedops_contrast(sequence_for_bedops,
+                                                    contrast_overlaps_with_row_df_bedops,
+                                                    'merge')
+                data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
+                os.remove(contrast_overlaps_with_row_df_bedops)
+            else:  # They are not in the same strand
+                data_input.loc[index, :] = pd.NA
+        else: # if `contrast_overlaps_with_row_df.shape[0] > 1`
+            # ---------------------------------------------------------------
+            dict_counter = {} # TODO: remove in future, it's only a checker
+            for _, elem in contrast_overlaps_with_row_df.iterrows():
+                if elem['sstrand'] in dict_counter:
+                    dict_counter[elem['sstrand']] += 1
+                else:
+                    dict_counter[elem['sstrand']] = 1
+            dict_len = len(dict_counter)
+            # ---------------------------------------------------------------
+            if dict_len == 1:
+                if row_df['sstrand'].iloc[0] == list(dict_counter.keys())[0]:
+                    contrast_overlaps_with_row_df_bedops = get_bedops_bash_file(contrast_overlaps_with_row_df)
+                    extended_sequence = bedops_contrast(sequence_for_bedops,
+                                                        contrast_overlaps_with_row_df_bedops,
+                                                        'merge')
+                    data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
+                    os.remove(contrast_overlaps_with_row_df_bedops)
+                else:  # They are not in the same strand
+                    data_input.loc[index, :] = pd.NA
+            else:  # if `dict_len > 1`
+                pass
 
+        os.remove(sequence_for_bedops)
 
     data_input.dropna(inplace=True)
 
     # Remove temp files
-    # noinspection PyUnboundLocalVariable
-    os.remove(sequence_for_bedops)
-    
+
     return data_input
 
 
