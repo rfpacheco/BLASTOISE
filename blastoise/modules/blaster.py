@@ -205,9 +205,14 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     old_data_exclusive_less_than_100 = None
 
     # noinspection PyUnresolvedReferences
-    if not old_data_exclusive.empty and (old_data_exclusive["length"] < min_length).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
-        old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive["length"] < min_length]
-        old_data_exclusive = old_data_exclusive[old_data_exclusive["length"] >= min_length]
+    old_data_exclusive['len'] = abs(old_data_exclusive['send'] - old_data_exclusive['sstart']) + 1
+    # noinspection PyUnresolvedReferences
+    if not old_data_exclusive.empty and (old_data_exclusive['len'] < min_length).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
+        old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive['len'] < min_length]
+        old_data_exclusive = old_data_exclusive[old_data_exclusive['len'] >= min_length]
+        # Now drop the 'len' column for both, to not break the following concat
+        old_data_exclusive_less_than_100.drop(columns=['len'], inplace=True)
+        old_data_exclusive.drop(columns=['len'], inplace=True)
     else:
         pass
 

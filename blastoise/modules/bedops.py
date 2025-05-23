@@ -127,6 +127,7 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     print(f"\t\t\t\t- Merged data: {merged_data.shape[0]}")
 
     coincidence_data = merged_data.copy()
+    coincidence_data['sstrand'] = strand
     # ----------------- ------------------------------------------------------------
     # -----------------------------------------------------------------------------
     # Check elements from `main_data` that DO NOT overlap with `data_for_contrast`-

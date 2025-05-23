@@ -108,7 +108,7 @@ def columns_to_numeric(data_input, columns_to_convert=None):
         pandas.DataFrame: The modified DataFrame with specified columns converted to numeric.
     """
     if columns_to_convert is None:
-        columns_to_convert = ['length', 'sstart', 'send']
+        columns_to_convert = ['sstart', 'send']
 
     for column in columns_to_convert:
         data_input[column] = pd.to_numeric(data_input[column], errors='coerce')

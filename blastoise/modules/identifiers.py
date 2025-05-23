@@ -48,7 +48,7 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     data_to_extend = data_input.copy()
     print("")
     print(f"\t\t2.1. Sequence extension to {extend_number} nt:\n",
-          f"\t\t\t- Data row length: {data_to_extend.shape[0]}\n")
+          f"\t\t\t- Data row length: {data_to_extend.shape[0]}")
     sequences_extended = sequence_extension(data_input=data_to_extend,
                                             genome_fasta=genome_fasta,
                                             extend_number=extend_number,
