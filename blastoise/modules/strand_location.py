@@ -52,7 +52,23 @@ def set_overlapping_status(data_input, contrast_data_bedops):
                     os.remove(contrast_overlaps_with_row_df_bedops)
                 else:  # They are not in the same strand
                     data_input.loc[index, :] = pd.NA
-            else:  # if `dict_len > 1`
+            elif dict_len > 1:  # In this case, the match will be with different strands
+                # TODO: review with JMR
+                # We will add the data to the strand it matches.
+                # The one with inverse match, will be ignored
+                for _, elem in contrast_overlaps_with_row_df.iterrows():
+                    if elem['sstrand'] == row_df['sstrand'].iloc[0]:
+                        # Transform elem from pandas.core.series.Series to pandas.core.frame.DataFrame
+                        elem = pd.DataFrame(elem).T
+                        contrast_overlaps_with_row_df_bedops = get_bedops_bash_file(elem) # Only the element that matches strand
+                        extended_sequence = bedops_contrast(sequence_for_bedops,
+                                                            contrast_overlaps_with_row_df_bedops,
+                                                            'merge')
+                        data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
+                        os.remove(contrast_overlaps_with_row_df_bedops)
+                    else: # if the element doesn't match the strand
+                        pass
+            else: # if dict_len == 0
                 pass
 
         os.remove(sequence_for_bedops)
