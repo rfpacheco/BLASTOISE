@@ -28,7 +28,7 @@ def set_overlapping_status(data_input, contrast_data_bedops):
                 extended_sequence = bedops_contrast(sequence_for_bedops,
                                                     contrast_overlaps_with_row_df_bedops,
                                                     'merge')
-                data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']].astype(int)
+                data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
                 os.remove(contrast_overlaps_with_row_df_bedops)
             else:  # They are not in the same strand
                 data_input.loc[index, :] = pd.NA
@@ -48,7 +48,7 @@ def set_overlapping_status(data_input, contrast_data_bedops):
                     extended_sequence = bedops_contrast(sequence_for_bedops,
                                                         contrast_overlaps_with_row_df_bedops,
                                                         'merge')
-                    data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']].astype(int)
+                    data_input.loc[index, ['sstart', 'send']] = extended_sequence.iloc[0][['sstart', 'send']]
                     os.remove(contrast_overlaps_with_row_df_bedops)
                 else:  # They are not in the same strand
                     data_input.loc[index, :] = pd.NA
