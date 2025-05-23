@@ -145,20 +145,8 @@ print(f"\t\t- Data row length: {first_blaster_bedops.shape[0]}\n",
       f"\t\t- Execution time: {toc - tic:0.2f} seconds")
 
 # =============================================================================
-# Call the second and last BLASTn
+# Call the Repetitive BLASTn step
 # =============================================================================
-# 1) Create fasta file for the second BLASTn from first_blaster data frame
-fasta_file_path = os.path.join(folder_location, 'First_Blaster.fasta')  # Path to the fasta file to create
-
-# Now let's create the fasta file
-tic = time.perf_counter()  # Start the timer
-fasta_creator(data_input=first_blaster_bedops,
-              fasta_output_path=fasta_file_path)
-toc = time.perf_counter()  # Stop the timer
-print('')
-print(f"2. Fasta file creation:\n",
-      f"\t- Execution time: {toc - tic:0.2f} seconds")
-
 # Create a new folder for all the data
 repetitive_blaster_folder = os.path.join(folder_location, 'execution_data')
 os.makedirs(repetitive_blaster_folder, exist_ok=True)

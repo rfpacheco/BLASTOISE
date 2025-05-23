@@ -46,7 +46,7 @@ def fasta_creator(data_input, fasta_output_path, id_names=None):
     # TODO: in futuro may change to bash tmp file with <(echo -e '>{name_id}\n{seq}')
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
-def get_data_sequence(data, strand, genome_fasta):
+def get_data_sequence(data, genome_fasta):
     """
     Fetches nucleotide sequences from a specified genome database using BLAST commands.
 
@@ -57,9 +57,6 @@ def get_data_sequence(data, strand, genome_fasta):
     Args:
         data (DataFrame): A pandas DataFrame containing the sequence details. It must
         contain the columns 'sseqid', 'sstart', and 'send'.
-
-        strand (str): A string indicating the strand direction for sequence retrieval, typically
-        'plus' or 'minus'.
 
         genome_fasta (str): The file path to the genome database in fasta format to query against.
 
@@ -75,6 +72,7 @@ def get_data_sequence(data, strand, genome_fasta):
         sseqid = row['sseqid']
         start = row['sstart']
         end = row['send']
+        strand = row['sstrand']
         cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
 
         sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
@@ -115,15 +113,6 @@ def columns_to_numeric(data_input, columns_to_convert=None):
     for column in columns_to_convert:
         data_input[column] = pd.to_numeric(data_input[column], errors='coerce')
     return data_input
-
-def df_columns_restore(data_input, data_model):
-    new_column = [len(x) for x in data_input.loc[:,"sseq"]]   # Create a new column with the length of the sequence
-    data_input.insert(1, "length", new_column, True)  # Insert the new column in the second position
-    new_data = pd.DataFrame(index=range(data_input.shape[0]), columns=data_model.columns)
-    new_data.loc[:,["sseqid", "length", "sstart", "send", "sstrand", "sseq"]] = data_input.loc[:,["sseqid", "length", "sstart", "send", "sstrand", "sseq"]].copy()
-    
-    return new_data
-
 
 def end_always_greater_than_start(data_input):
     """

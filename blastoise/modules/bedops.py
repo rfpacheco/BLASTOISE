@@ -7,52 +7,6 @@ import os
 
 from modules.files_manager import columns_to_numeric, end_always_greater_than_start
 
-def get_data_sequence(data, strand, genome_fasta):
-    """
-    Fetches nucleotide sequences from a specified genome database using BLAST commands.
-
-    This function retrieves specified sequence ranges from a genome database in a fasta format.
-    The input strand direction is specified, and BLAST commands are executed to obtain the
-    sequences based on the provided data.
-
-    Args:
-        data (DataFrame): A pandas DataFrame containing the sequence details. It must
-        contain the columns 'sseqid', 'sstart', and 'send'.
-
-        strand (str): A string indicating the strand direction for sequence retrieval, typically
-        'plus' or 'minus'.
-
-        genome_fasta (str): The file path to the genome database in fasta format to query against.
-
-    Returns:
-        DataFrame: A pandas DataFrame containing the retrieved sequences. The DataFrame includes
-        columns for 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'.
-
-    Raises:
-        subprocess.CalledProcessError: If the `blastdbcmd` tool encounters an error during execution.
-    """
-    sequences = []
-    for _, row in data.iterrows():
-        sseqid = row['sseqid']
-        start = row['sstart']
-        end = row['send']
-        cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
-
-        sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
-                                  executable="/usr/bin/bash").stdout.strip()
-
-        sequences.append({
-            'sseqid': sseqid,
-            'sstart': start,
-            'send': end,
-            'sstrand': strand,
-            'sseq': sequence
-        })
-
-    sequences_df = pd.DataFrame(sequences)
-
-    return sequences_df
-
 def get_bedops_bash_file(data):
     """
     Generate a string representing a BEDOPS-compatible bash file.
@@ -172,9 +126,8 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     merged_data = bedops_contrast(main_exists_in_contrast_data_bedops, contrast_exists_in_main_data_bedops, 'merge')
     print(f"\t\t\t\t- Merged data: {merged_data.shape[0]}")
 
-    # Now get teh sequence for the `merged_data`
-    coincidence_data = get_data_sequence(merged_data, strand, genome_fasta)
-    # -----------------------------------------------------------------------------
+    coincidence_data = merged_data.copy()
+    # ----------------- ------------------------------------------------------------
     # -----------------------------------------------------------------------------
     # Check elements from `main_data` that DO NOT overlap with `data_for_contrast`-
     # Because these elements are not in the contrast data, they will be novice elements.
@@ -185,7 +138,7 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_not_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
 
     if not main_not_exists_in_contrast_data.empty:  # If the data frame has data
-        new_data = get_data_sequence(main_not_exists_in_contrast_data, strand, genome_fasta)
+        new_data = main_not_exists_in_contrast_data.copy()
     else:  # If the data frame is empty
         new_data = pd.DataFrame()
     # -----------------------------------------------------------------------------
@@ -195,7 +148,7 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_not_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
 
     if not contrast_not_exists_in_main_data.empty:  # If the data frame has lines
-        only_in_contrast_data = get_data_sequence(contrast_not_exists_in_main_data, strand, genome_fasta)
+        only_in_contrast_data = contrast_not_exists_in_main_data.copy()
     else:  # If the data frame is empty
         only_in_contrast_data = pd.DataFrame()
 

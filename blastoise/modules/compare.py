@@ -1,7 +1,7 @@
 import pandas as pd
 
 from modules.bedops import bedops_coincidence
-from modules.files_manager import df_columns_restore, columns_to_numeric
+from modules.files_manager import columns_to_numeric
 
 def compare_main(newest_data, contrast_data, genome_fasta):
     """
@@ -36,13 +36,10 @@ def compare_main(newest_data, contrast_data, genome_fasta):
     print("\t\t- '+' strand:")
     coincidence_plus, new_data_plus, old_data_exclusive_plus= bedops_coincidence(newest_data_plus, contrast_data_plus, "plus", genome_fasta)
     if not new_data_plus.empty:  # If the data frame has lines
-        new_data_plus = df_columns_restore(new_data_plus, newest_data)  # Restore the columns
         new_data_plus = columns_to_numeric(new_data_plus)  # Convert columns to numeric
     if not coincidence_plus.empty:  # If the data frame has lines
-        coincidence_plus = df_columns_restore(coincidence_plus, newest_data)  # Restore the columns
         coincidence_plus = columns_to_numeric(coincidence_plus)  # Convert columns to numeric
     if not old_data_exclusive_plus.empty:  # If the data frame has lines
-        old_data_exclusive_plus = df_columns_restore(old_data_exclusive_plus, contrast_data)  # Restore the columns
         old_data_exclusive_plus = columns_to_numeric(old_data_exclusive_plus)  # Convert columns to numeric
     # -----------------------------------------------------------------------------
     # Call BEDOPS on minus.
@@ -52,13 +49,10 @@ def compare_main(newest_data, contrast_data, genome_fasta):
     coincidence_minus, new_data_minus, old_data_exclusive_minus = bedops_coincidence(newest_data_minus, contrast_data_minus, "minus", genome_fasta)
     # Restore the coordinates
     if not new_data_minus.empty:  # If the data frame is not empty
-        new_data_minus = df_columns_restore(new_data_minus, newest_data)  # Restore the columns
         new_data_minus = columns_to_numeric(new_data_minus)
     if not coincidence_minus.empty:
-        coincidence_minus = df_columns_restore(coincidence_minus, newest_data)
         coincidence_minus = columns_to_numeric(coincidence_minus)
     if not old_data_exclusive_minus.empty:
-        old_data_exclusive_minus = df_columns_restore(old_data_exclusive_minus, contrast_data)
         old_data_exclusive_minus = columns_to_numeric(old_data_exclusive_minus)
     # -----------------------------------------------------------------------------
     # Concatenate both Data Frames
