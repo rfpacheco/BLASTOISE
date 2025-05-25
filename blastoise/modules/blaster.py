@@ -239,7 +239,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     os.makedirs(stopping_folder, exist_ok=True)
 
     if new_data.shape[0] == 0:
-        coincidence_data = coincidence_data[['sseqid', 'length', 'sstart', 'send', 'sstrand', 'sseq']].copy()  # #Take only the necessary columns:
+        coincidence_data = coincidence_data[['sseqid', 'sstart', 'send', 'sstrand']].copy()  # #Take only the necessary columns:
         
         # Make it so 'sstart' is always < than 'send'
         coincidence_data = end_always_greater_than_start(coincidence_data)
