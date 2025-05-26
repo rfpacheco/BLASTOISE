@@ -83,24 +83,74 @@ def set_overlapping_status(data_input, contrast_data_bedops):
 
 
 def set_strand_direction(data_input):
-    # First, let's take the original data with coordinates
+    """
+     Analyzes and processes genomic sequence data to determine the correct strand orientation for each sequence.
+     It handles both new sequences and overlapping sequences, merging and extending where appropriate, ensuring
+     data consistency between strands.
+
+     Workflow:
+     1. **Prepare the Input Data**:
+        - Extracts the original dataset and reconfigures its columns for consistency and comparison.
+        - Sorts and deduplicates data by sequence identifiers (`sseqid`) and start positions (`sstart`) to simplify operations.
+
+     2. **Split Data into Original and New Sequences**:
+        - Separates the input data into `original_contrast_data` (already detected sequences) and `new_data` (new detected elements).
+
+     3. **Identify Overlaps and Non-Overlapping Sequences**:
+        - Determines where the `new_data` sequences overlap or do not overlap with the `original_contrast_data` using BEDOPS tools.
+        - Non-overlapping sequences are treated as *new elements*, while overlapping sequences move to further processing.
+
+     4. **Process Overlapping Elements**:
+        - For overlapping elements, evaluates the strand orientation:
+            a. If an overlap occurs with the same strand as the existing sequences, they are **merged and extended** if there's room for extension.
+            b. If the strands differ, conflicting sequences are removed (sequences from inverse strands cannot coexist).
+            c. For multiple overlapping matches, the new elements are merged with the existing sequences only with the ones they share the same orientation.
+
+     5. **Output Combined Results**:
+        - Combines the processed overlapping sequences with the new elements from `new_data` that had no conflicts.
+        - Produces a clean, consistent DataFrame with updated strand orientations and merged sequences.
+
+     6. **Cleanup Temporary Files**:
+        - Filters and removes temporary files generated during the BEDOPS processing.
+
+     Key Features:
+     - **Strand Orientation Evaluation**:
+       Ensures that sequences are merged correctly if overlaps are found and validates strand (plus/minus direction) alignment.
+     - **Handling of Multiple Overlaps**:
+       Manages situations where overlaps occur across multiple existing sequences, ensuring data integrity and avoiding strand conflicts.
+     - **Performance Tracking**:
+       Tracks execution time of strand computations for performance insights.
+     - **Integration with BEDOPS**:
+       Relies on BEDOPS to perform overlap, contrast, and merging operations efficiently.
+
+    Arguments:
+        data_input (pd.DataFrame): Input DataFrame containing sequence data with columns such as
+                                   'og_sseqid', 'og_sstart', 'og_send', 'og_sstrand', 'sseqid',
+                                   'sstart', 'send', and 'sstrand'.
+
+    Returns:
+        pd.DataFrame: A DataFrame with processed data that includes new elements and overlapping
+                      elements with orientation properly set.
+    """
+
+    # Save the original coordinates before the extension in `original_contrast_data`
     original_contrast_data = data_input[['og_sseqid', 'og_sstart', 'og_send', 'og_sstrand']].copy()
     original_contrast_data.columns = ['sseqid', 'sstart', 'send', 'sstrand'] # Change column names
     original_contrast_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     original_contrast_data.drop_duplicates(inplace=True)
+    print(f"\t\t\t- Already existing elements row length: {original_contrast_data.shape[0]}")
 
-    # Do the same with the new data
+    # Save all the new elements discovered in `new_data`
     new_data = data_input[['sseqid', 'sstart', 'send', 'sstrand']].copy()
     new_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     new_data.drop_duplicates(inplace=True)
-    print(f"\t\t\t- Data to analyze: {new_data.shape[0]}")
-    # new_plus, new_minus = plus_and_minus_dataframe_splitter(new_data, 'sstrand')
+    print(f"\t\t\t- Potential newly discovered elements row length: {new_data.shape[0]}")
 
-    # Let's check if the new sequences overlap with the original
+    # From both pd.DataFrames, create a tmp .bed file using BEDOPS tools.
     original_bedops = get_bedops_bash_file(original_contrast_data)
     new_bedops = get_bedops_bash_file(new_data)
 
-    # And where there is not a coincidence
+    # Get the newly discovered elements that do not match with the already existing sequences
     new_data_no_overlaps_contrast = bedops_contrast(new_bedops, original_bedops, 'opposite')
 
     # `new_data_no_overlaps_contrast` are considered new elements. Let's save them correctly.
