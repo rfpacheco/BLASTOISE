@@ -41,7 +41,7 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     # If coincidence_data is not None. We add the previous data to the new one, so we don't lose the previous data.
     if coincidence_data is not None:
         data_input = pd.concat([data_input, coincidence_data], ignore_index=True).copy()
-        data_input.sort_values(by=["sstrand", "sseqid", "sstart"], inplace=True)
+        data_input.sort_values(by=['sstrand', 'sseqid', 'sstart'], inplace=True)
     else:
         pass
 
