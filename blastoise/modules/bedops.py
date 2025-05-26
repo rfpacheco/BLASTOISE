@@ -241,6 +241,9 @@ def bedops_main(data_input, genome_fasta):
     # Join both data frames
     all_data = pd.concat([df_plus_bedops, df_minus_bedops], ignore_index=True)
 
+    # Add "len" column
+    all_data['len'] = all_data['send'] - all_data['sstart'] + 1
+
     # remove temp files
     os.remove(plus_bedops_bash)
     os.remove(minus_bedops_bash)
