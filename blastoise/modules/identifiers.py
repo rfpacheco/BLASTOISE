@@ -37,7 +37,6 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     run_phase_extension_path = os.path.join(main_folder_path, f"run_{str(run_phase)}")
     os.makedirs(run_phase_extension_path, exist_ok=True)  # Create the run phase folder
     # -----------------------------------------------------------------------------
-    tic = time.perf_counter()
     if coincidence_data is not None: # If coincidence data exist with actual information.
         print("")
         print('\t\t2.0. Input data information')
@@ -56,11 +55,13 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     print(f"\t\t2.1. Sequence extension in both directions to {extend_number} nt:\n",
           f"\t\t\t- Data row length: {data_to_extend.shape[0]}")
 
+    tic = time.perf_counter()
     # Extend `data_to_extend` in both directions to `extend_number` nt
     sequences_extended = sequence_extension(data_input=data_to_extend,
                                             genome_fasta=genome_fasta,
                                             extend_number=extend_number,
                                             limit_len=limit_len)
+    sequences_extended['len'] = sequences_extended['send'] - sequences_extended['sstart'] + 1
     sequences_extended_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
     print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
