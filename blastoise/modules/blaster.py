@@ -85,12 +85,12 @@ def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
     data[['sstart', 'send']] = data[['sstart', 'send']].astype(int)
     # get 'evalue' as a 'float' type
     data['evalue'] = data['evalue'].astype(float)
+    # Make sure 'send' > 'sstart'
+    data = end_always_greater_than_start(data)
     # Create 'len' colum
     data['len'] = data['send'] - data['sstart'] + 1
     # Place it between 'sent' and 'sstrand' column
     data = data[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq', 'len']]
-    # Make sure 'send' > 'sstart'
-    data = end_always_greater_than_start(data)
     return data
     
 
