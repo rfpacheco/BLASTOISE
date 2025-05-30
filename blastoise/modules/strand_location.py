@@ -248,7 +248,13 @@ def set_overlapping_status(data_input, contrast_data_bedops):
                         index
                     )
                 else:  # They are not in the same strand
-                    data_input.loc[index, :] = pd.NA
+                    # In this case, `row_df` doesn't match in 'strand' with any `contrast_overlaps_with_row_df`
+                    # So the every element in `data_input_that_overlap_with_contrast` with the same 'strand as 'row_df'
+                    # shall be removed
+                    elem_in_same_strand = data_input_that_overlap_with_contrast[
+                        data_input_that_overlap_with_contrast['sstrand'] == row_df['sstrand'].iloc[0]
+                    ]
+                    match_data_and_set_false(data_input, elem_in_same_strand)
             elif dict_len > 1:  # The overlapping elems are in different strands
                 # TODO: review with JMR
                 # We will add the data to the strand it matches.
