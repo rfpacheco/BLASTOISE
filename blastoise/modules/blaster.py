@@ -264,7 +264,9 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
         run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
         save_run_file.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
+        print(f"\t- Coincidence data + 'n' exclusive data + 'n-1' exclusive data: {save_run_file.shape[0]}")
         print(f"\t- Data file saved at {run_saver_path}")
+
         # -----------------------------------------------------------------------------
         numbering += 1  # Increase the numbering
         repetitive_blaster(data_input=new_data_and_old,
