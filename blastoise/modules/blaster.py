@@ -260,6 +260,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         # Now save the information for this data
         save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)
         save_run_file.sort_values(by=['sseqid', 'sstart'], inplace=True)
+        save_run_file['len'] = save_run_file['send'] - save_run_file['sstart'] + 1
         runs_folder = os.path.join(folder_path, "RUNS")  # Creates the folder for the RUNS
         os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
         run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
