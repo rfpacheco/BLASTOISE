@@ -161,13 +161,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     print(f"\t- Data row length: {whole_group.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
 
-    # -----------------------------------------------------------------------------
-    ## Save the RUN
-    runs_folder = os.path.join(folder_path, "RUNS")  # Creates the folder for the RUNS
-    os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
-    run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
-    whole_group.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
-    # -----------------------------------------------------------------------------
+      # -----------------------------------------------------------------------------
     # Compare part
     # Prepare folders and path
     comparison_folder = os.path.join(folder_path, "comparison")
@@ -198,38 +192,41 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
 
 
     print("")
-    print(f"\t\t- Coincidence data row length: {coincidence_data.shape[0]}\n",
-          f"\t\t- New data row length: {new_data.shape[0]}\n",
-          f"\t\t- Previous data row length: {old_data_exclusive.shape[0]}")
+    print(f"\t\t- Coincidence data from run 'n' and 'n-1': {coincidence_data.shape[0]}\n",
+          f"\t\t- New data detected only from run 'n': {new_data.shape[0]}\n",
+          f"\t\t- Previous data detecte only from 'n-1': {old_data_exclusive.shape[0]}")
 
     old_data_exclusive_less_than_100 = None
 
-    # noinspection PyUnresolvedReferences
     old_data_exclusive['len'] = abs(old_data_exclusive['send'] - old_data_exclusive['sstart']) + 1
     # noinspection PyUnresolvedReferences
+    # If `old_data_exclusive` has lines and there's some 'len' < `lim_length`
     if not old_data_exclusive.empty and (old_data_exclusive['len'] < min_length).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
         old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive['len'] < min_length]
         old_data_exclusive = old_data_exclusive[old_data_exclusive['len'] >= min_length]
         # Now drop the 'len' column for both, to not break the following concat
         old_data_exclusive_less_than_100.drop(columns=['len'], inplace=True)
         old_data_exclusive.drop(columns=['len'], inplace=True)
+        print(f"\t\t\t- Sequences < {min_length} bp: {old_data_exclusive_less_than_100.shape[0]}")
+        print(f"\t\t\t- Sequences >= {min_length} bp: {old_data_exclusive.shape[0]}")
     else:
         pass
 
-    if old_data_exclusive_less_than_100 is not None: # If old_data_exclusive_less_than_100 exists
+    if old_data_exclusive_less_than_100 is not None: # If `old_data_exclusive_less_than_100` exists
         new_data_and_old = pd.concat([new_data, old_data_exclusive_less_than_100], ignore_index=True)
         new_data_and_old.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)
-        print('\t' * 3 + f"- Less than {min_length} bp: {old_data_exclusive_less_than_100.shape[0]}")
         print('\t' * 3 + f"- New data + less than {min_length}: {new_data_and_old.shape[0]}")
-        print('\t' * 3 + f"- Previous data: {old_data_exclusive.shape[0]}")
     else:
         new_data_and_old = new_data
 
-    # Join coincidence_data with old_data_exclusive
+    # if `coincidence_data` and `old_data_exclusive` has lines --> join them;
+    # This way we have the `coincidence_data` containing joined data from 'n' and 'n-1' run and
+    # the exclusive data from 'n-1' that does not appear in 'n'
     if not coincidence_data.empty and not old_data_exclusive.empty:
         coincidence_data = pd.concat([coincidence_data, old_data_exclusive], ignore_index=True)
-        coincidence_data.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)
+        coincidence_data.sort_values(by=['sseqid', 'sstrand', 'sstart'], inplace=True)
         print(f"\t\t- Coincidence data + Previous data: {coincidence_data.shape[0]}")
+
     else:
         pass
     print(f"\t\t- Execution time: {toc - tic:0.2f} seconds")
@@ -259,6 +256,15 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         print("")
         print(f"RUN {numbering} finished:\n",
               f"\t- Execution time: {toc_main - tic_main:0.2f} seconds")
+
+        # Now save the information for this data
+        save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)
+        save_run_file.sort_values(by=['sseqid', 'sstart'], inplace=True)
+        runs_folder = os.path.join(folder_path, "RUNS")  # Creates the folder for the RUNS
+        os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
+        run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
+        save_run_file.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
+        print(f"\t- Data file saved at {run_saver_path}")
         # -----------------------------------------------------------------------------
         numbering += 1  # Increase the numbering
         repetitive_blaster(data_input=new_data_and_old,
