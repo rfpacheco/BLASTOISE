@@ -77,10 +77,20 @@ def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
            f"-query {query_path} "
            f"-db {dict_path} "
            f"-perc_identity {perc_identity} "
-           f"-outfmt '10 qseqid sseqid length sstart send sstrand sseq'")
+           f"-outfmt '10 qseqid sseqid sstart send sstrand evalue sseq'")
     data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
-    data.columns = ['qseqid', 'sseqid', 'length', 'sstart', 'send', 'sstrand', 'sseq']
+    data.columns = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
+    # Get 'sstart', 'send' to 'int' type
+    data[['sstart', 'send']] = data[['sstart', 'send']].astype(int)
+    # get 'evalue' as a 'float' type
+    data['evalue'] = data['evalue'].astype(float)
+    # Create 'len' colum
+    data['len'] = data['send'] - data['sstart'] + 1
+    # Place it between 'sent' and 'sstrand' column
+    data = data[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq', 'len']]
+    # Make sure 'send' > 'sstart'
+    data = end_always_greater_than_start(data)
     return data
     
 

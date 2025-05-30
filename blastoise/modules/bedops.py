@@ -114,10 +114,16 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     main_exists_in_contrast_data = bedops_contrast(main_data_bedops, contrast_data_bedops, 'coincidence')
     print("")
     print("\t\t\t- Coincidence data:")
-    print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
+    if main_data_len > 0:
+        print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
+    else: # In this case `main_data_len == 0`
+        print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len}")
 
     contrast_exists_in_main_data = bedops_contrast(contrast_data_bedops, main_data_bedops, 'coincidence')
-    print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
+    if data_contrast_len > 0:
+        print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
+    else: # Then `data_contrast_len == 0`
+        print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len}")
     # -----------------------------------------------------------------------------
     # There would be elements that are in both datas. The next step is to merge them.
     main_exists_in_contrast_data_bedops = get_bedops_bash_file(main_exists_in_contrast_data)
@@ -136,7 +142,10 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     print("\t\t\t- NOT coincidence data:")
     # noinspection DuplicatedCode
     main_not_exists_in_contrast_data = bedops_contrast(main_data_bedops, contrast_data_bedops, 'opposite')
-    print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_not_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
+    if main_data_len > 0:
+        print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_not_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
+    else:
+        print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len}")
 
     if not main_not_exists_in_contrast_data.empty:  # If the data frame has data
         new_data = main_not_exists_in_contrast_data.copy()
@@ -146,7 +155,10 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
     # Now check the elements in Old that are not in Last
     # noinspection DuplicatedCode
     contrast_not_exists_in_main_data = bedops_contrast(contrast_data_bedops, main_data_bedops, 'opposite')
-    print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_not_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
+    if data_contrast_len > 0:
+        print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_not_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
+    else:
+        print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len}")
 
     if not contrast_not_exists_in_main_data.empty:  # If the data frame has lines
         only_in_contrast_data = contrast_not_exists_in_main_data.copy()

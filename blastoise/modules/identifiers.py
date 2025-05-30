@@ -83,10 +83,6 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
                                     dict_path=genome_fasta,
                                     perc_identity=identity_1,
                                     word_size=word_size)
-    second_blaster = columns_to_numeric(second_blaster) # Transform to an int type
-    second_blaster = end_always_greater_than_start(second_blaster) # Make sure "send" > "sstart"
-    # Add 'len' column # NOTE: is different from the 'length' column BALSTn gets
-    second_blaster['len'] = second_blaster['send'] - second_blaster['sstart'] + 1
     # Get elems only with a seq length >= `min_length`
     second_blaster = second_blaster[second_blaster['len'] >= min_length]
 

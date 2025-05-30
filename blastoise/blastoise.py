@@ -128,11 +128,6 @@ first_blaster = blastn_blaster(query_path=args_data_path,
 # Take only the necessary columns
 first_blaster = first_blaster[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand']]
 
-first_blaster = columns_to_numeric(first_blaster, ['sstart', 'send'])
-first_blaster = end_always_greater_than_start(first_blaster)
-# Add len column
-first_blaster['len'] = first_blaster['send'] - first_blaster['sstart'] + 1
-
 toc = time.perf_counter()  # Stop the timer
 print(f"1. Initial data:\n",
       f"\t- Data row length: {first_blaster.shape[0]}\n",
