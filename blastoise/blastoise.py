@@ -54,7 +54,7 @@ folder_location = os.path.join(data_location, folder_name)
 os.makedirs(folder_location, exist_ok=True)
 print(f"{'.'*20} Folder {folder_name} created in {data_location}")
 
-# identity_1 = input('Enter the identity for the first BLASTn step: ')
+# identity_1 = input ('Enter the identity for the first BLASTn step: ')
 identity_1 = args.identity
 
 # word_size_param = input('Enter the `word_size` value: ')

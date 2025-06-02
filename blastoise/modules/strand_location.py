@@ -123,7 +123,7 @@ def edit_og_data_and_get_merged_seq(contrast_overlaps_with_row, data_input_overl
     pandas.DataFrame
         The updated `to_discard` DataFrame after processing and filtering redundant sequences.
     """
-
+    # TODO: in `set_overlapping_status` there's already a bedops file for `contrast_overlaps_with_row`
     contrast_overlaps_with_row_bedops = get_bedops_bash_file(contrast_overlaps_with_row) # tmp bedops file
 
     # Get the merged coordinates data from `data_input_overlaps_with_contrast` and the data set to discard
