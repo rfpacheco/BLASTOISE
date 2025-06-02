@@ -195,8 +195,8 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             'coincidence'
         )
 
-        # Get tmp bedops file from 'new_overlapping_data` here, so it always change
-        new_overlapping_data_bedops = get_bedops_bash_file(new_overlapping_data)
+        # Get tmp bedops file from 'new_overlapping_data` here, so it always changes. Get only the elems with 'analyze' == True
+        new_overlapping_data_bedops = get_bedops_bash_file(new_overlapping_data[new_overlapping_data['analyze'] == True])
         # Get elements from the original `new_overlapping_data` that overlap with `original_overlaps_with_row_df`
         original_overlaps_with_row_df_bedops = get_bedops_bash_file(original_overlaps_with_row_df) # tmp bedops file
         new_overlapping_data_that_overlaps_with_selected_original = bedops_contrast(
@@ -255,7 +255,6 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                     ]
                     match_data_and_set_false(new_overlapping_data, elem_in_same_strand)
             elif dict_len > 1:  # The overlapping elems are in different strands
-                # TODO: review with JMR
                 # We will add the data to the strand it matches.
                 # The one with inverse match, will be ignored
                 for _, elem in original_overlaps_with_row_df.iterrows():
