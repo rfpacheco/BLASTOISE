@@ -16,7 +16,7 @@ def match_data_and_set_false(data_input, to_discard):
     )
 
     # Use the index of the matches to update the 'analyze' column in data_input
-    data_input.loc[ # TODO: IMPORTANT! change this! because it changes for index, even the merged changed ones
+    data_input.loc[
         data_input.set_index(['sseqid', 'sstart', 'send', 'sstrand']).index.isin(
             matches.set_index(['sseqid', 'sstart', 'send', 'sstrand']).index
         ),
@@ -91,7 +91,7 @@ def filter_redundant_seqs(df_to_filter, df_to_contrast, df_to_discard):
     return same_elems_merged, df_to_discard
 
 
-def edit_og_data_and_get_merged_seq(original_overlapping_with_row, 
+def edit_og_data_and_get_merged_seq(original_overlapping_with_row_bedops, 
                                     new_overlapping_data_that_overlaps_with_selected_original, 
                                     row_df, to_discard, new_overlapping_data, index):
     """
@@ -105,7 +105,7 @@ def edit_og_data_and_get_merged_seq(original_overlapping_with_row,
 
     Parameters:
     ----------
-    original_overlapping_with_row : str
+    original_overlapping_with_row_bedops : str
         Path to the file containing overlapping data rows that belong to the contrast dataset.
     new_overlapping_data_that_overlaps_with_selected_original : pandas.DataFrame
         Subset of the input dataset containing rows that overlap with the contrast dataset.
@@ -124,8 +124,6 @@ def edit_og_data_and_get_merged_seq(original_overlapping_with_row,
     pandas.DataFrame
         The updated `to_discard` DataFrame after processing and filtering redundant sequences.
     """
-    # TODO: in `set_overlapping_status` there's already a bedops file for `original_overlapping_with_row`
-    original_overlapping_with_row_bedops = get_bedops_bash_file(original_overlapping_with_row) # tmp bedops file
 
     # Get the merged coordinates data from `new_overlapping_data_that_overlaps_with_selected_original` and the data set to discard
     merged_coordinates, to_discard = filter_redundant_seqs(
@@ -150,7 +148,6 @@ def edit_og_data_and_get_merged_seq(original_overlapping_with_row,
     match_data_and_set_false(new_overlapping_data, to_discard)
 
     # Remove tmp files
-    os.remove(original_overlapping_with_row_bedops)
     os.remove(merged_coordinates_bedops)
 
 
@@ -180,8 +177,6 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
 
     # Set the 'analyze' column to True
     new_overlapping_data['analyze'] = True  # Only True values will be analyzed, the rest will be skipped.
-    new_overlapping_data_bedops = get_bedops_bash_file(new_overlapping_data)  # tmp bedops file
-    # TODO: should rewrite later on constantly `new_overlapping_data_bedops`
 
     for index, row in new_overlapping_data.iterrows():
         if not new_overlapping_data.at[index, 'analyze']:
@@ -200,6 +195,8 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             'coincidence'
         )
 
+        # Get tmp bedops file from 'new_overlapping_data` here, so it always change
+        new_overlapping_data_bedops = get_bedops_bash_file(new_overlapping_data)
         # Get elements from the original `new_overlapping_data` that overlap with `original_overlaps_with_row_df`
         original_overlaps_with_row_df_bedops = get_bedops_bash_file(original_overlaps_with_row_df) # tmp bedops file
         new_overlapping_data_that_overlaps_with_selected_original = bedops_contrast(
@@ -207,6 +204,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             original_overlaps_with_row_df_bedops,
             'coincidence'
         )
+        os.remove(new_overlapping_data_bedops) # Remove tmp file
 
         # Create the "discard" dataframe
         discard_df = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
@@ -215,7 +213,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
         if original_overlaps_with_row_df.shape[0] == 1: # means row_df overlapped with only 1 elem
             if row_df['sstrand'].iloc[0] == original_overlaps_with_row_df['sstrand'].iloc[0]: # Both in same strand
                 edit_og_data_and_get_merged_seq(
-                    original_overlaps_with_row_df,
+                    original_overlaps_with_row_df_bedops,
                     new_overlapping_data_that_overlaps_with_selected_original,
                     row_df,
                     discard_df,
@@ -230,7 +228,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                 match_data_and_set_false(new_overlapping_data, elem_in_same_strand)
         else: # means `row_df` overlapped with > 1 elem
             # ---------------------------------------------------------------
-            dict_counter = {} # TODO: remove in the future, it's only a checker
+            dict_counter = {}
             for _, elem in original_overlaps_with_row_df.iterrows():
                 if elem['sstrand'] in dict_counter:
                     dict_counter[elem['sstrand']] += 1
@@ -241,7 +239,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             if dict_len == 1: # The overlapping elems are in the same strand
                 if row_df['sstrand'].iloc[0] == list(dict_counter.keys())[0]:
                     edit_og_data_and_get_merged_seq(
-                        original_overlaps_with_row_df,
+                        original_overlaps_with_row_df_bedops,
                         new_overlapping_data_that_overlaps_with_selected_original,
                         row_df,
                         discard_df,
@@ -263,6 +261,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                 for _, elem in original_overlaps_with_row_df.iterrows():
                     if elem['sstrand'] == row_df['sstrand'].iloc[0]: # Only when they are in the same strand
                         elem = pd.DataFrame(elem).T
+                        elem_bedops = get_bedops_bash_file(elem)
                         edit_og_data_and_get_merged_seq(elem,
                                                         new_overlapping_data_that_overlaps_with_selected_original,
                                                         row_df,
@@ -270,6 +269,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                                                         new_overlapping_data,
                                                         index
                         )
+                        os.remove(elem_bedops) # Remove tmp file
                     else: # if the element doesn't match the strand
                         pass
             else: # if dict_len == 0
@@ -281,9 +281,6 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
     new_overlapping_data.dropna(inplace=True)
     new_overlapping_data['sstart'] = new_overlapping_data['sstart'].astype(int)
     new_overlapping_data['send'] = new_overlapping_data['send'].astype(int)
-
-    # Remove temp files
-    os.remove(new_overlapping_data_bedops)
 
     final_data = new_overlapping_data[new_overlapping_data['analyze'] == True].copy()
 
