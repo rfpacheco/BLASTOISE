@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import time
 
-from modules.bedops import get_bedops_bash_file, bedops_contrast
+from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 
 
 def match_data_and_set_false(data_input, to_discard):
@@ -378,8 +378,13 @@ def set_strand_direction(data_input):
         tic = time.perf_counter()
         print(f"\t\t\t- Checking strand orientation in overlapping elements:")
         overlapping_elems = set_overlapping_status(overlapping_elems, original_bedops)
+        overlapping_elems = bedops_main(overlapping_elems) # Merge the data
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
+
+    # Let's merge the `new_elems`
+    if not new_elems.empty:
+        new_elems = bedops_main(new_elems)
 
     # Combine new elements and processed leftover elements # TODO: I think, a overlapping checking status of the `new_elems` against `overlapping_elems` should take place
     result = pd.concat([new_elems, overlapping_elems])
