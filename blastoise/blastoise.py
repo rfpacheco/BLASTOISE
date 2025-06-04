@@ -138,8 +138,7 @@ print(f"1. Initial data:\n",
 # =============================================================================
 print('\t- Filtering data:')
 tic = time.perf_counter()  # Start the timer
-first_blaster_bedops = bedops_main(data_input=first_blaster,
-                                   genome_fasta=blastn_dict_path_out)
+first_blaster_bedops = bedops_main(data_input=first_blaster)
 toc = time.perf_counter()  # Stop the timers
 print(f"\t\t- Data row length: {first_blaster_bedops.shape[0]}\n",
       f"\t\t- Execution time: {toc - tic:0.2f} seconds")

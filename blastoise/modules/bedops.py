@@ -174,8 +174,8 @@ def bedops_coincidence(main_data, data_for_contrast, strand, genome_fasta):
 
     return coincidence_data, new_data, only_in_contrast_data
 
-
-def bedops_main(data_input, genome_fasta):
+# TODO: remove `genome_fasta`, its not used
+def bedops_main(data_input):
     """
     Processes genomic data to create strand-specific sorted BEDOPS files, merges ranges using
     the BEDOPS tool, retrieves genomic sequences, and formats the final output as a DataFrame
@@ -185,7 +185,6 @@ def bedops_main(data_input, genome_fasta):
         data_input (pd.DataFrame): Input data containing genome coordinates and strand
             information. Expected to have specific columns like 'sstrand', 'sseqid',
             'sstart', 'send', etc.
-        genome_fasta (str): Path to the genome FASTA file used for sequence retrieval.
 
     Returns:
         pd.DataFrame: A processed DataFrame containing genomic ranges with associated

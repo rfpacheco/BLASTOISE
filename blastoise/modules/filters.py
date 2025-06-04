@@ -81,8 +81,7 @@ def global_filters_main(data_input, genome_fasta, writing_path, min_length):
     if not data_filtered.empty:  # Checks if the data is empty. If it is, it will skip the next part of the code
         tic = time.perf_counter()
         print("\t\t\t- Processing with BEDOPS:")
-        data_bedops = bedops_main(data_input=data_filtered,
-                                  genome_fasta=genome_fasta)
+        data_bedops = bedops_main(data_input=data_filtered)
         final_data = data_bedops.copy()
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
