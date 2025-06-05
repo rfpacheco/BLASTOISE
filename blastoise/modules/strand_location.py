@@ -5,7 +5,32 @@ import time
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 
+
 def match_data(data_input, to_discard):
+    """
+    Matches data from two DataFrame objects based on specific columns and returns the result.
+
+    This function performs an inner join operation between the input DataFrame
+    `data_input` and a subset of columns from the DataFrame `to_discard`. The
+    matching is conducted over the columns 'sseqid', 'sstart', 'send', and
+    'sstrand'. The resulting DataFrame contains rows where the values in these
+    columns align in both DataFrames.
+
+    Parameters:
+    ----------
+    data_input : pandas.DataFrame
+        The primary DataFrame to be matched against.
+    to_discard : pandas.DataFrame
+        The DataFrame from which specific columns are used to find matches
+        in `data_input`.
+
+    Returns:
+    --------
+    pandas.DataFrame
+        A DataFrame containing rows from `data_input` that share the same
+        values in the specified columns with the corresponding rows in
+        `to_discard`.
+    """
     matches = data_input.merge(
         to_discard[['sseqid', 'sstart', 'send', 'sstrand']],
         on=['sseqid', 'sstart', 'send', 'sstrand'],
@@ -16,6 +41,27 @@ def match_data(data_input, to_discard):
 
 
 def match_data_and_remove(data_input, to_discard):
+    """
+    Remove rows from a DataFrame based on matching criteria from another DataFrame.
+
+    This function identifies rows from the given `data_input` DataFrame that match the rows
+    in the `to_discard` DataFrame based on specific indexing criteria, and removes the
+    matched rows. The matching is performed using the columns 'sseqid', 'sstart', 'send',
+    and 'sstrand' as the indices for comparison.
+
+    Parameters:
+    -----------
+        data_input: pandas.DataFrame
+            The input DataFrame from which rows should be evaluated and potentially removed.
+        to_discard: pandas.DataFrame
+            A DataFrame containing rows to be matched and removed from the `data_input`
+            DataFrame based on specified criteria.
+
+    Returns:
+    --------
+        pandas.DataFrame
+            A copy of the `data_input` DataFrame with rows matching the criteria removed.
+    """
     matches = match_data(data_input, to_discard)
 
     # Remove only the matching data
@@ -29,6 +75,31 @@ def match_data_and_remove(data_input, to_discard):
 
 
 def match_data_and_set_false(data_input, to_discard):
+    """
+    Matches data based on specific conditions and updates a column in the input dataset.
+
+    This function takes a primary dataset and a dataset of elements to be discarded, then matches
+    elements based on specific coordinate-based keys. It uses these matches to update a boolean
+    column in the primary dataset, marking the matched elements as `False` in the 'analyze' column.
+
+    Parameters:
+    -----------
+    data_input : pandas.DataFrame
+        The primary dataset to be analyzed and updated. It must
+        contain the columns: 'sseqid', 'sstart', 'send', and 'sstrand'.
+
+    to_discard : pandas.DataFrame
+        The dataset containing elements that should be matched
+        and marked as not for analysis in the primary dataset.
+        Similar to `data_input`, it must also have the columns:
+        'sseqid', 'sstart', 'send', and 'sstrand'.
+
+    Returns:
+    --------
+    None
+        The function operates directly on the `data_input` DataFrame, updating
+        its 'analyze' column in-place. No new object is returned.
+    """
 
     # Get any element in `data_input` with the same start and end coordinates as `to_discard` dataset
     matches = match_data(data_input, to_discard)
@@ -40,7 +111,6 @@ def match_data_and_set_false(data_input, to_discard):
         ),
         'analyze'
     ] = False
-
 
 
 def filter_redundant_seqs(df_to_filter, df_to_contrast, df_to_discard):
@@ -406,7 +476,7 @@ def set_strand_direction(data_input):
         original_elems_plus = overlapping_elems[overlapping_elems['sstrand'] == 'plus'].copy()
         original_elems_minus = overlapping_elems[overlapping_elems['sstrand'] == 'minus'].copy()
 
-        # Transform to bedops
+        # Transform to bedops tmp files
         original_elems_plus_bedops = get_bedops_bash_file(original_elems_plus)
         original_elems_minus_bedops = get_bedops_bash_file(original_elems_minus)
 
@@ -418,36 +488,36 @@ def set_strand_direction(data_input):
         new_elems_plus = new_elems[new_elems['sstrand'] == 'plus'].copy()
         new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
 
-        # Transform to bedops
+        # Transform to bedops tmp files
         new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
         new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
 
         # Remove the elements that overlap with the original sequences
-        if original_elems_plus_bedops != '':
-            new_elems_plus_overlaps_original_minus= bedops_contrast(new_elems_plus_bedops, original_elems_minus_bedops, 'coincidence')
+        if original_elems_plus_bedops != '':  # Removing new elements in plus strand that overlaps with original strands
+            new_elems_plus_overlaps_original_minus = bedops_contrast(new_elems_plus_bedops, original_elems_minus_bedops,
+                                                                     'coincidence')
             if not new_elems_plus_overlaps_original_minus.empty:
                 new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
-            os.remove(original_elems_plus_bedops)
+            os.remove(original_elems_plus_bedops)  # Removing tmp file with no more use
 
-        if original_elems_minus_bedops != '':
-            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus_bedops, 'coincidence')
+        if original_elems_minus_bedops != '':  # Removing new elements in minus strand that overlaps with original strands
+            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus_bedops,
+                                                                     'coincidence')
             if not new_elems_minus_overlaps_original_plus.empty:
                 new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
-            os.remove(original_elems_minus_bedops)
+            os.remove(original_elems_minus_bedops)  # Removing tmp file with no more use
 
         # Join again in new_elems and remove tmp files
-        os.remove(new_elems_plus_bedops)
-        os.remove(new_elems_minus_bedops)
+        os.remove(new_elems_plus_bedops)  # Removing tmp file with no more use
+        os.remove(new_elems_minus_bedops)  # Removing tmp file with no more use
         new_elems = pd.concat([new_elems_plus, new_elems_minus])
         new_elems.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
-
-    # Combine new elements and processed leftover elements # TODO: I think, a overlapping checking status of the `new_elems` against `overlapping_elems` should take place
+    # Combine new elements and processed leftover elements
     result = pd.concat([new_elems, overlapping_elems])
 
     # Remove temp files
     os.remove(original_bedops)
     os.remove(new_bedops)
-
 
     return result
