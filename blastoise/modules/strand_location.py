@@ -5,15 +5,33 @@ import time
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 
-
-def match_data_and_set_false(data_input, to_discard):
-
-    # Get any element in `data_input` with the same start and end coordinates as `to_discard` dataset
+def match_data(data_input, to_discard):
     matches = data_input.merge(
         to_discard[['sseqid', 'sstart', 'send', 'sstrand']],
         on=['sseqid', 'sstart', 'send', 'sstrand'],
         how='inner'
     )
+
+    return matches
+
+
+def match_data_and_remove(data_input, to_discard):
+    matches = match_data(data_input, to_discard)
+
+    # Remove only the matching data
+    data_input = data_input.loc[
+        ~data_input.set_index(['sseqid', 'sstart', 'send', 'sstrand']).index.isin(
+            matches.set_index(['sseqid', 'sstart', 'send', 'sstrand']).index
+        )
+    ].copy()
+
+    return data_input
+
+
+def match_data_and_set_false(data_input, to_discard):
+
+    # Get any element in `data_input` with the same start and end coordinates as `to_discard` dataset
+    matches = match_data(data_input, to_discard)
 
     # Use the index of the matches to update the 'analyze' column in data_input
     data_input.loc[
@@ -363,8 +381,8 @@ def set_strand_direction(data_input):
     # From 'new_data', extract the elements that have the same 'sseqid, 'sstart', 'send' and 'sstrand' as in
     # `new_data_no_overlaps_original`
     new_elems = pd.merge(new_data, new_data_no_overlaps_original,
-                            on=['sseqid', 'sstart', 'send', 'sstrand'],
-                            how='inner')
+                         on=['sseqid', 'sstart', 'send', 'sstrand'],
+                         how='inner')
     print(f"\t\t\t- New elements: {new_elems.shape[0]}")
 
     # And the rest elements, which for sure, overlap
@@ -374,6 +392,8 @@ def set_strand_direction(data_input):
     print(f"\t\t\t- Overlapping elements: {overlapping_elems.shape[0]}")
 
     # Now we need to check if the overlapping is in the same strand as the original data
+    original_elems_plus_bedops = '' # Initialization
+    original_elems_minus_bedops = '' # Initialization
     if not overlapping_elems.empty:
         tic = time.perf_counter()
         print(f"\t\t\t- Checking strand orientation in overlapping elements:")
@@ -382,9 +402,40 @@ def set_strand_direction(data_input):
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
+        # Now dive the data in 'minus' and plus' strand if there are rows with 'plus' or 'minus'
+        original_elems_plus = overlapping_elems[overlapping_elems['sstrand'] == 'plus'].copy()
+        original_elems_minus = overlapping_elems[overlapping_elems['sstrand'] == 'minus'].copy()
+
+        # Transform to bedops
+        original_elems_plus_bedops = get_bedops_bash_file(original_elems_plus)
+        original_elems_minus_bedops = get_bedops_bash_file(original_elems_minus)
+
     # Let's merge the `new_elems`
     if not new_elems.empty:
         new_elems = bedops_main(new_elems)
+
+        # Now dive the data in 'minus' and plus' strand
+        new_elems_plus = new_elems[new_elems['sstrand'] == 'plus'].copy()
+        new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
+
+        # Transform to bedops
+        new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
+        new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
+
+        # Remove the elements that overlap with the original sequences
+        if original_elems_plus_bedops != '':
+            new_elems_plus_overlaps_original_minus= bedops_contrast(new_elems_plus_bedops, original_elems_minus_bedops, 'coincidence')
+            if not new_elems_plus_overlaps_original_minus.empty:
+                new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
+
+        if original_elems_minus_bedops != '':
+            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus_bedops, 'coincidence')
+            if not new_elems_minus_overlaps_original_plus.empty:
+                new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
+
+        # Join again in new_elems
+        new_elems = pd.concat([new_elems_plus, new_elems_minus])
+        new_elems.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
     # Combine new elements and processed leftover elements # TODO: I think, a overlapping checking status of the `new_elems` against `overlapping_elems` should take place
     result = pd.concat([new_elems, overlapping_elems])
