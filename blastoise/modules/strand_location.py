@@ -427,15 +427,20 @@ def set_strand_direction(data_input):
             new_elems_plus_overlaps_original_minus= bedops_contrast(new_elems_plus_bedops, original_elems_minus_bedops, 'coincidence')
             if not new_elems_plus_overlaps_original_minus.empty:
                 new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
+            os.remove(original_elems_plus_bedops)
 
         if original_elems_minus_bedops != '':
             new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus_bedops, 'coincidence')
             if not new_elems_minus_overlaps_original_plus.empty:
                 new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
+            os.remove(original_elems_minus_bedops)
 
-        # Join again in new_elems
+        # Join again in new_elems and remove tmp files
+        os.remove(new_elems_plus_bedops)
+        os.remove(new_elems_minus_bedops)
         new_elems = pd.concat([new_elems_plus, new_elems_minus])
         new_elems.sort_values(by=['sseqid', 'sstart'], inplace=True)
+
 
     # Combine new elements and processed leftover elements # TODO: I think, a overlapping checking status of the `new_elems` against `overlapping_elems` should take place
     result = pd.concat([new_elems, overlapping_elems])
