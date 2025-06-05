@@ -496,15 +496,15 @@ def set_strand_direction(data_input):
         if original_elems_minus_bedops != '':  # Removing new elements in minus strand that overlaps with original strands
             new_elems_plus_overlaps_original_minus = bedops_contrast(new_elems_plus_bedops, original_elems_minus_bedops,
                                                                      'coincidence')
-            if not new_elems_plus_overlaps_original_minus.empty:
-                new_elems_minus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
+            if not new_elems_plus_overlaps_original_minus.empty: # MAIN TAKE
+                new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
             os.remove(original_elems_minus_bedops)  # Removing tmp file with no more use
 
         if original_elems_plus_bedops != '':  # Removing new elements in plus strand that overlaps with original strands
-            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_plus_bedops, original_elems_plus_bedops,
+            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus_bedops,
                                                                      'coincidence')
-            if not new_elems_minus_overlaps_original_plus.empty:
-                new_elems_plus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
+            if not new_elems_minus_overlaps_original_plus.empty: # MAIN TAKE
+                new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
             os.remove(original_elems_plus_bedops)  # Removing tmp file with no more use
 
         # Join again in new_elems and remove tmp files
