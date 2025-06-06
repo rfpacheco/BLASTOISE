@@ -294,14 +294,14 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
 
         # NOTE: this part is important
         # Get the original elements from `original_overlapping_data` that overlap with `new_overlapping_data_that_overlaps_with_selected_original`
-        new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(new_overlapping_data_that_overlaps_with_selected_original) # TODO: remove tmp file
+        new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(new_overlapping_data_that_overlaps_with_selected_original)
         og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original = bedops_contrast(
             original_overlapping_data,
             new_overlapping_data_that_overlaps_with_selected_original_bedops,
             'coincidence'
         )
         og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
-            og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original)  # TODO: remove tmp file
+            og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original)
 
         # NOTE: important part
         # `row_df` connects with `original_overlaps_with_row_df`. But sometimes, all new elements similar like `row_df`
@@ -312,14 +312,17 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
         alien_elem = bedops_contrast(og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops,
                                      original_overlaps_with_row_df_bedops,
                                      'opposite')
+        os.remove(og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops)
 
         ## Get the 'new_elem' that overlaps with the `alien_elem`
-        alien_elem_bedops = get_bedops_bash_file(alien_elem) # TODO: remove temp file
+        alien_elem_bedops = get_bedops_bash_file(alien_elem)
         new_overlapping_data_that_overlaps_with_alien_elem = bedops_contrast(
             new_overlapping_data_that_overlaps_with_selected_original_bedops,
             alien_elem_bedops,
             'coincidence'
         )
+        os.remove(alien_elem_bedops)
+        os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
 
         ## And remove that element from `new_overlapping_data_that_overlaps_with_selected_original`
         new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
@@ -483,7 +486,7 @@ def set_strand_direction(data_input):
     new_bedops = get_bedops_bash_file(new_data)
 
     # Get the newly discovered elements that do not match with the already existing sequences
-    new_data_no_overlaps_original = bedops_contrast(new_bedops, original_bedops, 'opposite') # TODO: there's a special case, new data. But that will overlap other data after `set_overlapping_status` takes place
+    new_data_no_overlaps_original = bedops_contrast(new_bedops, original_bedops, 'opposite')
 
     # `new_data_no_overlaps_original` are considered new elements. Let's save them correctly.
     # From 'new_data', extract the elements that have the same 'sseqid, 'sstart', 'send' and 'sstrand' as in
