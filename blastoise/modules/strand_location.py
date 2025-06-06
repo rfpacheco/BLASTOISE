@@ -499,13 +499,19 @@ def set_strand_direction(data_input):
         # And remove them
         if not new_elems_plus_overlap_with_new_elems_minus.empty:
             new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlap_with_new_elems_minus)
+            os.remove(new_elems_plus_bedops)  # Remove tmp files after use
 
         if not new_elems_minus_overlap_with_new_elems_plus.empty:
             new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlap_with_new_elems_plus)
+            os.remove(new_elems_minus_bedops)  # Remove tmp files after use
 
         # Not let's merge the results
         new_elems_plus = bedops_main(new_elems_plus)
         new_elems_minus = bedops_main(new_elems_minus)
+
+        # And make again the tmp files
+        new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
+        new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
 
         # Remove the elements that overlap with the original sequences
         if original_elems_minus_bedops != '':  # Removing new elements in minus strand that overlaps with original strands
