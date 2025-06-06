@@ -345,6 +345,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                 # We will add the data to the strand it matches.
                 # The one with inverse match, will be ignored
                 for _, elem in original_overlaps_with_row_df.iterrows():
+                    # TODO: this wrong, need to change it
                     if elem['sstrand'] == row_df['sstrand'].iloc[0]: # Only when they are in the same strand
                         elem = pd.DataFrame(elem).T
                         elem_bedops = get_bedops_bash_file(elem)
@@ -480,10 +481,7 @@ def set_strand_direction(data_input):
         original_elems_plus_bedops = get_bedops_bash_file(original_elems_plus)
         original_elems_minus_bedops = get_bedops_bash_file(original_elems_minus)
 
-    # Let's merge the `new_elems`
     if not new_elems.empty:
-        new_elems = bedops_main(new_elems)
-
         # Now dive the data in 'minus' and plus' strand
         new_elems_plus = new_elems[new_elems['sstrand'] == 'plus'].copy()
         new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
@@ -491,6 +489,23 @@ def set_strand_direction(data_input):
         # Transform to bedops tmp files
         new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
         new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
+
+        # First, for each new element before being merged. Let's remove elements in the contrary strands that overlap with each other
+        new_elems_plus_overlap_with_new_elems_minus = bedops_contrast(new_elems_plus_bedops, new_elems_minus_bedops,
+                                                                      'coincidence')
+        new_elems_minus_overlap_with_new_elems_plus = bedops_contrast(new_elems_minus_bedops, new_elems_plus_bedops,
+                                                                      'coincidence')
+
+        # And remove them
+        if not new_elems_plus_overlap_with_new_elems_minus.empty:
+            new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlap_with_new_elems_minus)
+
+        if not new_elems_minus_overlap_with_new_elems_plus.empty:
+            new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlap_with_new_elems_plus)
+
+        # Not let's merge the results
+        new_elems_plus = bedops_main(new_elems_plus)
+        new_elems_minus = bedops_main(new_elems_minus)
 
         # Remove the elements that overlap with the original sequences
         if original_elems_minus_bedops != '':  # Removing new elements in minus strand that overlaps with original strands
