@@ -322,7 +322,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             'coincidence'
         )
         os.remove(alien_elem_bedops)
-        os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
+        # os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
 
         ## And remove that element from `new_overlapping_data_that_overlaps_with_selected_original`
         new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
@@ -332,6 +332,61 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
 
         ## And set the element to False
         match_data_and_set_false(new_overlapping_data, new_overlapping_data_that_overlaps_with_alien_elem)
+
+        # NOTE: second important extension filter
+           ## Divide in strands
+        new_plus_overlapping_data_that_overlaps_with_selected_original = new_overlapping_data_that_overlaps_with_selected_original[
+            new_overlapping_data_that_overlaps_with_selected_original['sstrand'] == 'plus'
+        ].copy()
+
+        new_minus_overlapping_data_that_overlaps_with_selected_original = new_overlapping_data_that_overlaps_with_selected_original[
+            new_overlapping_data_that_overlaps_with_selected_original['sstrand'] == 'minus'
+        ]
+
+        ## Get bedops files for each one
+        new_plus_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
+            new_plus_overlapping_data_that_overlaps_with_selected_original)
+
+        new_minus_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
+            new_minus_overlapping_data_that_overlaps_with_selected_original)
+
+        ## Check for coincidence in each one against each other
+        plus_over_minus = bedops_contrast(
+            new_plus_overlapping_data_that_overlaps_with_selected_original_bedops,
+            new_minus_overlapping_data_that_overlaps_with_selected_original_bedops,
+            'coincidence'
+        )
+
+        minus_over_plus = bedops_contrast(
+            new_minus_overlapping_data_that_overlaps_with_selected_original_bedops,
+            new_plus_overlapping_data_that_overlaps_with_selected_original_bedops,
+            'coincidence'
+        )
+
+        # Remove tmp files
+        os.remove(new_plus_overlapping_data_that_overlaps_with_selected_original_bedops)
+        os.remove(new_minus_overlapping_data_that_overlaps_with_selected_original_bedops)
+
+        # Get the one pd.DataFrame with the less data, only if both data frames have info
+        if not plus_over_minus.empty and not minus_over_plus.empty:
+            small_hit = plus_over_minus if plus_over_minus.shape[0] < minus_over_plus.shape[0] else minus_over_plus
+        else:
+            small_hit = None
+
+        # Join both "plus" and "minus" original secunces
+        new_overlapping_data_that_overlaps_with_selected_original = pd.concat(
+            [new_plus_overlapping_data_that_overlaps_with_selected_original,
+             new_minus_overlapping_data_that_overlaps_with_selected_original]
+        )
+        new_overlapping_data_that_overlaps_with_selected_original.sort_values(by=['sseqid', 'send'], inplace=True)
+
+        # If small hit exist, then remove from `new_overlapping_data` the sequences
+        # that have the same 'sseqid', 'sstart', 'send' and 'sstrand' as `small_hit`
+        if small_hit:
+            match_data_and_remove(new_overlapping_data, small_hit)
+        else: # Keep going with as if this second filter didn't happened
+            pass
+
 
         # Create the "discard" dataframe
         discard_df = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
