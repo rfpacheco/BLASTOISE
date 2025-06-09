@@ -266,7 +266,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
     # Set the 'analyze' column to True
     new_overlapping_data['analyze'] = True  # Only True values will be analyzed, the rest will be skipped.
     new_overlapping_data_bedops = get_bedops_bash_file(new_overlapping_data)
-
+    # TODO: Review elements that do not merge when enxt to each other
     for index, row in new_overlapping_data.iterrows():
         if not new_overlapping_data.at[index, 'analyze']:
             # IMPORTANT: with `at` we access the original DataFrame, not the copy. Because in `.iterrows()`, we access
@@ -283,7 +283,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             row_df_bedops,
             'coincidence'
         )
-
+        # TODO: filter out all 'FALSE' status
         # Get the new elements from `new_overlapping_data` that overlap with `original_overlaps_with_row_df`
         original_overlaps_with_row_df_bedops = get_bedops_bash_file(original_overlaps_with_row_df) # tmp bedops file
         new_overlapping_data_that_overlaps_with_selected_original = bedops_contrast(
@@ -334,59 +334,44 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
         match_data_and_set_false(new_overlapping_data, new_overlapping_data_that_overlaps_with_alien_elem)
 
         # NOTE: second important extension filter
-           ## Divide in strands
-        new_plus_overlapping_data_that_overlaps_with_selected_original = new_overlapping_data_that_overlaps_with_selected_original[
-            new_overlapping_data_that_overlaps_with_selected_original['sstrand'] == 'plus'
-        ].copy()
+        ## Check for more 'new elems' that can overlap with our actual 'new_elems'
+        # Get OTHER elems that overlap with 'new_overlapping_data_that_overlaps_with_selected_original'
+        all_new_elems_overlap_with_selected_new_elems = bedops_contrast(
+            new_overlapping_data_bedops,
+            new_overlapping_data_that_overlaps_with_selected_original_bedops,
+            'coincidence'
+        )
+        # Remove already existence elements in 'original_overlaps_with_row_df' that are in 'all_new_elems_overlap_with_selected_new_elems'
+        all_new_elems_overlap_with_selected_new_elems = match_data_and_remove(
+            all_new_elems_overlap_with_selected_new_elems,
+            new_overlapping_data_that_overlaps_with_selected_original
+        )
+        all_new_elems_overlap_with_selected_new_elems_bedops = get_bedops_bash_file(
+            all_new_elems_overlap_with_selected_new_elems) # tmp file
 
-        new_minus_overlapping_data_that_overlaps_with_selected_original = new_overlapping_data_that_overlaps_with_selected_original[
-            new_overlapping_data_that_overlaps_with_selected_original['sstrand'] == 'minus'
-        ]
-
-        ## Get bedops files for each one
-        new_plus_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
-            new_plus_overlapping_data_that_overlaps_with_selected_original)
-
-        new_minus_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
-            new_minus_overlapping_data_that_overlaps_with_selected_original)
-
-        ## Check for coincidence in each one against each other
-        plus_over_minus = bedops_contrast(
-            new_plus_overlapping_data_that_overlaps_with_selected_original_bedops,
-            new_minus_overlapping_data_that_overlaps_with_selected_original_bedops,
+        # And the contrary
+        selected_new_elems_overlap_with_all_new_elems = bedops_contrast(
+            new_overlapping_data_that_overlaps_with_selected_original_bedops,
+            all_new_elems_overlap_with_selected_new_elems_bedops,
             'coincidence'
         )
 
-        minus_over_plus = bedops_contrast(
-            new_minus_overlapping_data_that_overlaps_with_selected_original_bedops,
-            new_plus_overlapping_data_that_overlaps_with_selected_original_bedops,
-            'coincidence'
-        )
+        os.remove(all_new_elems_overlap_with_selected_new_elems_bedops)
 
-        # Remove tmp files
-        os.remove(new_plus_overlapping_data_that_overlaps_with_selected_original_bedops)
-        os.remove(new_minus_overlapping_data_that_overlaps_with_selected_original_bedops)
-
-        # Get the one pd.DataFrame with the less data, only if both data frames have info
-        if not plus_over_minus.empty and not minus_over_plus.empty:
-            small_hit = plus_over_minus if plus_over_minus.shape[0] < minus_over_plus.shape[0] else minus_over_plus
-        else:
-            small_hit = None
-
-        # Join both "plus" and "minus" original secunces
-        new_overlapping_data_that_overlaps_with_selected_original = pd.concat(
-            [new_plus_overlapping_data_that_overlaps_with_selected_original,
-             new_minus_overlapping_data_that_overlaps_with_selected_original]
-        )
-        new_overlapping_data_that_overlaps_with_selected_original.sort_values(by=['sseqid', 'send'], inplace=True)
-
-        # If small hit exist, then remove from `new_overlapping_data` the sequences
-        # that have the same 'sseqid', 'sstart', 'send' and 'sstrand' as `small_hit`
-        if small_hit:
-            match_data_and_remove(new_overlapping_data, small_hit)
-        else: # Keep going with as if this second filter didn't happened
-            pass
-
+        # Now, make "FALSE" this both datasets in the original data, only if there are data inside
+        if not all_new_elems_overlap_with_selected_new_elems.empty:
+            match_data_and_set_false(new_overlapping_data, all_new_elems_overlap_with_selected_new_elems)
+        if not selected_new_elems_overlap_with_all_new_elems.empty:
+            match_data_and_set_false(new_overlapping_data, selected_new_elems_overlap_with_all_new_elems)
+            # IMPORTANT: Remove these data from `new_overlapping_data_that_overlaps_with_selected_original`
+            new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
+                new_overlapping_data_that_overlaps_with_selected_original,
+                selected_new_elems_overlap_with_all_new_elems
+            )
+            # Check if 'row_df' is included in 'selected_new_elems_overlap_with_all_new_elems', if so, "skip" this iteration
+            is_inside = match_data(row_df, selected_new_elems_overlap_with_all_new_elems)
+            if not is_inside.empty:
+                continue # If the row is inside, skip it.
 
         # Create the "discard" dataframe
         discard_df = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
