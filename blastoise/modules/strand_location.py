@@ -283,13 +283,20 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             row_df_bedops,
             'coincidence'
         )
-        # TODO: filter out all 'FALSE' status
         # Get the new elements from `new_overlapping_data` that overlap with `original_overlaps_with_row_df`
         original_overlaps_with_row_df_bedops = get_bedops_bash_file(original_overlaps_with_row_df) # tmp bedops file
         new_overlapping_data_that_overlaps_with_selected_original = bedops_contrast(
             new_overlapping_data_bedops,
             original_overlaps_with_row_df_bedops,
             'coincidence'
+        )
+        # Select only the ones with column 'True' in `new_overlapping_data`.
+        ## Select False elements
+        only_false_new_overlapping_data = new_overlapping_data.loc[new_overlapping_data['analyze'] == False]
+        ## Remove these elements from `new_overlapping_data_that_overlaps_with_selected_original`
+        new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
+            new_overlapping_data_that_overlaps_with_selected_original,
+            only_false_new_overlapping_data
         )
 
         # NOTE: this part is important
@@ -333,6 +340,20 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
         ## And set the element to False
         match_data_and_set_false(new_overlapping_data, new_overlapping_data_that_overlaps_with_alien_elem)
 
+        # Recalculate only true values, because of alien data set removal
+        ## Select False elements
+        only_false_new_overlapping_data = new_overlapping_data.loc[new_overlapping_data['analyze'] == False]
+        ## Remove these elements from `new_overlapping_data_that_overlaps_with_selected_original`
+        new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
+            new_overlapping_data_that_overlaps_with_selected_original,
+            only_false_new_overlapping_data
+        )
+
+        # Replace the bedops version:
+        os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
+        new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
+            new_overlapping_data_that_overlaps_with_selected_original)
+
         # NOTE: second important extension filter
         ## Check for more 'new elems' that can overlap with our actual 'new_elems'
         # Get OTHER elems that overlap with 'new_overlapping_data_that_overlaps_with_selected_original'
@@ -341,6 +362,14 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
             new_overlapping_data_that_overlaps_with_selected_original_bedops,
             'coincidence'
         )
+        # Let's remove false values again
+        ## Select False elements
+        only_false_new_overlapping_data = new_overlapping_data.loc[new_overlapping_data['analyze'] == False]
+        all_new_elems_overlap_with_selected_new_elems = match_data_and_remove(
+            all_new_elems_overlap_with_selected_new_elems,
+            only_false_new_overlapping_data
+        )
+
         # Remove already existence elements in 'original_overlaps_with_row_df' that are in 'all_new_elems_overlap_with_selected_new_elems'
         all_new_elems_overlap_with_selected_new_elems = match_data_and_remove(
             all_new_elems_overlap_with_selected_new_elems,
@@ -422,10 +451,71 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                     ]
                     match_data_and_set_false(new_overlapping_data, elem_in_same_strand)
             elif dict_len > 1:  # The overlapping elems are in different strands
+                # There are some cases where both `original_overlaps_with_row_df` don't overlap. But the new
+                # `new_overlapping_data_that_overlaps_with_selected_original` makes them overlap.
+                if original_overlaps_with_row_df.shape[0] == 2:
+                    first_og = pd.DataFrame(original_overlaps_with_row_df.loc[0]).T
+                    second_og = pd.DataFrame(original_overlaps_with_row_df.loc[1]).T
+
+                    # Take bedops files
+                    first_og_bedops = get_bedops_bash_file(first_og)
+                    second_og_bedops = get_bedops_bash_file(second_og)
+                    new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
+                        new_overlapping_data_that_overlaps_with_selected_original)
+
+                    new_elems_overlap_first_og = bedops_contrast(
+                        new_overlapping_data_that_overlaps_with_selected_original_bedops,
+                        first_og_bedops,
+                        'coincidence'
+                    )
+
+                    new_elems_overlap_second_og = bedops_contrast(
+                        new_overlapping_data_that_overlaps_with_selected_original_bedops,
+                        second_og_bedops,
+                        'coincidence'
+                    )
+
+                    # Remove tmp files
+                    os.remove(first_og_bedops)
+                    os.remove(second_og_bedops)
+                    os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
+
+                    # Take the elements that overlap in `new_elems_overlap_first_og` and `new_elems_overlap_second_og`
+                    ## Create bedops
+                    new_elems_overlap_first_og_bedops = get_bedops_bash_file(new_elems_overlap_first_og)
+                    new_elems_overlap_second_og_bedops = get_bedops_bash_file(new_elems_overlap_second_og)
+                    elems_to_remove_first_og = bedops_contrast(
+                        new_elems_overlap_first_og_bedops,
+                        new_elems_overlap_second_og_bedops,
+                        'coincidence'
+                    )
+                    elems_to_remove_second_og = bedops_contrast(
+                        new_elems_overlap_second_og_bedops,
+                        new_elems_overlap_first_og_bedops,
+                        'coincidence'
+                    )
+                    # Remove tmp files
+                    os.remove(new_elems_overlap_first_og_bedops)
+                    os.remove(new_elems_overlap_second_og_bedops)
+
+                    # Concat the data
+                    elems_to_remove = pd.concat([elems_to_remove_first_og, elems_to_remove_second_og])
+                    #Remove duplicates
+                    elems_to_remove = elems_to_remove.drop_duplicates()
+
+                    # Turn to false those elements in the overlap data
+                    match_data_and_set_false(new_overlapping_data, elems_to_remove)
+
+                    # Check if the actual row is inside those elems to remove
+                    is_inside = match_data(row_df, elems_to_remove)
+                    if not is_inside.empty: # There's data
+                        continue # Skip this iteration
+                elif original_overlaps_with_row_df.shape[0] > 2: # Sometimes is, e.g., "minus_og" -- "plus_og" -- "minus_og"
+                    pass
+
                 # We will add the data to the strand it matches.
                 # The one with inverse match, will be ignored
                 for _, elem in original_overlaps_with_row_df.iterrows():
-                    # TODO: this wrong, need to change it
                     if elem['sstrand'] == row_df['sstrand'].iloc[0]: # Only when they are in the same strand
                         elem = pd.DataFrame(elem).T
                         elem_bedops = get_bedops_bash_file(elem)
@@ -435,7 +525,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                                                         discard_df,
                                                         new_overlapping_data,
                                                         index
-                        )
+                                                        )
                         os.remove(elem_bedops) # Remove tmp file
                     else: # if the element doesn't match the strand
                         pass
