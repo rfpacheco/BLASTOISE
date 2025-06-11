@@ -312,64 +312,76 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
 
         # NOTE: important part
         # `row_df` connects with `original_overlaps_with_row_df`. But sometimes, all new elements similar like `row_df`
-        # gathered in `new_overlapping_data_that_overlaps_with_selected_original`, can overextend a connect with other element
+        # gathered in `new_overlapping_data_that_overlaps_with_selected_original`, can overextend a connecting with another element
         # in `og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original` --> Remove the elements from
-        # `new_overlapping_data_that_overlaps_with_selected_original` that connect with that 'alien' element
-        ## Get the alien element not equal to `original_overlaps_with_row_df`
-        alien_elem = bedops_contrast(og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops,
-                                     original_overlaps_with_row_df_bedops,
-                                     'opposite')
-        os.remove(og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops)
+        # `new_overlapping_data_that_overlaps_with_selected_original` that connect with that 'alien' element.
+        # However, only implement this when these sequences are in opposite strands.
 
-        ## Get the 'new_elem' that overlaps with the `alien_elem`
-        alien_elem_bedops = get_bedops_bash_file(alien_elem)
-        new_overlapping_data_that_overlaps_with_alien_elem = bedops_contrast(
-            new_overlapping_data_that_overlaps_with_selected_original_bedops,
-            alien_elem_bedops,
-            'coincidence'
-        )
-        os.remove(alien_elem_bedops)
-        # os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
+        ## Check if the sequences in `og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops`
+        ## are in different strands.
+        strand_counter = {}
+        for _, elem in og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original.iterrows():
+            if elem['sstrand'] in strand_counter:
+                strand_counter[elem['sstrand']] += 1
+            else:
+                strand_counter[elem['sstrand']] = 1
+        strand_counter_len = len(strand_counter)
+        if strand_counter_len > 1: # If they are in the different strands
+            ## Get the alien element not equal to `original_overlaps_with_row_df`
+            alien_elem = bedops_contrast(og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops,
+                                         original_overlaps_with_row_df_bedops,
+                                         'opposite')
+            os.remove(og_that_overlaps_with_new_overlapping_data_that_overlaps_with_selected_original_bedops)
 
-        ## And remove that element from `new_overlapping_data_that_overlaps_with_selected_original`
-        new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
-            new_overlapping_data_that_overlaps_with_selected_original,
-            new_overlapping_data_that_overlaps_with_alien_elem
-        )
+            ## Get the 'new_elem' that overlaps with the `alien_elem`
+            alien_elem_bedops = get_bedops_bash_file(alien_elem)
+            new_overlapping_data_that_overlaps_with_alien_elem = bedops_contrast(
+                new_overlapping_data_that_overlaps_with_selected_original_bedops,
+                alien_elem_bedops,
+                'coincidence'
+            )
+            os.remove(alien_elem_bedops)
 
-        ## And set the element to False
-        match_data_and_set_false(new_overlapping_data, new_overlapping_data_that_overlaps_with_alien_elem)
+            ## And remove that element from `new_overlapping_data_that_overlaps_with_selected_original`
+            new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
+                new_overlapping_data_that_overlaps_with_selected_original,
+                new_overlapping_data_that_overlaps_with_alien_elem
+            )
 
-        # Recalculate only true values, because of alien data set removal
-        ## Select False elements
-        only_false_new_overlapping_data = new_overlapping_data.loc[new_overlapping_data['analyze'] == False]
-        ## Remove these elements from `new_overlapping_data_that_overlaps_with_selected_original`
-        new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
-            new_overlapping_data_that_overlaps_with_selected_original,
-            only_false_new_overlapping_data
-        )
+            ## And set the element to False
+            match_data_and_set_false(new_overlapping_data, new_overlapping_data_that_overlaps_with_alien_elem)
 
-        # Replace the bedops version:
-        os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
-        new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
-            new_overlapping_data_that_overlaps_with_selected_original)
+            # Recalculate only true values, because of alien data set removal
+            ## Select False elements
+            only_false_new_overlapping_data = new_overlapping_data.loc[new_overlapping_data['analyze'] == False]
+            ## Remove these elements from `new_overlapping_data_that_overlaps_with_selected_original`
+            new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
+                new_overlapping_data_that_overlaps_with_selected_original,
+                only_false_new_overlapping_data
+            )
+
+            # Replace the bedops version:
+            os.remove(new_overlapping_data_that_overlaps_with_selected_original_bedops)
+            new_overlapping_data_that_overlaps_with_selected_original_bedops = get_bedops_bash_file(
+                new_overlapping_data_that_overlaps_with_selected_original)
+
+
 
         # NOTE: second important extension filter
         ## Check for more 'new elems' that can overlap with our actual 'new_elems'
         # Get OTHER elems that overlap with 'new_overlapping_data_that_overlaps_with_selected_original'
+        # Let's remove false values again
+        ## Select False elements
         all_new_elems_overlap_with_selected_new_elems = bedops_contrast(
             new_overlapping_data_bedops,
             new_overlapping_data_that_overlaps_with_selected_original_bedops,
             'coincidence'
         )
-        # Let's remove false values again
-        ## Select False elements
         only_false_new_overlapping_data = new_overlapping_data.loc[new_overlapping_data['analyze'] == False]
         all_new_elems_overlap_with_selected_new_elems = match_data_and_remove(
             all_new_elems_overlap_with_selected_new_elems,
             only_false_new_overlapping_data
         )
-
         # Remove already existence elements in 'original_overlaps_with_row_df' that are in 'all_new_elems_overlap_with_selected_new_elems'
         all_new_elems_overlap_with_selected_new_elems = match_data_and_remove(
             all_new_elems_overlap_with_selected_new_elems,
@@ -378,29 +390,47 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
         all_new_elems_overlap_with_selected_new_elems_bedops = get_bedops_bash_file(
             all_new_elems_overlap_with_selected_new_elems) # tmp file
 
-        # And the contrary
-        selected_new_elems_overlap_with_all_new_elems = bedops_contrast(
-            new_overlapping_data_that_overlaps_with_selected_original_bedops,
+        # Check how many elements in 'original_overlapping_data' overlaps with 'all_new_elems_overlap_with_selected_new_elems'
+        all_og_elems_overlap_with_selected_new_elems = bedops_contrast(
+            original_overlapping_data,
             all_new_elems_overlap_with_selected_new_elems_bedops,
             'coincidence'
         )
 
-        os.remove(all_new_elems_overlap_with_selected_new_elems_bedops)
+        strand_counter_2 = {}
+        for _, elem in all_og_elems_overlap_with_selected_new_elems.iterrows():
+            if elem['sstrand'] in strand_counter_2:
+                strand_counter_2[elem['sstrand']] += 1
+            else:
+                strand_counter_2[elem['sstrand']] = 1
+        strand_counter_2_len = len(strand_counter_2)
 
-        # Now, make "FALSE" this both datasets in the original data, only if there are data inside
-        if not all_new_elems_overlap_with_selected_new_elems.empty:
-            match_data_and_set_false(new_overlapping_data, all_new_elems_overlap_with_selected_new_elems)
-        if not selected_new_elems_overlap_with_all_new_elems.empty:
-            match_data_and_set_false(new_overlapping_data, selected_new_elems_overlap_with_all_new_elems)
-            # IMPORTANT: Remove these data from `new_overlapping_data_that_overlaps_with_selected_original`
-            new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
-                new_overlapping_data_that_overlaps_with_selected_original,
-                selected_new_elems_overlap_with_all_new_elems
+        if strand_counter_len > 1 or strand_counter_2_len > 2:  # If they are in the different strands
+            # And the contrary
+            selected_new_elems_overlap_with_all_new_elems = bedops_contrast(
+                new_overlapping_data_that_overlaps_with_selected_original_bedops,
+                all_new_elems_overlap_with_selected_new_elems_bedops,
+                'coincidence'
             )
-            # Check if 'row_df' is included in 'selected_new_elems_overlap_with_all_new_elems', if so, "skip" this iteration
-            is_inside = match_data(row_df, selected_new_elems_overlap_with_all_new_elems)
-            if not is_inside.empty:
-                continue # If the row is inside, skip it.
+
+            os.remove(all_new_elems_overlap_with_selected_new_elems_bedops)
+
+            # Now, make "FALSE" this both datasets in the original data, only if there are data inside
+            if not all_new_elems_overlap_with_selected_new_elems.empty:
+                match_data_and_set_false(new_overlapping_data, all_new_elems_overlap_with_selected_new_elems)
+            if not selected_new_elems_overlap_with_all_new_elems.empty:
+                match_data_and_set_false(new_overlapping_data, selected_new_elems_overlap_with_all_new_elems)
+                # IMPORTANT: Remove these data from `new_overlapping_data_that_overlaps_with_selected_original`
+                new_overlapping_data_that_overlaps_with_selected_original = match_data_and_remove(
+                    new_overlapping_data_that_overlaps_with_selected_original,
+                    selected_new_elems_overlap_with_all_new_elems
+                )
+                # Check if 'row_df' is included in 'selected_new_elems_overlap_with_all_new_elems', if so, "skip" this iteration
+                is_inside = match_data(row_df, selected_new_elems_overlap_with_all_new_elems)
+                if not is_inside.empty:
+                    continue # If the row is inside, skip it.
+        else:
+            pass
 
         # Create the "discard" dataframe
         discard_df = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
@@ -420,7 +450,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                 # Take from `new_overlapping_data_that_overlaps_with_selected_original` the elements that are in the same strand as `row_df`
                 elem_in_same_strand = new_overlapping_data_that_overlaps_with_selected_original[
                     new_overlapping_data_that_overlaps_with_selected_original['sstrand'] == row_df['sstrand'].iloc[0]
-                ]
+                    ]
                 match_data_and_set_false(new_overlapping_data, elem_in_same_strand)
         else: # means `row_df` overlapped with > 1 elem
             # ---------------------------------------------------------------
@@ -448,7 +478,7 @@ def set_overlapping_status(new_overlapping_data, original_overlapping_data):
                     # shall be removed
                     elem_in_same_strand = new_overlapping_data_that_overlaps_with_selected_original[
                         new_overlapping_data_that_overlaps_with_selected_original['sstrand'] == row_df['sstrand'].iloc[0]
-                    ]
+                        ]
                     match_data_and_set_false(new_overlapping_data, elem_in_same_strand)
             elif dict_len > 1:  # The overlapping elems are in different strands
                 # There are some cases where both `original_overlaps_with_row_df` don't overlap. But the new
