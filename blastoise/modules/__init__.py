@@ -7,7 +7,8 @@ __all__ = [
     "filters",
     "bedops",
     "compare",
-    "strand_location"
+    "strand_location",
+    "own_bedops"
 ]
 
 # noinspection PyUnresolvedReferences

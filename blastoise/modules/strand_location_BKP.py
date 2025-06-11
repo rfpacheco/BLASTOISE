@@ -5,6 +5,7 @@ import time
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 
+
 def match_data(data_input, to_discard):
     """
     Matches data from two DataFrame objects based on specific columns and returns the result.
