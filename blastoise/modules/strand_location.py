@@ -2,6 +2,7 @@
 import pandas as pd
 import os
 import time
+from joblib import Parallel, delayed
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 from modules.own_bedops import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
@@ -149,55 +150,44 @@ def process_overlapping_data(
         match_data_and_set_false(new_df, all_elems_inrange_same_strand)
 
 
-def set_overlapping_status(new_df: pd.DataFrame, og_df: pd.DataFrame) -> pd.DataFrame:
+def _set_overlapping_status_single(chrom: str,
+                                   new_df_chr: pd.DataFrame,
+                                   og_df_chr: pd.DataFrame) -> pd.DataFrame:
     """
-    Analyzes and updates overlapping genomic regions based on strand compatibility. For each 
-    genomic region in the input data, determines if it overlaps with regions in the contrast data. 
-    If overlaps exist and strands match, the regions are extended and merged. Regions with 
-    mismatched strands are marked for removal.
+    **INTERNAL** helper that contains the ORIGINAL sequential algorithm.
 
-    Parameters
-    ----------
-    new_df : pd.DataFrame
-        Set of sequences that overlap with one or more sequences in `og_df`.
-
-    og_df : pd.DataFrame
-        Set of sequences containing the original sequences that `new_df` overlaps with.
-
-    Returns
-    -------
-    pd.DataFrame
-        Processed dataframe with:
-        - Updated start/end positions for merged overlapping regions
-        - Removed rows for non-overlapping or strand-mismatched regions
-        - Original rows converted to integer coordinates
+    It is executed by a single worker and receives data restricted to one
+    chromosome.  Code below the ‘BEGIN ORIGINAL CODE’ comment is *exactly*
+    what used to be inside the old `set_overlapping_status` body – so
+    nothing changes logically, we only moved it into a private function.
     """
-
+    # ------------------------------------------------------------------
+    # BEGIN ORIGINAL CODE (cut-and-paste of the old implementation)
+    # ------------------------------------------------------------------
     # To avoid taking in data already analyzed, insert a boolean True column. NOTE: important
-    new_df['analyze'] = True
+    new_df_chr['analyze'] = True
     counter = 0
-    for idx, row in new_df.iterrows():  # TODO: if I could devide the data by chromosomes, and implement multiprocessing in each chromosome it would be fantastic
+    for idx, row in new_df_chr.iterrows():  # TODO: if I could devide the data by chromosomes, and implement multiprocessing in each chromosome it would be fantastic
         # Skip already processed elements to avoid processing them again
         counter += 1
-        if not new_df.loc[idx, 'analyze']:
+        if not new_df_chr.loc[idx, 'analyze']:
             continue
-        print(f"\t\t\t\t- Processing row {counter}/{len(new_df)}")
 
         # Get row as a pd.DataFrame and not a pd.Series
-        row = new_df.loc[idx:idx, :]
+        row = new_df_chr.loc[idx:idx, :]
 
-        # Get elements from `og_df` that overlap with `row`.
+        # Get elements from `og_df_chr` that overlap with `row`.
         # NOTO: 'vs' will be used instead of 'overlap'
-        og_vs_row = get_interval_coincidence(og_df, row)
+        og_vs_row = get_interval_coincidence(og_df_chr, row)
 
-        # And now, all the elements that overlap with `og_vs_row`. # NOTE: take only True values in `new_df`
-        new_elems_in_og_vs_row = get_interval_coincidence(new_df[new_df['analyze'] == True], og_vs_row)
+        # And now, all the elements that overlap with `og_vs_row`. # NOTE: take only True values in `new_df_chr`
+        new_elems_in_og_vs_row = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_vs_row)
 
-        # Now get all new elements that overlap with 'new_elems_in_og_vs_row'. # NOTE: take only True values in `new_df`
-        all_elems_inrange = get_interval_coincidence(new_df[new_df['analyze'] == True], new_elems_in_og_vs_row)
+        # Now get all new elements that overlap with 'new_elems_in_og_vs_row'. # NOTE: take only True values in `new_df_chr`
+        all_elems_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], new_elems_in_og_vs_row)
 
         # And get all original elements in the whole range of `all_elems_in_range`
-        all_og_inrange = get_interval_coincidence(og_df, all_elems_inrange)
+        all_og_inrange = get_interval_coincidence(og_df_chr, all_elems_inrange)
 
         # Let's count how many original elements are in "minus" and "plus" strand. There could be 4 cases
         ## 1) There's only 1 original element in range.
@@ -213,7 +203,7 @@ def set_overlapping_status(new_df: pd.DataFrame, og_df: pd.DataFrame) -> pd.Data
             # In this case it doesn't matter if its 1 sequences in `all_og_inrange` or > 2 sequences. The merged will
             # be implemented the same way
             process_overlapping_data(
-                new_df,
+                new_df_chr,
                 row,
                 idx,
                 all_og_inrange,
@@ -230,7 +220,7 @@ def set_overlapping_status(new_df: pd.DataFrame, og_df: pd.DataFrame) -> pd.Data
                 elems_to_remove_a = get_interval_coincidence(elems_of_a, elems_of_b)
                 elems_to_remove_b = get_interval_coincidence(elems_of_b, elems_of_a)
                 elems_to_remove = pd.concat([elems_to_remove_a, elems_to_remove_b]).sort_values(['sstart', 'send'])
-                match_data_and_set_false(new_df, elems_to_remove)
+                match_data_and_set_false(new_df_chr, elems_to_remove)
                 is_row_removed = match_data(row, elems_to_remove)
                 if not is_row_removed.empty:
                     continue
@@ -239,10 +229,10 @@ def set_overlapping_status(new_df: pd.DataFrame, og_df: pd.DataFrame) -> pd.Data
                     # as if it were only one `original_og_inrange`
                     og_vs_row = get_interval_coincidence(all_og_inrange, row) # Selects original data that overlaps with row
                     process_overlapping_data(
-                        new_df,
+                        new_df_chr,
                         row,
                         idx,
-                        og_vs_row, #
+                        og_vs_row,
                         all_elems_inrange
                     )
             else:
@@ -251,9 +241,60 @@ def set_overlapping_status(new_df: pd.DataFrame, og_df: pd.DataFrame) -> pd.Data
                 ## First, let's check the order
                 pass
 
-    final_data = new_df[new_df['analyze'] == True].copy()
+    final_data = new_df_chr[new_df_chr['analyze'] == True].copy()
 
     return final_data
+
+
+def set_overlapping_status(new_df: pd.DataFrame,
+                           og_df: pd.DataFrame,
+                           n_jobs: int = -1) -> pd.DataFrame:
+    """
+    Parallel wrapper around the original algorithm.
+
+    Parameters
+    ----------
+    new_df : DataFrame
+        Data to analyse.  Must contain column ``'sseqid'``.
+    og_df  : DataFrame
+        Reference data.  Must contain column ``'sseqid'``.
+    n_jobs : int, default ``-1``
+        Number of processes Joblib should spawn.  (``-1`` ⇒ use all cores,
+        ``1`` ⇒ fallback to the original single-process execution.)
+    """
+
+    # Fast exit: keep the exact behaviour if the caller explicitly disables
+    # parallelism.
+    if n_jobs == 1:
+        return _set_overlapping_status_single("ALL", new_df, og_df)
+
+    # ------------------------------------------------------------------
+    # 1. Split the two dataframes by chromosome
+    # ------------------------------------------------------------------
+    new_groups = {c: df for c, df in new_df.groupby("sseqid", sort=False)}
+    og_groups  = {c: df for c, df in og_df.groupby("sseqid", sort=False)}
+
+    # Use only chromosomes that are present in *new* – everything else
+    # would produce empty output anyway.
+    chromosomes = list(new_groups)
+
+    # ------------------------------------------------------------------
+    # 2. Run one worker per chromosome
+    # ------------------------------------------------------------------
+    results = Parallel(n_jobs=n_jobs, backend="loky")(
+        delayed(_set_overlapping_status_single)(
+            chrom,
+            new_groups[chrom],
+            og_groups.get(chrom, og_df.iloc[0:0])  # empty DF if missing
+        )
+        for chrom in chromosomes
+    )
+
+    # ------------------------------------------------------------------
+    # 3. Concatenate the per-chromosome outputs and keep original order
+    # ------------------------------------------------------------------
+    combined_df = pd.concat(results, ignore_index=True)
+    return combined_df
 
 # noinspection DuplicatedCode
 def set_strand_direction(data_input: pd.DataFrame,
