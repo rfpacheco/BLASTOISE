@@ -132,7 +132,9 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     print(f"\t\t 2.4. Setting strand orientation")
     print(f"\t\t\t- Data row length: {second_blaster_not_extended.shape[0]}")
     tic = time.perf_counter()
-    second_blaster_not_extended_oriented = set_strand_direction(data_input=second_blaster_not_extended)
+    second_blaster_not_extended_oriented = set_strand_direction(second_blaster_not_extended,
+                                                                run_phase,
+                                                                main_folder_path)
     toc = time.perf_counter()
     print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
