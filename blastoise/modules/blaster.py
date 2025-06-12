@@ -11,6 +11,7 @@ from modules.aesthetics import boxymcboxface  # Some aesthetics function
 from modules.identifiers import genome_specific_chromosome_main
 from modules.compare import compare_main
 from modules.files_manager import end_always_greater_than_start
+from extra.csv_to_gff import csv_to_gff
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -253,6 +254,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
 
 
         coincidence_data.to_csv(os.path.join(folder_path, "blastoise_df.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
+        csv_to_gff(os.path.join(folder_path, "blastoise_df.csv"))
         print("")
         print(f"4. Stopping:")
         print(f"\t- No new data found.")
@@ -275,6 +277,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
         run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
         save_run_file.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
+        csv_to_gff(run_saver_path)
         print(f"\t- Coincidence data + 'n' exclusive data + 'n-1' exclusive data: {save_run_file.shape[0]}")
         print(f"\t- Data file saved at {run_saver_path}")
 

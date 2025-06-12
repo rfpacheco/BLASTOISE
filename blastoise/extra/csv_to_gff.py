@@ -18,14 +18,13 @@ def parse_arguments():
 # =============================================================================
 # Main function
 # =============================================================================
-if __name__ == '__main__':
-    args = parse_arguments()
-    csv_file = os.path.expanduser(args.csv_file)
+def csv_to_gff(csv_file, source=".", feature=".", attribute="."):
+    csv_file = os.path.expanduser(csv_file)
     csv_file_name = os.path.basename(csv_file).replace(".csv", "")
     csv_folder = os.path.dirname(csv_file)
 
     # Read the CSV file
-    data = pd.read_csv(args.csv_file, sep=",", header=0)
+    data = pd.read_csv(csv_file, sep=",", header=0)
 
     # Strand input
     if "sstrand" in data.columns:
@@ -39,8 +38,8 @@ if __name__ == '__main__':
         pre_gff.append(
             {
                 "seqname": row["sseqid"],
-                "source": args.source,
-                "feature": args.feature,
+                "source": source,
+                "feature": feature,
                 "start": row["sstart"],
                 "end": row["send"],
                 "score": ".",
@@ -52,9 +51,14 @@ if __name__ == '__main__':
 
     # Create the GFF file
     final_gff_df = pd.DataFrame(pre_gff, columns=column_names)
-    # File path
+    # File path  
     gff_save_path = os.path.join(csv_folder, f"{csv_file_name}.gff")
 
     # Save the GFF file
     final_gff_df.to_csv(gff_save_path, sep='\t', index=False, header=False)
     print(f'GFF file saved in {gff_save_path}')
+
+
+if __name__ == '__main__':
+    args = parse_arguments()
+    csv_to_gff(args.csv_file, args.source, args.feature, args.attribute)

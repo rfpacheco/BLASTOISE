@@ -6,6 +6,7 @@ from joblib import Parallel, delayed
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 from modules.own_bedops import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
+from extra.csv_to_gff import csv_to_gff
 
 
 # noinspection DuplicatedCode
@@ -396,11 +397,17 @@ def set_strand_direction(data_input: pd.DataFrame,
         print(f"\t\t\t- Checking strand orientation in overlapping elements:")
         save_folder = os.path.join(folder_path, 'RUNS')
         os.makedirs(save_folder, exist_ok=True)
-        save_overlapping_elems = overlapping_elems.to_csv(
-            os.path.join(save_folder, f"run_{run_phase-1}_new_df.csv"), index=False
+        overlapping_elems.to_csv(
+            os.path.join(save_folder, f"run_{run_phase - 1}_new_df.csv"), index=False
         )
-        save_og_data = og_data.to_csv(
-            os.path.join(save_folder, f"run_{run_phase-1}_og_df.csv"), index=False
+        csv_to_gff(
+            os.path.join(save_folder, f"run_{run_phase - 1}_new_df.csv")
+        )
+        og_data.to_csv(
+            os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv"), index=False
+        )
+        csv_to_gff(
+            os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
         )
         overlapping_elems = set_overlapping_status(overlapping_elems, og_data)
         overlapping_elems = bedops_main(overlapping_elems) # Merge the data
