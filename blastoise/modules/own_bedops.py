@@ -14,21 +14,6 @@ def pyranges_column_name_change(df: pd.DataFrame) -> pd.DataFrame:
     return df_renamed
 
 
-def add_interval_column(df: pd.DataFrame, start_interval: str, end_interval: str) -> pd.DataFrame:
-    """
-    Adds a new column to a pandas DataFrame with pandas' intervals based on the 'sstart' and 'send' column coming from
-    bedops
-
-    Parameters:
-    -----------
-
-    Returns:
-    --------
-    """
-    df['interval'] = pd.IntervalIndex.from_arrays(df[start_interval], df[end_interval], closed='both')
-    return df
-
-
 def get_interval_coincidence(df: pd.DataFrame, interval_df: pd.DataFrame) -> pd.DataFrame:
     """
     Uses PyRanges to find overlapping intervals between df and interval_df based on sseqid, start, end.
