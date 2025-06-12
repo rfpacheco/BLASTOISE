@@ -67,3 +67,30 @@ def get_interval_not_coincidence(df: pd.DataFrame, interval_df: pd.DataFrame) ->
     })
 
     return result
+
+def merge_intervals(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merges overlapping or adjacent intervals from a DataFrame using PyRanges.
+
+    Assumes df has columns: 'chromosome', 'start', 'end'
+    Returns a DataFrame with merged intervals.
+    """
+
+    # Rename to PyRanges expected format
+    pr_df = pyranges_column_name_change(df)
+
+    # Get `pr_df` as a PyRanges obejct
+    pr_df = pr.PyRanges(pr_df)
+
+    # Merge (collapse overlapping/adjacent intervals)
+    merged = pr_df.merge()
+
+    # Convert back to DataFrame and rename
+    result = merged.df.rename(columns={
+        "Chromosome": "sseqid",
+        "Start": "sstart",
+        "End": "send"
+    })
+
+    return result
+
