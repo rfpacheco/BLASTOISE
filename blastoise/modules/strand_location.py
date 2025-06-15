@@ -4,6 +4,8 @@ import os
 import time
 from joblib import Parallel, delayed
 
+from typing import Hashable
+
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
 from modules.own_bedops import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
 from extra.csv_to_gff import csv_to_gff
@@ -120,7 +122,7 @@ def match_data_and_set_false(data_input, to_discard):
 def process_overlapping_data(
         new_df: pd.DataFrame,
         row_df: pd.DataFrame,  # will have only 1 sequence
-        idx: int,
+        idx: Hashable,
         all_og_inrange: pd.DataFrame,  # will have only 1 sequence
         all_elems_inrange: pd.DataFrame  # will have multipel sequences
 ) -> None:
@@ -150,10 +152,120 @@ def process_overlapping_data(
         # And remove these elements from the `new_df`
         match_data_and_set_false(new_df, all_elems_inrange_same_strand)
 
+def smart_merge_across_flips(
+    all_og_inrange: pd.DataFrame,
+    all_elems_inrange: pd.DataFrame,
+    strand_col: str = "sstrand",
+    start_col: str = "sstart",
+    end_col: str = "send",
+) -> pd.DataFrame:
+    # ──────────────────────────────────────────────────────────────────
+    # 0) Build the strand-block structure
+    # ──────────────────────────────────────────────────────────────────
+    change_points = (all_og_inrange[strand_col] != all_og_inrange[strand_col].shift())
+    block_id = change_points.cumsum()
+    all_og_inrange = all_og_inrange.assign(_block_id=block_id)
+
+    block_summary = (
+        all_og_inrange.groupby("_block_id")
+          .agg(block_start=(start_col, "min"),
+               block_end=(end_col,   "max"),
+               strand=(strand_col,   "first"))
+    )
+
+    # ──────────────────────────────────────────────────────────────────
+    # Containers
+    # ──────────────────────────────────────────────────────────────────
+    final_chunks = []
+    skip_next_blocks = set()
+
+    # ──────────────────────────────────────────────────────────────────
+    # 1) Sliding window on blocks: b0, b1, b2
+    # ──────────────────────────────────────────────────────────────────
+    ids = block_summary.index.to_list()
+    n_blocks = len(ids)
+
+    for idx, b0 in enumerate(ids):
+        if b0 in skip_next_blocks:
+            continue
+
+        b1 = ids[idx + 1] if idx + 1 < n_blocks else None
+        b2 = ids[idx + 2] if idx + 2 < n_blocks else None
+
+        # ──────────────────────────────────────────────────────────────
+        # 2) We have at least three consecutive blocks
+        # ──────────────────────────────────────────────────────────────
+        if b1 is not None and b2 is not None:
+            s0 = block_summary.loc[b0, "strand"]
+            s1 = block_summary.loc[b1, "strand"]
+            s2 = block_summary.loc[b2, "strand"]
+
+            # do outer blocks overlap?
+            ## Get all the overlapping elems for block b0 and b2 using `get_interval_coincidence`
+            elems_of_b0 = get_interval_coincidence(all_elems_inrange,
+                                                   all_og_inrange.loc[all_og_inrange["_block_id"] == b0])
+            elems_of_b2 = get_interval_coincidence(all_elems_inrange,
+                                                   all_og_inrange.loc[all_og_inrange["_block_id"] == b2])
+            ## Check if they have elements overlapping in common
+            elems_of_b0_vs_b2 = get_interval_coincidence(elems_of_b0, elems_of_b2)
+            outer_overlap = False
+            if not elems_of_b0_vs_b2.empty:
+                outer_overlap = True
+
+            # do b0 and b1 overlap?
+            ## Get all the overlapping elems for block b1 using `get_interval_coincidence`
+            elems_of_b1 = get_interval_coincidence(all_elems_inrange,
+                                                   all_og_inrange.loc[all_og_inrange["_block_id"] == b1])
+            ## Check if they have elements overlapping in common
+            elems_of_b0_vs_b1 = get_interval_coincidence(elems_of_b0, elems_of_b1)
+            inner_overlap = False
+            if not elems_of_b0_vs_b1.empty:
+                inner_overlap = True
+
+            # ─ Rule 1: outer blocks share strand & overlap ───────────
+            if s0 == s2 and s0 != s1 and outer_overlap:
+                outer_rows = pd.concat([elems_of_b0, elems_of_b2])
+                og_b1_and_b2 = pd.concat([
+                    all_og_inrange.loc[all_og_inrange["_block_id"] == b0],
+                    all_og_inrange.loc[all_og_inrange["_block_id"] == b2]
+                ])
+                all_elems = pd.concat([outer_rows, og_b1_and_b2]).drop_duplicates()
+                all_elems.sort_values(start_col)
+                collapsed_outer = merge_intervals(all_elems)
+                collapsed_outer["sstrand"] = s0
+                final_chunks.append(collapsed_outer)
+                skip_next_blocks.update({b1, b2})
+
+                continue
+
+            # ─ Rule 2: only b0 ↔ b1 overlap ─────────────────────────
+            if inner_overlap:
+                elems_of_b1_vs_b0 = get_interval_coincidence(elems_of_b1, elems_of_b0)
+                elems_to_remove = pd.concat([elems_of_b1_vs_b0, elems_of_b0_vs_b1]).drop_duplicates()
+                elems_to_remove.sort_values(start_col)
+                cleaned = match_data_and_remove(all_elems_inrange, elems_to_remove)
+                final_chunks.append(cleaned)
+                skip_next_blocks.add(b0)
+                continue
+
+        # ─ Default: keep block untouched ─────────────────────────────
+        untouched = all_og_inrange[all_og_inrange["_block_id"] == b0]
+        final_chunks.append(untouched)
+
+    # ──────────────────────────────────────────────────────────────────
+    # 3) Build final output
+    # ──────────────────────────────────────────────────────────────────
+    result = (pd.concat(final_chunks, ignore_index=True, copy=False)
+                .drop(columns="_block_id", errors="ignore")   # ← safe drop
+                .sort_values(start_col)
+                .reset_index(drop=True))
+    return result
+
 
 def _set_overlapping_status_single(chrom: str,
                                    new_df_chr: pd.DataFrame,
-                                   og_df_chr: pd.DataFrame) -> pd.DataFrame:
+                                   og_df_chr: pd.DataFrame,
+                                   run_phase: int) -> pd.DataFrame:
     """
     **INTERNAL** helper that contains the ORIGINAL sequential algorithm.
 
@@ -167,15 +279,13 @@ def _set_overlapping_status_single(chrom: str,
     # ------------------------------------------------------------------
     # To avoid taking in data already analyzed, insert a boolean True column. NOTE: important
     new_df_chr['analyze'] = True
-    counter = 0
-    for idx, row in new_df_chr.iterrows():  # TODO: if I could devide the data by chromosomes, and implement multiprocessing in each chromosome it would be fantastic
+    for idx, row in new_df_chr.iterrows():
         # Skip already processed elements to avoid processing them again
-        counter += 1
         if not new_df_chr.loc[idx, 'analyze']:
             continue
 
         # Get row as a pd.DataFrame and not a pd.Series
-        row = new_df_chr.loc[idx:idx, :]
+        row = new_df_chr.loc[idx:idx, :].copy()
 
         # Get elements from `og_df_chr` that overlap with `row`.
         # NOTO: 'vs' will be used instead of 'overlap'
@@ -185,10 +295,18 @@ def _set_overlapping_status_single(chrom: str,
         new_elems_in_og_vs_row = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_vs_row)
 
         # Now get all new elements that overlap with 'new_elems_in_og_vs_row'. # NOTE: take only True values in `new_df_chr`
-        all_elems_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], new_elems_in_og_vs_row)
+        new_elems_inrange_of_og = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], new_elems_in_og_vs_row)
 
         # And get all original elements in the whole range of `all_elems_in_range`
-        all_og_inrange = get_interval_coincidence(og_df_chr, all_elems_inrange)
+        og_inrange = get_interval_coincidence(og_df_chr, new_elems_inrange_of_og)
+
+        # Now, get all elems that overlap all this `og_inrange`
+        all_elems_vs_og_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_inrange)
+
+        # If these new elems in `all_elems_vs_og_inrange` overlap some other new element comming from a little far
+        # away original element, we need to detect them.
+        all_og_inrange = get_interval_coincidence(og_df_chr, all_elems_vs_og_inrange)
+        all_elems_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], all_og_inrange)
 
         # Let's count how many original elements are in "minus" and "plus" strand. There could be 4 cases
         ## 1) There's only 1 original element in range.
@@ -200,8 +318,8 @@ def _set_overlapping_status_single(chrom: str,
 
         # Case 1)
         # If there's only 1 element, be it 'minus' or 'plus'
-        if len(how_many_og) == 1: # Only one 'strand' is present in `all_og_inrange`
-            # In this case it doesn't matter if its 1 sequences in `all_og_inrange` or > 2 sequences. The merged will
+        if len(how_many_og) == 1: # Only one 'strand' is present in `og_inrange`
+            # In this case, it doesn't matter if its 1 sequences in `og_inrange` or > 2 sequences. The merged will
             # be implemented the same way
             process_overlapping_data(
                 new_df_chr,
@@ -214,13 +332,15 @@ def _set_overlapping_status_single(chrom: str,
             if sum(how_many_og.values()) == 2:  # The normal case is when 1 sequence is in 'plus' and the other in 'minus'
                 # In this case the first step to avoid overlaps is to remove all the sequences in `all_elems_inrange`
                 # of the original element A that overlaps all the elements in `all_elems_inrange` of element B
-                og_a = all_og_inrange.loc[0:0, :]
-                og_b = all_og_inrange.loc[1:1, :]
+                og_a = og_inrange.loc[0:0, :]
+                og_b = og_inrange.loc[1:1, :]
                 elems_of_a =get_interval_coincidence(all_elems_inrange, og_a)
                 elems_of_b =get_interval_coincidence(all_elems_inrange, og_b)
                 elems_to_remove_a = get_interval_coincidence(elems_of_a, elems_of_b)
                 elems_to_remove_b = get_interval_coincidence(elems_of_b, elems_of_a)
-                elems_to_remove = pd.concat([elems_to_remove_a, elems_to_remove_b]).sort_values(['sstart', 'send'])
+                elems_to_remove = pd.concat(
+                    [elems_to_remove_a, elems_to_remove_b]
+                ).drop_duplicates().sort_values(['sstart', 'send'])
                 match_data_and_set_false(new_df_chr, elems_to_remove)
                 is_row_removed = match_data(row, elems_to_remove)
                 if not is_row_removed.empty:
@@ -228,19 +348,65 @@ def _set_overlapping_status_single(chrom: str,
                 else:
                     # Now that the connection between the 2 `original_og_inrange` is removed. The rest will behave like
                     # as if it were only one `original_og_inrange`
-                    og_vs_row = get_interval_coincidence(all_og_inrange, row) # Selects original data that overlaps with row
+                    og_vs_row = get_interval_coincidence(og_inrange, row) # Selects original data that overlaps with row
+                    all_elems_vs_og = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_vs_row)
                     process_overlapping_data(
                         new_df_chr,
                         row,
                         idx,
                         og_vs_row,
-                        all_elems_inrange
+                        all_elems_vs_og
                     )
             else:
+
                 # These are not normal cases. For example, is when in the original data is 'minus' -- 'plus' -- 'minus',
                 # or 'plus' -- 'minus' -- 'plus', or 'plus' -- 'plus' -- 'minus'.
-                ## First, let's check the order
-                pass
+                ## First, in the `all_og_inrange` detect the strand flip
+                change_points = (all_og_inrange['sstrand'] != all_og_inrange['sstrand'].shift())
+
+                # Now check the blocks by number
+                block_id = change_points.cumsum()
+
+                if block_id.unique().shape[0] == 2:
+                    # if there are only 2 blocks, it means a structure without interlaps like:
+                    # 'plus' -- 'plus' -- 'minus' or 'plus' -- 'minus' -- 'minus'
+                    ## Take from `all_elems_inrange` the elems with each strand
+                    elems_in_plus = all_elems_inrange[all_elems_inrange['sstrand'] == 'plus']
+                    elems_in_minus = all_elems_inrange[all_elems_inrange['sstrand'] == 'minus']
+
+                    # Take the elems that overlap each one
+                    elems_in_plus_vs_minus = get_interval_coincidence(elems_in_plus, elems_in_minus)
+                    elems_in_minus_vs_plus = get_interval_coincidence(elems_in_minus, elems_in_plus)
+                    elems_to_remove = pd.concat(
+                        [elems_in_plus_vs_minus, elems_in_minus_vs_plus]
+                    ).sort_values(['sstart', 'send'])
+                    match_data_and_set_false(new_df_chr, elems_to_remove)
+                    is_row_removed = match_data(row, elems_to_remove)
+                    if not is_row_removed.empty:
+                        continue
+                    else:
+                        elems_in_row = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], row)
+                        process_overlapping_data(
+                            new_df_chr,
+                            row,
+                            idx,
+                            og_vs_row,
+                            elems_in_row
+                        )
+                else:
+                    # This one is harder, since there are interlaps for sure, something like:
+                    # 'plus' -- 'minus' -- 'plus'
+                    # Create one-row summary per block to make the window logic easier
+                    ## First make all these `all_elems_inrange` in the original `df` as False
+                    match_data_and_set_false(new_df_chr, all_elems_inrange)
+                    all_elems_inrange_resolved = smart_merge_across_flips(all_og_inrange, all_elems_inrange)
+                    idx_locator = idx
+                    for _, elem in all_elems_inrange_resolved.iterrows():
+                        # Replace each idx in `new_df_chr` for each element in `all_elems_inrange_resolved`
+                        new_df_chr.loc[idx_locator, ['sstart', 'send']] = elem[['sstart', 'send']]
+                        new_df_chr.loc[idx_locator, 'sstrand'] = elem['sstrand']
+                        new_df_chr.loc[idx_locator, 'analyze'] = True
+                        idx_locator += 1
 
     final_data = new_df_chr[new_df_chr['analyze'] == True].copy()
 
@@ -249,6 +415,7 @@ def _set_overlapping_status_single(chrom: str,
 
 def set_overlapping_status(new_df: pd.DataFrame,
                            og_df: pd.DataFrame,
+                           run_phase: int,
                            n_jobs: int = -1) -> pd.DataFrame:
     """
     Parallel wrapper around the original algorithm.
@@ -259,6 +426,8 @@ def set_overlapping_status(new_df: pd.DataFrame,
         Data to analyse.  Must contain column ``'sseqid'``.
     og_df  : DataFrame
         Reference data.  Must contain column ``'sseqid'``.
+    run_phase : int
+        Iteration counter
     n_jobs : int, default ``-1``
         Number of processes Joblib should spawn.  (``-1`` ⇒ use all cores,
         ``1`` ⇒ fallback to the original single-process execution.)
@@ -267,7 +436,7 @@ def set_overlapping_status(new_df: pd.DataFrame,
     # Fast exit: keep the exact behaviour if the caller explicitly disables
     # parallelism.
     if n_jobs == 1:
-        return _set_overlapping_status_single("ALL", new_df, og_df)
+        return _set_overlapping_status_single("ALL", new_df, og_df, run_phase)
 
     # ------------------------------------------------------------------
     # 1. Split the two dataframes by chromosome
@@ -286,7 +455,8 @@ def set_overlapping_status(new_df: pd.DataFrame,
         delayed(_set_overlapping_status_single)(
             chrom,
             new_groups[chrom],
-            og_groups.get(chrom, og_df.iloc[0:0])  # empty DF if missing
+            og_groups.get(chrom, og_df.iloc[0:0],),  # empty DF if missing
+            run_phase
         )
         for chrom in chromosomes
     )
@@ -409,7 +579,8 @@ def set_strand_direction(data_input: pd.DataFrame,
         csv_to_gff(
             os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
         )
-        overlapping_elems = set_overlapping_status(overlapping_elems, og_data)
+        multiprocesing_jobs = -1
+        overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=multiprocesing_jobs)
         overlapping_elems = bedops_main(overlapping_elems) # Merge the data
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
