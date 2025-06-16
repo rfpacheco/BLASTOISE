@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 from typing import Hashable
 
 from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
-from modules.own_bedops import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
+from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
 from extra.csv_to_gff import csv_to_gff
 
 

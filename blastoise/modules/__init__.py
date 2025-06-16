@@ -8,7 +8,7 @@ __all__ = [
     "bedops",
     "compare",
     "strand_location",
-    "own_bedops"
+    "genomic_ranges.py"
 ]
 
 # noinspection PyUnresolvedReferences
