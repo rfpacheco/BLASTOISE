@@ -6,8 +6,8 @@ from joblib import Parallel, delayed
 
 from typing import Hashable
 
-from modules.bedops import get_bedops_bash_file, bedops_contrast
-from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals, get_merge_stranded
+from modules.genomic_ranges import get_merge_stranded
+from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
 from extra.csv_to_gff import csv_to_gff
 
 
@@ -50,8 +50,8 @@ def match_data_and_remove(data_input, to_discard):
     """
     Remove rows from a DataFrame based on matching criteria from another DataFrame.
 
-    This function identifies rows from the given `data_input` DataFrame that match the rows
-    in the `to_discard` DataFrame based on specific indexing criteria, and removes the
+    This function identifies rows from the given `data_input` DataFrame that matches the rows
+    in the `to_discard` DataFrame based on specific indexing criteria and removes the
     matched rows. The matching is performed using the columns 'sseqid', 'sstart', 'send',
     and 'sstrand' as the indices for comparison.
 
@@ -162,7 +162,10 @@ def smart_merge_across_flips(
     # ──────────────────────────────────────────────────────────────────
     # 0) Build the strand-block structure
     # ──────────────────────────────────────────────────────────────────
-    change_points = (all_og_inrange[strand_col] != all_og_inrange[strand_col].shift())
+    change_points = (
+            all_og_inrange[strand_col] != all_og_inrange[strand_col].shift()
+    )
+    # noinspection PyUnresolvedReferences
     block_id = change_points.cumsum()
     all_og_inrange = all_og_inrange.assign(_block_id=block_id)
 
@@ -261,7 +264,7 @@ def smart_merge_across_flips(
                 .reset_index(drop=True))
     return result
 
-
+# noinspection PyUnusedLocal
 def _set_overlapping_status_single(chrom: str,
                                    new_df_chr: pd.DataFrame,
                                    og_df_chr: pd.DataFrame,
@@ -303,7 +306,7 @@ def _set_overlapping_status_single(chrom: str,
         # Now, get all elems that overlap all this `og_inrange`
         all_elems_vs_og_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_inrange)
 
-        # If these new elems in `all_elems_vs_og_inrange` overlap some other new element comming from a little far
+        # If these new elems in `all_elems_vs_og_inrange` overlap some other new element coming from a little far
         # away original element, we need to detect them.
         all_og_inrange = get_interval_coincidence(og_df_chr, all_elems_vs_og_inrange)
         all_elems_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], all_og_inrange)
@@ -359,12 +362,13 @@ def _set_overlapping_status_single(chrom: str,
                     )
             else:
 
-                # These are not normal cases. For example, is when in the original data is 'minus' -- 'plus' -- 'minus',
+                # These are not normal cases. For example, it is when in the original data is 'minus' -- 'plus' -- 'minus',
                 # or 'plus' -- 'minus' -- 'plus', or 'plus' -- 'plus' -- 'minus'.
                 ## First, in the `all_og_inrange` detect the strand flip
                 change_points = (all_og_inrange['sstrand'] != all_og_inrange['sstrand'].shift())
 
                 # Now check the blocks by number
+                # noinspection PyUnresolvedReferences
                 block_id = change_points.cumsum()
 
                 if block_id.unique().shape[0] == 2:
@@ -423,9 +427,9 @@ def set_overlapping_status(new_df: pd.DataFrame,
     Parameters
     ----------
     new_df : DataFrame
-        Data to analyse.  Must contain column ``'sseqid'``.
+        Data to analyze.  Must contain the column ``'sseqid'``.
     og_df  : DataFrame
-        Reference data.  Must contain column ``'sseqid'``.
+        Reference data.  Must contain the column ``'sseqid'``.
     run_phase : int
         Iteration counter
     n_jobs : int, default ``-1``
@@ -433,7 +437,7 @@ def set_overlapping_status(new_df: pd.DataFrame,
         ``1`` ⇒ fallback to the original single-process execution.)
     """
 
-    # Fast exit: keep the exact behaviour if the caller explicitly disables
+    # Fast exit: keep the exact behavior if the caller explicitly disables
     # parallelism.
     if n_jobs == 1:
         return _set_overlapping_status_single("ALL", new_df, og_df, run_phase)
@@ -612,12 +616,8 @@ def set_strand_direction(data_input: pd.DataFrame,
             new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlap_with_new_elems_plus)
 
         # Not let's merge the results
-        new_elems_plus = merge_intervals(new_elems_plus)
-        new_elems_minus = merge_intervals(new_elems_minus)
-
-        # And make again the tmp files
-        new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
-        new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
+        new_elems_plus = get_merge_stranded(new_elems_plus)
+        new_elems_minus = get_merge_stranded(new_elems_minus)
 
         # Remove the elements that overlap with the original sequences
         if not original_elems_minus.empty:  # Removing new elements in minus strand that overlaps with original strands
@@ -628,14 +628,13 @@ def set_strand_direction(data_input: pd.DataFrame,
                 new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
 
         if not original_elems_plus.empty:  # Removing new elements in plus strand that overlaps with original strands
-            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus,
-                                                                     'coincidence')
+            new_elems_minus_overlaps_original_plus = get_interval_coincidence(
+                new_elems_minus, original_elems_plus
+            )
             if not new_elems_minus_overlaps_original_plus.empty: # MAIN TAKE
                 new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
 
         # Join again in new_elems and remove tmp files
-        os.remove(new_elems_plus_bedops)  # Removing tmp file with no more use
-        os.remove(new_elems_minus_bedops)  # Removing tmp file with no more use
         new_elems = pd.concat([new_elems_plus, new_elems_minus])
         new_elems.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
