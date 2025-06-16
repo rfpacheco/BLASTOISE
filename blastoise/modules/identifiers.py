@@ -142,10 +142,10 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     tic = time.perf_counter()
     print("")
     print("\t\t2.4. Filtering data:\n")
-    filtered_data = global_filters_main(data_input=second_blaster_not_extended_oriented,
-                                        genome_fasta=genome_fasta,
-                                        writing_path=run_phase_extension_path,
-                                        min_length=min_length)
+    filtered_data = global_filters_main(
+        second_blaster_not_extended_oriented,
+        min_length
+    )
 
     toc = time.perf_counter()
     print(f"\t\t\t- Data row length: {len(filtered_data)}\n",  # Not .shape[0] in case it's empty

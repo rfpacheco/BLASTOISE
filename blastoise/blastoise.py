@@ -7,7 +7,6 @@ import subprocess
 
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
 from modules.aesthetics import boxymcboxface
-from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start
 from modules.genomic_ranges import get_merge_stranded
 
 # Initiate parser
@@ -34,7 +33,7 @@ args = parser.parse_args()
 # =============================================================================
 # Ask the user for the folder name and data location
 # folder_name = input('\n\nEnter folder name: '); folder_name = folder_name.strip()
-# data_location = input('Enter path where you want to place all data: ')
+# data_location = input('Enter path where you want to place all data:')
 
 # data_location = os.path.normpath(data_location)  # Normalize the path to avoid problems with the OS
 # data_location = os.path.expanduser(data_location)
@@ -54,7 +53,7 @@ folder_location = os.path.join(data_location, folder_name)
 os.makedirs(folder_location, exist_ok=True)
 print(f"{'.'*20} Folder {folder_name} created in {data_location}")
 
-# identity_1 = input ('Enter the identity for the first BLASTn step: ')
+# identity_1 = input ('Enter the identity for the first BLASTn step:')
 identity_1 = args.identity
 
 # word_size_param = input('Enter the `word_size` value: ')
@@ -237,3 +236,6 @@ print(f"""
 
 # Add right to groups and users
 subprocess.run(["chmod", "-R", "a+w", data_location], check=True)
+
+
+

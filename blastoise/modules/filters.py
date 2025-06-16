@@ -55,17 +55,16 @@ def chromosome_filter(path_input, name):
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def global_filters_main(data_input, genome_fasta, writing_path, min_length):
+def global_filters_main(data_input, min_length):
     """
-    Applies a series of filters to the input data and then processes the data using the `get_merge_stranded` function.
+    Applies a series of filters to the input data and then processes the data using the ` bedops_main ` function.
 
     Parameters:
     data_input (DataFrame): The input data to be filtered.
-    genome_fasta (str): Path to the genome fasta file required for further processing.
     min_length (int): The minimum length to filter the input data.
 
     Returns:
-    DataFrame: The processed data after applying filters and `get_merge_stranded` function.
+    DataFrame: The processed data after applying filters and `bedops_main` function.
     """
 
     print("\t\t\t- Setting length:")
@@ -80,9 +79,9 @@ def global_filters_main(data_input, genome_fasta, writing_path, min_length):
     final_data = data_filtered.copy()
     if not data_filtered.empty:  # Checks if the data is empty. If it is, it will skip the next part of the code
         tic = time.perf_counter()
-        print("\t\t\t- Processing with PyRanges:")
-        data_merged = get_merge_stranded(data_input=data_filtered)
-        final_data = data_merged.copy()
+        print("\t\t\t- Processing with BEDOPS:")
+        data_bedops = get_merge_stranded(data_filtered)
+        final_data = data_bedops.copy()
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     else:
