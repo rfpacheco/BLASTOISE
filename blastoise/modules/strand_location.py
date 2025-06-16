@@ -596,10 +596,6 @@ def set_strand_direction(data_input: pd.DataFrame,
         new_elems_plus = new_elems[new_elems['sstrand'] == 'plus'].copy()
         new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
 
-        # Transform to bedops tmp files
-        new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus) # TODO: remove
-        new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus) # TODO: remove
-
         # First, for each new element before being merged. Let's remove elements in the contrary strands that overlap with each other
         new_elems_plus_overlap_with_new_elems_minus = get_interval_coincidence(
             new_elems_plus, new_elems_minus
@@ -611,15 +607,13 @@ def set_strand_direction(data_input: pd.DataFrame,
         # And remove them
         if not new_elems_plus_overlap_with_new_elems_minus.empty:
             new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlap_with_new_elems_minus)
-            os.remove(new_elems_plus_bedops)  # Remove tmp files after use
 
         if not new_elems_minus_overlap_with_new_elems_plus.empty:
             new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlap_with_new_elems_plus)
-            os.remove(new_elems_minus_bedops)  # Remove tmp files after use
 
         # Not let's merge the results
-        new_elems_plus = get_merge_stranded(new_elems_plus) # TODO: review if that function is overkill
-        new_elems_minus = get_merge_stranded(new_elems_minus) # TODO: review if that function is overkill
+        new_elems_plus = merge_intervals(new_elems_plus)
+        new_elems_minus = merge_intervals(new_elems_minus)
 
         # And make again the tmp files
         new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
