@@ -161,3 +161,60 @@ def merge_intervals(df: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
+
+def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
+    """
+    Processes genomic data to merge overlapping ranges based on strand information
+    using PyRanges technology.
+
+    This function replaces the previous bedops_main function, providing the same
+    functionality but using PyRanges instead of BEDOPS tools.
+
+    Arguments:
+        data_input (pd.DataFrame): Input data containing genome coordinates and strand
+            information. Expected to have specific columns like 'sstrand', 'sseqid',
+            'sstart', 'send', etc.
+
+    Returns:
+        pd.DataFrame: A processed DataFrame containing genomic ranges with associated
+            sequence data and additional calculated attributes such as sequence length.
+    """
+    # -----------------------------------------------------------------------------
+    # 1) Filter and sort data
+    # -----------------------------------------------------------------------------
+    print("\t\t\t\t- Getting diff. strand data.")
+    df_plus = data_input[data_input['sstrand'] == 'plus'].copy()  # filters the "+" strand
+    df_minus = data_input[data_input['sstrand'] == 'minus'].copy()  # filters the "-" strand
+
+    # Sort the data by the start coordinate
+    print("\t\t\t\t- Sorting data.")
+    df_plus = df_plus.sort_values(by=['sseqid', 'sstart'])  # sorts the "+" strand by the start coordinate
+    df_minus = df_minus.sort_values(by=['sseqid', 'sstart'])  # sorts the "-" strand by the start coordinate
+
+    # -----------------------------------------------------------------------------
+    # 2) Merge overlapping intervals using PyRanges for each strand
+    # -----------------------------------------------------------------------------
+    print("\t\t\t\t- Merging intervals for plus strand.")
+    if not df_plus.empty:
+        df_plus_merged = merge_intervals(df_plus)
+        df_plus_merged['sstrand'] = 'plus'
+    else:
+        df_plus_merged = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
+
+    print("\t\t\t\t- Merging intervals for minus strand.")
+    if not df_minus.empty:
+        df_minus_merged = merge_intervals(df_minus)
+        df_minus_merged['sstrand'] = 'minus'
+    else:
+        df_minus_merged = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
+
+    # -----------------------------------------------------------------------------
+    # 3) Combine results and add length column
+    # -----------------------------------------------------------------------------
+    # Join both data frames
+    all_data = pd.concat([df_plus_merged, df_minus_merged], ignore_index=True)
+
+    # Add "len" column
+    all_data['len'] = all_data['send'] - all_data['sstart'] + 1
+
+    return all_data

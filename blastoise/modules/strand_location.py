@@ -6,8 +6,8 @@ from joblib import Parallel, delayed
 
 from typing import Hashable
 
-from modules.bedops import get_bedops_bash_file, bedops_contrast, bedops_main
-from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
+from modules.bedops import get_bedops_bash_file, bedops_contrast
+from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals, get_merge_stranded
 from extra.csv_to_gff import csv_to_gff
 
 
@@ -583,7 +583,7 @@ def set_strand_direction(data_input: pd.DataFrame,
         )
         multiprocessing_jobs = -1
         overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=multiprocessing_jobs)
-        overlapping_elems = bedops_main(overlapping_elems) # Merge the data
+        overlapping_elems = get_merge_stranded(overlapping_elems) # Merge the data
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
@@ -618,8 +618,8 @@ def set_strand_direction(data_input: pd.DataFrame,
             os.remove(new_elems_minus_bedops)  # Remove tmp files after use
 
         # Not let's merge the results
-        new_elems_plus = bedops_main(new_elems_plus)
-        new_elems_minus = bedops_main(new_elems_minus)
+        new_elems_plus = get_merge_stranded(new_elems_plus) # TODO: review if that function is overkill
+        new_elems_minus = get_merge_stranded(new_elems_minus) # TODO: review if that function is overkill
 
         # And make again the tmp files
         new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)

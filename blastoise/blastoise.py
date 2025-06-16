@@ -8,7 +8,7 @@ import subprocess
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
 from modules.aesthetics import boxymcboxface
 from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start
-from modules.bedops import bedops_main
+from modules.genomic_ranges import get_merge_stranded
 
 # Initiate parser
 parser = argparse.ArgumentParser(
@@ -134,13 +134,13 @@ print(f"1. Initial data:\n",
       f"\t- Execution time: {toc - tic:0.2f} seconds")
 
 # =============================================================================
-# Use BEDOPS to merge the first BLASTn data
+# Use PyRanges to merge the first BLASTn data
 # =============================================================================
 print('\t- Filtering data:')
 tic = time.perf_counter()  # Start the timer
-first_blaster_bedops = bedops_main(data_input=first_blaster)
+first_blaster_merged = get_merge_stranded(data_input=first_blaster)
 toc = time.perf_counter()  # Stop the timers
-print(f"\t\t- Data row length: {first_blaster_bedops.shape[0]}\n",
+print(f"\t\t- Data row length: {first_blaster_merged.shape[0]}\n",
       f"\t\t- Execution time: {toc - tic:0.2f} seconds")
 
 # =============================================================================
@@ -151,7 +151,7 @@ repetitive_blaster_folder = os.path.join(folder_location, 'execution_data')
 os.makedirs(repetitive_blaster_folder, exist_ok=True)
 
 tic = time.perf_counter()  # Start the timer
-repetitive_blaster(data_input=first_blaster_bedops,
+repetitive_blaster(data_input=first_blaster_merged,
                    genome_fasta=blastn_dict_path_out,  # path to the genome dict
                    folder_path=repetitive_blaster_folder,
                    numbering=1,
@@ -237,6 +237,3 @@ print(f"""
 
 # Add right to groups and users
 subprocess.run(["chmod", "-R", "a+w", data_location], check=True)
-
-
-
