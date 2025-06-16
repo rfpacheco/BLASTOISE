@@ -56,7 +56,6 @@ def csv_to_gff(csv_file, source=".", feature=".", attribute="."):
 
     # Save the GFF file
     final_gff_df.to_csv(gff_save_path, sep='\t', index=False, header=False)
-    print(f'GFF file saved in {gff_save_path}')
 
 
 if __name__ == '__main__':
