@@ -518,7 +518,8 @@ def set_strand_direction(data_input: pd.DataFrame,
      - **Integration with BEDOPS**:
        Relies on BEDOPS to perform overlap, contrast, and merging operations efficiently.
 
-    Arguments:
+    Parameters:
+    -----------
         data_input (pd.DataFrame): Input DataFrame containing sequence data with columns such as
                                    'og_sseqid', 'og_sstart', 'og_send', 'og_sstrand', 'sseqid',
                                    'sstart', 'send', and 'sstrand'.
@@ -526,6 +527,7 @@ def set_strand_direction(data_input: pd.DataFrame,
         folder_path (str): Path to the folder where temporary files are stored.
 
     Returns:
+    --------
         pd.DataFrame: A DataFrame with processed data that includes new elements and overlapping
                       elements with orientation properly set.
     """
@@ -560,8 +562,8 @@ def set_strand_direction(data_input: pd.DataFrame,
     print(f"\t\t\t- Overlapping elements: {overlapping_elems.shape[0]}")
 
     # Now we need to check if the overlapping is in the same strand as the original data
-    original_elems_plus_bedops = '' # Initialization
-    original_elems_minus_bedops = '' # Initialization
+    original_elems_plus = pd.DataFrame() # Initialization
+    original_elems_minus = pd.DataFrame() # Initialization
     if not overlapping_elems.empty:
         tic = time.perf_counter()
         print(f"\t\t\t- Checking strand orientation in overlapping elements:")
@@ -579,8 +581,8 @@ def set_strand_direction(data_input: pd.DataFrame,
         csv_to_gff(
             os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
         )
-        multiprocesing_jobs = -1
-        overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=multiprocesing_jobs)
+        multiprocessing_jobs = -1
+        overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=multiprocessing_jobs)
         overlapping_elems = bedops_main(overlapping_elems) # Merge the data
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
@@ -589,24 +591,22 @@ def set_strand_direction(data_input: pd.DataFrame,
         original_elems_plus = overlapping_elems[overlapping_elems['sstrand'] == 'plus'].copy()
         original_elems_minus = overlapping_elems[overlapping_elems['sstrand'] == 'minus'].copy()
 
-        # Transform to bedops tmp files
-        original_elems_plus_bedops = get_bedops_bash_file(original_elems_plus)
-        original_elems_minus_bedops = get_bedops_bash_file(original_elems_minus)
-
     if not new_elems.empty:
         # Now dive the data in 'minus' and plus' strand
         new_elems_plus = new_elems[new_elems['sstrand'] == 'plus'].copy()
         new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
 
         # Transform to bedops tmp files
-        new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus)
-        new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
+        new_elems_plus_bedops = get_bedops_bash_file(new_elems_plus) # TODO: remove
+        new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus) # TODO: remove
 
         # First, for each new element before being merged. Let's remove elements in the contrary strands that overlap with each other
-        new_elems_plus_overlap_with_new_elems_minus = bedops_contrast(new_elems_plus_bedops, new_elems_minus_bedops,
-                                                                      'coincidence')
-        new_elems_minus_overlap_with_new_elems_plus = bedops_contrast(new_elems_minus_bedops, new_elems_plus_bedops,
-                                                                      'coincidence')
+        new_elems_plus_overlap_with_new_elems_minus = get_interval_coincidence(
+            new_elems_plus, new_elems_minus
+        )
+        new_elems_minus_overlap_with_new_elems_plus = get_interval_coincidence(
+            new_elems_minus, new_elems_plus
+        )
 
         # And remove them
         if not new_elems_plus_overlap_with_new_elems_minus.empty:
@@ -626,19 +626,18 @@ def set_strand_direction(data_input: pd.DataFrame,
         new_elems_minus_bedops = get_bedops_bash_file(new_elems_minus)
 
         # Remove the elements that overlap with the original sequences
-        if original_elems_minus_bedops != '':  # Removing new elements in minus strand that overlaps with original strands
-            new_elems_plus_overlaps_original_minus = bedops_contrast(new_elems_plus_bedops, original_elems_minus_bedops,
-                                                                     'coincidence')
+        if not original_elems_minus.empty:  # Removing new elements in minus strand that overlaps with original strands
+            new_elems_plus_overlaps_original_minus = get_interval_coincidence(
+                new_elems_plus, original_elems_minus
+            )
             if not new_elems_plus_overlaps_original_minus.empty: # MAIN TAKE
                 new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_overlaps_original_minus)
-            os.remove(original_elems_minus_bedops)  # Removing tmp file with no more use
 
-        if original_elems_plus_bedops != '':  # Removing new elements in plus strand that overlaps with original strands
-            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus_bedops,
+        if not original_elems_plus.empty:  # Removing new elements in plus strand that overlaps with original strands
+            new_elems_minus_overlaps_original_plus = bedops_contrast(new_elems_minus_bedops, original_elems_plus,
                                                                      'coincidence')
             if not new_elems_minus_overlaps_original_plus.empty: # MAIN TAKE
                 new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_overlaps_original_plus)
-            os.remove(original_elems_plus_bedops)  # Removing tmp file with no more use
 
         # Join again in new_elems and remove tmp files
         os.remove(new_elems_plus_bedops)  # Removing tmp file with no more use
