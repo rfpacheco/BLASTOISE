@@ -4,36 +4,27 @@ import subprocess
 import time
 import shutil
 import logging
-# from pathlib import Path
 from datetime import datetime
 
-from modules.aesthetics import boxymcboxface  # Some aesthetics function
+from modules.aesthetics import print_message_box
 from modules.identifiers import genome_specific_chromosome_main
 from modules.compare import compare_main
 from modules.files_manager import end_always_greater_than_start
 from extra.csv_to_gff import csv_to_gff
 
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
 
-
-def blastn_dic(path_input, path_output):
+def blastn_dic(path_input: str, path_output: str) -> None:
     """
-    Executes the BLAST `makeblastdb` command to create a nucleotide database using the provided input
-    file and outputs the result to the specified output path.
+    Executes a BLAST database build command using the given input file path and output directory. The function attempts
+    to create a BLAST-compatible nucleotide database by invoking the `makeblastdb` command-line utility. Errors during
+    this process are logged appropriately.
 
-    This function is a wrapper around the BLAST `makeblastdb` tool and is designed to create a
-    BLAST dictionary based on the input nucleotide file. The sequence IDs are preserved using
-    the `parse_seqids` flag. If an error occurs during the execution of the command, it will
-    be logged.
-
-    Arguments:
-        path_input (str): The path to the input nucleotide file.
-        path_output (str): The path where the BLAST database files will be saved.
-
-    Raises:
-        Exception: If an error occurs during the creation of the BLAST dictionary, it logs the
-        error message.
+    Parameters:
+    -----------
+    path_input: str
+        Path to the input file to be used for building the BLAST database.
+    path_output: str
+        Path to the output where the database files will be stored.
     """
     try:
         # "parse_seqids" is used to keep the sequence ID in the output.
@@ -41,44 +32,43 @@ def blastn_dic(path_input, path_output):
         subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         logging.error(f"Error: Blast Dictionary couldn't be created: {e}", exc_info=True)
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
 
 
-def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
+def blastn_blaster(
+        query_path: str,
+        dict_path: str,
+        perc_identity: float,
+        word_size: int = 15
+) -> pd.DataFrame:
     """
-    Executes a BLASTN search on the provided query sequence against a nucleotide database.
+    Executes the BLASTn sequence alignment tool using the provided input parameters. BLASTn (Basic Local Alignment
+    Search Tool for Nucleotides) is used to compare a nucleotide query sequence against a nucleotide sequence database.
+    The function parses the output into a pandas DataFrame object.
 
-    Parameters:
-        query_path (str): Path to the query file containing the sequence to be searched.
-        dict_path (str): Path to the nucleotide database against which the query sequence is to be searched.
-        perc_identity (float): Percent identity threshold for reporting matches.
-        word_size (int, optional): Word size for the BLASTN search algorithm. Default is 15.
+    Parameters
+    ----------
+    query_path : str
+        Path to the query nucleotide sequence file to be used in the alignment.
+    dict_path : str
+        Path to the database directory containing nucleotide sequences for matching.
+    perc_identity : float
+        Percentage of identity required for a match between sequences during alignment.
+    word_size : int, optional
+        Size of the word used in the alignment by BLASTn algorithm. Default is 15.
 
-    Returns:
-        pandas.DataFrame: DataFrame containing the BLASTN search results with columns:
-            qseqid: Query sequence ID.
-            sseqid: Subject sequence ID.
-            pident: Percentage of identical matches.
-            length: Alignment length.
-            qstart: Start of alignment in a query.
-            qend: End of alignment in a query.
-            sstart: Start of alignment in a subject.
-            send: End of alignment in a subject.
-            evalue: Expectation value.
-            bitscore: Bit score.
-            qlen: Length of a query sequence.
-            slen: Length of a subject sequence.
-            sstrand: Strand of the subject sequence.
-            sseq: Aligned part of the subject sequence.
+    Returns
+    -------
+    pd.DataFrame
+        pandas.DataFrame containing the parsed output of the BLASTn alignment. The columns include:
+        'qseqid', 'sseqid', 'pident', 'length', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen',
+        'slen', 'sstrand', and 'sseq'.
     """
 
-    cmd = (f"blastn "
-           f"-word_size {word_size} "
-           f"-query {query_path} "
-           f"-db {dict_path} "
-           f"-perc_identity {perc_identity} "
-           f"-outfmt '10 qseqid sseqid sstart send sstrand evalue sseq'")
+    cmd = f"blastn -word_size {word_size} \
+    -query {query_path} \
+    -db {dict_path} \
+    -perc_identity {perc_identity} \
+    -outfmt '10 qseqid sseqid sstart send sstrand evalue sseq'"
     data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
     data.columns = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
@@ -93,49 +83,70 @@ def blastn_blaster(query_path, dict_path, perc_identity, word_size=15):
     # Place it between 'sent' and 'sstrand' column
     data = data[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq', 'len']]
     return data
-    
-
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
 
 
-def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_time, identity_1, tic_start, word_size, min_length, extend_number, limit_len, coincidence_data=None):
+def repetitive_blaster(
+        data_input: "pandas.DataFrame",
+        genome_fasta: str,
+        folder_path: str,
+        numbering: int,
+        start_time: str,
+        identity_1: float,
+        tic_start: float,
+        word_size: int,
+        min_length: int,
+        extend_number: int,
+        limit_len: int,
+        coincidence_data: pd.DataFrame | None = None,
+) -> None:
     """
-    Processes and filters genomic data by grouping, analyzing chromosomes, and comparing results with previous runs.
+    Performs repetitive sequence data processing, filtering, and comparison step-by-step for genomic analysis.
+    The function involves sorting data, individual sequence searching and cleaning, comparison with previous runs,
+    and preparing results for further analysis or stopping the process if no new data is found.
 
-    Parameters:
+    The function is designed to handle large genomic datasets, execute BLAST analysis-like operations,
+    and manages data across multiple runs to ensure convergence and completeness of results.
+
+    Parameters
+    ----------
     data_input : pandas.DataFrame
-        The initial dataset containing genomic data.
-    genome_fasta : str
-        Path to the reference genome file in FASTA format.
+        The input DataFrame containing genomic data.
+    genome_fasta : str 
+        Path to the genome FASTA file used for analysis.
     folder_path : str
-        Directory path where results will be stored.
+        Directory path for saving intermediate files and results.
     numbering : int
-        Run identifier number.
+        The identifier for the current run/analysis phase.  
     start_time : str
-        Starting timestamp of the run.
+        The timestamp marking the start of the program execution.
     identity_1 : float
-        Identity threshold for genomic sequence analysis.
+        Threshold identity value for filtering genomic sequences.
     tic_start : float
-        Starting time as recorded by time.perf_counter() for performance logging.
+        Initial timer value to measure program execution.
     word_size : int
-        Word size for sequence alignment.
+        Word size parameter for genomic sequence comparison. 
     min_length : int
-        Minimum length threshold for sequences.
+        Minimum length of sequences to include in the analysis.
     extend_number : int
-        Number of bases to extend during analysis.
-    coincidence_data : pandas.DataFrame, optional
-        Data from a previous run for comparison.
+        Extends number parameter for sequence range calculations.
+    limit_len : int
+        Length limit used for sequence filtering.
+    coincidence_data : pandas.DataFrame | None, optional
+        Existing data from a previous run to compare with. Default is None.
+
+    Returns
+    -------
+    None
+        The function performs operations and saves results to files; no explicit return value.
     """
 
     # Call the aesthetics function RUN identifier.
-    boxymcboxface('RUN ' + str(numbering))
+    print_message_box('RUN ' + str(numbering))
     tic_main = time.perf_counter()  # Start the timer
 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
-    # First let's order the data by "sseqid", "sstrand", "sstart".
-    data_ordered = data_input.sort_values(by=['sseqid', 'sstrand', 'sstart'])
+    data_ordered = data_input.sort_values(by=["sseqid", "sstrand", "sstart"])
     toc = time.perf_counter()
     print("")
     print('1. Initial data:\n',
@@ -157,22 +168,24 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     print(f"{start_time_text:>{terminal_width}}")
     print(f"{end_time_text:>{terminal_width}}")
 
-    whole_group = genome_specific_chromosome_main(data_input=data_ordered,
-                                                  main_folder_path=folder_path,
-                                                  genome_fasta=genome_fasta,
-                                                  identity_1=identity_1,
-                                                  run_phase=numbering,
-                                                  coincidence_data=coincidence_data,
-                                                  word_size=word_size,
-                                                  min_length=min_length,
-                                                  limit_len=limit_len,
-                                                  extend_number=extend_number)
+    whole_group = genome_specific_chromosome_main(
+        data_input=data_ordered,
+        main_folder_path=folder_path,
+        genome_fasta=genome_fasta,
+        identity_1=identity_1,
+        run_phase=numbering,
+        coincidence_data=coincidence_data,
+        word_size=word_size,
+        min_length=min_length,
+        limit_len=limit_len,
+        extend_number=extend_number
+    )
 
     toc = time.perf_counter()
     print(f"\t- Data row length: {whole_group.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
 
-      # -----------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------
     # Compare part
     # Prepare folders and path
     comparison_folder = os.path.join(folder_path, "comparison")
@@ -185,7 +198,7 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         print(f"\t- Previous Run data:\n",
               f"\t\t- Coincidence data row length: {coincidence_data.shape[0]}\n",
               f"\t\t- New data row length: {data_input.shape[0]}")
-        # This part is important to compare with the last run whole data "whoel_group_fildered", and not only the "new_data" subset.
+        # This part is important to compare with the last run whole data "whole_group", and not only the "new_data" subset.
         data_input = pd.concat([coincidence_data, data_input], ignore_index=True)
         data_input.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
         print(f"\t\t- Total data row length: {data_input.shape[0]}")
@@ -196,11 +209,8 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
     tic = time.perf_counter()
     print("")
     print(f"\t- Results in this RUN:")
-    coincidence_data, new_data, old_data_exclusive = compare_main(whole_group,
-                                                                  data_input,
-                                                                  genome_fasta)
+    coincidence_data, new_data, old_data_exclusive = compare_main(whole_group, data_input, genome_fasta)
     toc = time.perf_counter()
-
 
     print("")
     print(f"\t\t- Coincidence data from run 'n' and 'n-1': {coincidence_data.shape[0]}\n",
@@ -237,10 +247,10 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         coincidence_data = pd.concat([coincidence_data, old_data_exclusive], ignore_index=True)
         coincidence_data.sort_values(by=['sseqid', 'sstrand', 'sstart'], inplace=True)
         print(f"\t\t- Coincidence data + Previous data: {coincidence_data.shape[0]}")
-
     else:
         pass
     print(f"\t\t- Execution time: {toc - tic:0.2f} seconds")
+
     # -----------------------------------------------------------------------------
     # Stopping part
     stopping_folder = os.path.join(folder_path, "stopping")
@@ -261,7 +271,6 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
         print(f"\t- BLASTOISE final data row length: {coincidence_data.shape[0]}")
 
         return
-
     else:
         # -----------------------------------------------------------------------------
         toc_main = time.perf_counter()
@@ -283,16 +292,17 @@ def repetitive_blaster(data_input, genome_fasta, folder_path, numbering, start_t
 
         # -----------------------------------------------------------------------------
         numbering += 1  # Increase the numbering
-        repetitive_blaster(data_input=new_data_and_old,
-                           genome_fasta=genome_fasta,
-                           folder_path=folder_path,
-                           numbering=numbering,
-                           start_time=start_time,
-                           identity_1=identity_1,
-                           tic_start=tic_start,
-                           word_size=word_size,
-                           min_length=min_length,
-                           extend_number=extend_number,
-                           limit_len=limit_len,
-                           coincidence_data=coincidence_data)
-                        
+        repetitive_blaster(
+            data_input=new_data_and_old,
+            genome_fasta=genome_fasta,
+            folder_path=folder_path,
+            numbering=numbering,
+            start_time=start_time,
+            identity_1=identity_1,
+            tic_start=tic_start,
+            word_size=word_size,
+            min_length=min_length,
+            extend_number=extend_number,
+            limit_len=limit_len,
+            coincidence_data=coincidence_data
+        )

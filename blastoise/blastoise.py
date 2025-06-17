@@ -6,7 +6,7 @@ from datetime import datetime
 import subprocess
 
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
-from modules.aesthetics import boxymcboxface
+from modules.aesthetics import print_message_box
 from modules.genomic_ranges import get_merge_stranded
 
 # Initiate parser
@@ -99,8 +99,6 @@ else:
     print(f"Error: The genome file '{genome_path}' does not exist.")
     exit(1)
 
-
-# print(f"Files copied to {original_data_folder}")
 args_data_path = os.path.join(original_data_folder, os.path.basename(args.data))  # save the path so we can use this one instead of the original one
 args_genome_path = os.path.join(original_data_folder, os.path.basename(args.genome))  # save the path so we can use this one instead of the original one
 
@@ -117,13 +115,15 @@ blastn_dic(path_input=args.genome,
            path_output=blastn_dict_path_out)
 
 # Call the first BLASTn
-boxymcboxface(message='First BLASTn step initiated')
+print_message_box(message='First BLASTn step initiated')
 
 tic = time.perf_counter()  # Start the timer
-first_blaster = blastn_blaster(query_path=args_data_path,
-                               dict_path=blastn_dict_path_out, 
-                               perc_identity=identity_1,
-                               word_size=word_size_param)  # It has the data frame for the first blaster
+first_blaster = blastn_blaster(
+    query_path=args_data_path,
+    dict_path=blastn_dict_path_out,
+    perc_identity=identity_1,
+    word_size=word_size_param
+)  # It has the data frame for the first blaster
 # Take only the necessary columns
 first_blaster = first_blaster[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand']]
 
@@ -150,17 +150,19 @@ repetitive_blaster_folder = os.path.join(folder_location, 'execution_data')
 os.makedirs(repetitive_blaster_folder, exist_ok=True)
 
 tic = time.perf_counter()  # Start the timer
-repetitive_blaster(data_input=first_blaster_merged,
-                   genome_fasta=blastn_dict_path_out,  # path to the genome dict
-                   folder_path=repetitive_blaster_folder,
-                   numbering=1,
-                   start_time=formatted_start_time,
-                   identity_1=identity_1,
-                   tic_start=tic_main,
-                   word_size=word_size_param,
-                   min_length=min_length_param,
-                   extend_number=extend_number_param,
-                   limit_len=limit_length_param)
+repetitive_blaster(
+    data_input=first_blaster_merged,
+    genome_fasta=blastn_dict_path_out,  # path to the genome dict
+    folder_path=repetitive_blaster_folder,
+    numbering=1,
+    start_time=formatted_start_time,
+    identity_1=identity_1,
+    tic_start=tic_main,
+    word_size=word_size_param,
+    min_length=min_length_param,
+    extend_number=extend_number_param,
+    limit_len=limit_length_param
+)
 
 # Move "blastoise_df.csv" to the main folder
 final_data_path = os.path.join(repetitive_blaster_folder, "blastoise_df.csv")
@@ -195,14 +197,14 @@ for file_or_folder in os.listdir(folder_location):
 toc_main = time.perf_counter()  # Stop the timer
 end_time = datetime.now()
 formatted_end_time = end_time.strftime("%Y %B %d at %H:%M")
-boxymcboxface(message="END OF THE PROGRAM")
+print_message_box(message="END OF THE PROGRAM")
 print(f"\t- Execution time: {toc_main - tic_main:0.2f} seconds\n",
       f"\t- Program started: {formatted_start_time}\n",
       f"\t- Program ended: {formatted_end_time}\n",
       f"\t- Blastoise final file saved at: {final_data_path}")
 
 # Exit program
-boxymcboxface("BLASTING OUT!")
+print_message_box("BLASTING OUT!")
 print(f"""
                    o O       o O       o O       o O       o O
                  o | | O   o | | O   o | | O   o | | O   o | | O
@@ -236,6 +238,3 @@ print(f"""
 
 # Add right to groups and users
 subprocess.run(["chmod", "-R", "a+w", data_location], check=True)
-
-
-

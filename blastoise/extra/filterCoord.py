@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from modules.blaster import blastn_dic
 from extra.main_functions import coordinates_corrector, json_sider_filter, sider_json_to_csv
-from modules.aesthetics import boxymcboxface
+from modules.aesthetics import print_message_box
 
 
 # ======================================================================
@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     # # First SIDER filter
     data = pd.read_csv(csv_path, sep=",", header=0)
-    boxymcboxface("Correcting coordinates 1/3")
+    print_message_box("Correcting coordinates 1/3")
     json_path = coordinates_corrector(
         df=data,
         dict_path=dict_file_path_out,
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     )
 
     ## sider filter to new coordinates
-    boxymcboxface("Applying filter 2/3")
+    print_message_box("Applying filter 2/3")
     filtered_json_path = json_sider_filter(
         json_file=json_path,
         folder_path=folder_path,
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     )
 
     ## from json to csv
-    boxymcboxface("Re-caught data and output files 3/3")
+    print_message_box("Re-caught data and output files 3/3")
     sider_json_to_csv(
         json_file=filtered_json_path,
         folder_path=folder_path,
@@ -117,10 +117,4 @@ if __name__ == "__main__":
     except subprocess.CalledProcessError as e:
         print(f"Error occurred while changing permissions: {e}")
 
-boxymcboxface("THE END")
-
-
-
-
-
-
+print_message_box("THE END")

@@ -9,21 +9,26 @@ from Bio.SeqRecord import SeqRecord
 # -----------------------------------------------------------------------------
 def fasta_creator(data_input, fasta_output_path, id_names=None):
     """
-    Creates a FASTA file from a given data input, which includes sequences and related metadata.
+    Creates a FASTA file from a DataFrame containing sequence and metadata.
 
-    This function reads data from the provided input, constructs sequence records using
-    the Biopython library, and writes them to an output file in FASTA format. Each record
-    contains an ID constructed from metadata extracted from the input data and an associated
-    sequence.
+    This function processes sequence data from a specified DataFrame, formats the information as FASTA records, and 
+    writes those records to a file in FASTA format. Optionally, it can include original identifiers provided via a 
+    secondary DataFrame, appending both original and extended identifiers to each sequence record.
 
-    Args:
-        data_input (pandas.DataFrame): Input data containing sequence information. Assumes
-            the input DataFrame includes a 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'
-            column for the necessary metadata.
-        fasta_output_path (str): File path where the resulting FASTA file will be written.
-
-    Returns:
-        None
+    Parameters
+    ----------
+    data_input : pandas.DataFrame
+        Input data containing sequence information. Assumes the input DataFrame includes a 'sseqid', 'sstart', 'send', 
+        'sstrand', and 'sseq' column for the necessary metadata.
+    fasta_output_path : str
+        File path where the resulting FASTA file will be written.
+    id_names : pandas.DataFrame, optional
+        DataFrame containing original sequence identifiers and metadata, used to further annotate FASTA records. 
+        Default is None.
+    
+    Returns
+    -------
+    None
     """
     if id_names is None:
         id_names = data_input
@@ -35,7 +40,10 @@ def fasta_creator(data_input, fasta_output_path, id_names=None):
 
         if id_names is not None:
             # If there are the original coordinates and the extended ones, record them both
-            original = f"{id_names.iloc[index]['sseqid']}-{id_names.iloc[index]['sstart']}-{id_names.iloc[index]['send']}-{id_names.iloc[index]['sstrand']}"
+            original = f"{id_names.iloc[index]['sseqid']}-" \
+                       f"{id_names.iloc[index]['sstart']}-" \
+                       f"{id_names.iloc[index]['send']}-" \
+                       f"{id_names.iloc[index]['sstrand']}"
             data_input_string = f"{data_input_string}_{original}" # The first is the extended, the second is the original
 
         rec = SeqRecord(Seq(sequence.loc["sseq"]),  # In the 5 position is the seq
@@ -43,7 +51,6 @@ def fasta_creator(data_input, fasta_output_path, id_names=None):
                         description=""
                         )
         matrix.append(rec)
-    # TODO: in futuro may change to bash tmp file with <(echo -e '>{name_id}\n{seq}')
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
 def get_data_sequence(data, genome_fasta):
@@ -51,21 +58,22 @@ def get_data_sequence(data, genome_fasta):
     Fetches nucleotide sequences from a specified genome database using BLAST commands.
 
     This function retrieves specified sequence ranges from a genome database in a fasta format.
-    The input strand direction is specified, and BLAST commands are executed to obtain the
-    sequences based on the provided data.
+    The input strand direction is specified, and BLAST commands are executed to obtain the sequences based on the 
+    provided data.
 
-    Args:
-        data (DataFrame): A pandas DataFrame containing the sequence details. It must
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        A pandas DataFrame containing the sequence details. It must
         contain the columns 'sseqid', 'sstart', and 'send'.
+    genome_fasta : str
+        The file path to the genome database in fasta format to query against.
 
-        genome_fasta (str): The file path to the genome database in fasta format to query against.
-
-    Returns:
-        DataFrame: A pandas DataFrame containing the retrieved sequences. The DataFrame includes
+    Returns
+    -------
+    pandas.DataFrame
+        A pandas DataFrame containing the retrieved sequences. The DataFrame includes
         columns for 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'.
-
-    Raises:
-        subprocess.CalledProcessError: If the `blastdbcmd` tool encounters an error during execution.
     """
     sequences = []
     for _, row in data.iterrows():
@@ -94,18 +102,22 @@ def columns_to_numeric(data_input, columns_to_convert=None):
     """
     Convert specified columns of a DataFrame to numeric datatype.
 
-    This function takes a DataFrame and a list of column names and converts the
-    specified columns to a numeric datatype using `pd.to_numeric`. If no columns
-    are specified, it defaults to converting the columns: 'length', 'sstart',
-    and 'send'. Any non-convertible values are coerced into NaN.
+    This function takes a DataFrame and a list of column names and converts the specified columns to a numeric datatype 
+    using `pd.to_numeric`. If no columns are specified, it defaults to converting the columns: 'length', 'sstart', and 
+    'send'. Any non-convertible values are coerced into NaN.
 
-    Parameters:
-        data_input (pandas.DataFrame): The pandas DataFrame containing the data to be transformed.
-        columns_to_convert (list[str], optional): A list of column names to be converted to numeric data type.
-            Defaults to ['length', 'sstart', 'send'].
+    Parameters
+    ----------
+    data_input : pandas.DataFrame
+        The pandas DataFrame containing the data to be transformed.
+    columns_to_convert : list[str], optional
+        A list of column names to be converted to numeric data type.
+        Defaults to ['length', 'sstart', 'send'].
 
-    Returns:
-        pandas.DataFrame: The modified DataFrame with specified columns converted to numeric.
+    Returns
+    -------
+    pandas.DataFrame
+        The modified DataFrame with specified columns converted to numeric.
     """
     if columns_to_convert is None:
         columns_to_convert = ['sstart', 'send']
@@ -118,11 +130,15 @@ def end_always_greater_than_start(data_input):
     """
     Ensures that the 'send' value is always greater than 'sstart' value by swapping them if needed.
     
-    Args:
-        data_input (pandas.DataFrame): DataFrame containing 'sstart' and 'send' columns
-        
+    Parameters:
+    -----------
+    data_input: pd.DataFrame
+        A DataFrame containing 'sstart' and 'send' columns
+
     Returns:
-        pandas.DataFrame: DataFrame with 'sstart' and 'send' values properly ordered
+    --------
+    pd.DataFrame:
+        A DataFrame with 'sstart' and 'send' values properly ordered
     """
     data_input.loc[
         data_input[data_input['sstart'] > data_input['send']].index,

@@ -1,28 +1,23 @@
-def boxymcboxface(message):
+BOX_WIDTH_DEFAULT = 80
+
+
+def print_message_box(message: str, width: int = BOX_WIDTH_DEFAULT) -> None:
     """
-    This function was obtained from `ARIBA GitHub`_
+    Print ``message`` centered inside an ASCII art box.
 
-    It's just an aesthetics function which makes with a message inside. For example, with the word "message" it will write:
-    
-    .. code-block:: bash
-
-       |==================================================|
-       |                     example                      |
-       |==================================================|
-
-
-    :param message: Message to write inside the box of the function.
-    :type message: string
-
-    :return: an output text display box with a message inside.
-    :rtype: output text display box.
-
+    Parameters
+    ----------
+    message : str
+        Text to display.
+    width : int, optional
+        Number of ``=`` characters in the top/bottom borders.
+        If smaller than the message length, it is automatically enlarged.
     """
-    str(message)
-    #print('-' * 79)
-    print ('\n')
-    print('|', '=' * 80, '|', sep='')
-    print('|', '{: ^78}'.format(message), '|')
-    print('|', '=' * 80, '|', sep='')
-    print ('\n')
-    #print('-' * 79)
+    width = max(width, len(message))  # ensure the message fits
+    border = "=" * width
+
+    print()  # leading blank line
+    print(f"|{border}|")
+    print(f"|{message:^{width}}|")
+    print(f"|{border}|")
+    print()  # trailing blank line
