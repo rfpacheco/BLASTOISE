@@ -3,25 +3,38 @@ import pandas as pd
 from modules.bedops import bedops_coincidence
 from modules.files_manager import columns_to_numeric
 
-def compare_main(newest_data, contrast_data, genome_fasta):
+
+def compare_main(  # TODO: replace BEDOPS with PyRanges
+        newest_data: pd.DataFrame,
+        contrast_data: pd.DataFrame,
+        genome_fasta: str,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Processes and compares genomic dataframes for visualization and analysis based on
-    BEDOPS tool outputs for both plus and minus DNA strands.
+    # TODO: replace BEDOS in docs to PyRanges
+    This function performs comparative analysis between two data sets representing genomic
+    features on different strands ('plus' and 'minus') of DNA. It invokes the BEDOPS tool
+    for overlap analysis and processes the results to identify shared, unique, and exclusive
+    data points. The concatenated results for both strands are returned separately.
 
-    Parameters:
-    newest_data: pandas.DataFrame
-        The latest dataframe containing genomic data to compare.
-    contrast_data: pandas.DataFrame
-        The older dataframe containing genomic data to compare against.
-    genome_fasta: str
-        Path to the genome FASTA file for reference in BEDOPS processing.
+    Parameters
+    ----------
+    newest_data : pd.DataFrame
+        A DataFrame of the newest data to analyze, containing genomic feature information 
+        such as strand and coordinates.
+    contrast_data : pd.DataFrame
+        A DataFrame of contrast data to compare against the newest data, with similar 
+        genomic feature information.
+    genome_fasta : str
+        The genome FASTA file used for reference during the analysis.
 
-    Returns:
-    tuple
-        A tuple containing:
-        - coincidence_data (pandas.DataFrame): Dataframe with regions common between newest_data and contrast_data. It will contain the data already present in contrast_data. However, this data may be modified by new coordinates with newest_data
-        - new_data (pandas.DataFrame): Dataframe with regions exclusive to the latest dataframe.
-        - old_data_exclusive (pandas.DataFrame): Dataframe with regions exclusive to the older dataframe.
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+        A tuple containing three DataFrames:
+        - coincidence_data: Genomic features common between `newest_data` and
+          `contrast_data`.
+        - new_data: Genomic features exclusive to the `newest_data`.
+        - old_data_exclusive: Genomic features exclusive to the `contrast_data`.
     """
     # -----------------------------------------------------------------------------
     # Select data
@@ -34,7 +47,9 @@ def compare_main(newest_data, contrast_data, genome_fasta):
     # Call BEDOPS on plus
     print("")
     print("\t\t- '+' strand:")
-    coincidence_plus, new_data_plus, old_data_exclusive_plus= bedops_coincidence(newest_data_plus, contrast_data_plus, "plus", genome_fasta)
+    coincidence_plus, new_data_plus, old_data_exclusive_plus= bedops_coincidence(
+        newest_data_plus, contrast_data_plus, "plus", genome_fasta
+    )
     if not new_data_plus.empty:  # If the data frame has lines
         new_data_plus = columns_to_numeric(new_data_plus)  # Convert columns to numeric
     if not coincidence_plus.empty:  # If the data frame has lines
@@ -46,7 +61,9 @@ def compare_main(newest_data, contrast_data, genome_fasta):
     # And now call BEDOPS on minus
     print("")
     print("\t\t- '-' strand:")
-    coincidence_minus, new_data_minus, old_data_exclusive_minus = bedops_coincidence(newest_data_minus, contrast_data_minus, "minus", genome_fasta)
+    coincidence_minus, new_data_minus, old_data_exclusive_minus = bedops_coincidence(
+        newest_data_minus, contrast_data_minus, "minus", genome_fasta
+    )
     # Restore the coordinates
     if not new_data_minus.empty:  # If the data frame is not empty
         new_data_minus = columns_to_numeric(new_data_minus)
@@ -72,8 +89,3 @@ def compare_main(newest_data, contrast_data, genome_fasta):
         old_data_exclusive = pd.DataFrame()
     # -----------------------------------------------------------------------------
     return coincidence_data, new_data, old_data_exclusive
-
-    
-    
-
-
