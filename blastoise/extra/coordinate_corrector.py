@@ -20,8 +20,9 @@ from typing import Dict, List, Tuple, Any
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.blaster import blastn_dic
-from extra.second_functions import get_sequence, bedops_merge, general_blastn_blaster
+from extra.second_functions import get_sequence, general_blastn_blaster
 from modules.aesthetics import print_message_box
+from modules.genomic_ranges import merge_intervals
 
 # Configure logging
 logging.basicConfig(
@@ -83,7 +84,7 @@ def parse_arguments() -> argparse.Namespace:
 
 def setup_directories(input_file_dir: str, dict_path: str) -> Tuple[str, str]:
     """
-    Create necessary directories and prepare BLASTN database.
+    Create the necessary directories and prepare a BLASTN database.
 
     Args:
         input_file_dir: Directory of the input file
@@ -174,16 +175,21 @@ def correct_coordinates(
 
         # Sort and merge the filtered results
         blastn_df.sort_values(by=["qstart"], inplace=True)
-        bedops_df = bedops_merge(input_df=blastn_df, path_folder=temp_dir)
+
+        # Rename columns for the merge_intervals function
+        blastn_df_renamed = blastn_df.rename(columns={"qstart": "sstart", "qend": "send"})
+
+        # Merge intervals using PyRanges
+        merged_df = merge_intervals(blastn_df_renamed)
 
         # Initialize the results for this sequence
         results_dict[name_id] = []
 
         # Calculate new coordinates
-        for _, bedops_row in bedops_df.iterrows():
+        for _, merged_row in merged_df.iterrows():
             # Calculate new start and end coordinates
-            new_start = start_coor + bedops_row["qstart"] - 1
-            new_end = start_coor + bedops_row["qend"] - 1
+            new_start = start_coor + merged_row["sstart"] - 1
+            new_end = start_coor + merged_row["send"] - 1
 
             # Check if the sequence meets the minimum length requirement
             if abs(new_end - new_start) + 1 >= min_length:
@@ -217,8 +223,8 @@ def filter_blastn_results(
     """
     # Filter for plus strand
     # Remove rows where:
-    # (sstart is within start_coor and end_coor OR send is within start_coor and end_coor)
-    # AND sseqid matches name_chr AND sstrand is "plus"
+    # (sstart is within start_coor and end_coor, OR send is within start_coor and end_coor),
+    # AND sseqid matches name_chr, AND sstrand is "plus"
     plus_filter = (
         (((blastn_df["sstart"] >= start_coor) & (blastn_df["sstart"] <= end_coor)) |
          ((blastn_df["send"] <= end_coor) & (blastn_df["send"] >= start_coor))) &
@@ -229,8 +235,8 @@ def filter_blastn_results(
 
     # Filter for minus strand
     # Remove rows where:
-    # (sstart is within start_coor and end_coor OR send is within start_coor and end_coor)
-    # AND sseqid matches name_chr AND sstrand is "minus"
+    # (sstart is within start_coor and end_coor, OR send is within start_coor and end_coor),
+    # AND sseqid matches name_chr, AND sstrand is "minus"
     minus_filter = (
         (((blastn_df["sstart"] <= end_coor) & (blastn_df["sstart"] >= start_coor)) |
          ((blastn_df["send"] >= start_coor) & (blastn_df["send"] <= end_coor))) &
