@@ -1,8 +1,22 @@
+"""
+SIDER Filter Script
+
+This script filters sequences using SIDER (Short Interspersed Degenerated Retroposons) criteria.
+It processes input sequences, applies BLASTN-based filtering, and categorizes them as accepted or rejected.
+Additionally, it attempts to recapture sequences that might have been incorrectly rejected.
+
+The script requires several input parameters and produces two output CSV files in the same directory as the input file:
+- siders_df.csv: Contains sequences that meet the SIDER criteria
+- non_siders_df.csv: Contains sequences that do not meet the SIDER criteria
+"""
+
 import argparse
 import os
 import sys
+import logging
 import pandas as pd
 import subprocess
+from typing import Dict, Tuple
 from joblib import Parallel, delayed
 
 # Add the parent directory of 'blastoise' to sys.path
@@ -12,147 +26,268 @@ from modules.blaster import blastn_dic
 from extra.second_functions import general_blastn_blaster
 from modules.aesthetics import print_message_box
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('sider_filter')
+
 
 def parse_arguments() -> argparse.Namespace:
     """
-    Parses command-line arguments for the SIDER filter script.
+    Parse command-line arguments for the SIDER filter script.
 
-    This function sets up an argument parser with options for input and
-    output file paths as well as parameters controlling the behavior of the
-    SIDER filtering process.
-
-    Arguments:
-    ----------
-        -f, --file (str): Path to the input CSV file (required).
-        -d, --dict_path (str): Path to the genome fasta file (required).
-        -o, --output (str): Path to the output directory for positive and negative CSV files (required).
-        -rf, --recaught_file (str): Path to the recaught file (required).
-        -rt, --recaught_threshold (float): Recaught threshold (default: 1.0E-03).
-        -ws, --word_size (int): word_size value for BLASTN (required).
-        -e, --evalue (float): E-value threshold for BLASTN (default: 1.0E-09).
-        -i, --identity (int): Minimum identity of the sequence to be considered (required).
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
     """
-    parser = argparse.ArgumentParser(description="Filter sequences using SIDER criteria")
-    parser.add_argument("-f", "--file", type=str, required=True,
-                        help="Path to the input CSV file.")
-    parser.add_argument("-d", "--dict_path", type=str, required=True,
-                        help="Path to the genome fasta file.")
-    parser.add_argument("-o", "--output", type=str, required=True,
-                        help="Path to the output directory for positive and negative CSV files.")
-    parser.add_argument("-rf", "--recaught_file", type=str, required=True,
-                        help="Path to the recaught file.")
-    parser.add_argument("-rt", "--recaught_threshold", type=float, default=1.0E-03,
-                        help="Recaught threshold.")
-    parser.add_argument("-ws", "--word_size", type=int, required=True,
-                        help="word_size value of BLASTN")
-    parser.add_argument("-e", "--evalue", type=float, default=1.0E-09,
-                        help="E-value threshold for BLASTN.")
-    parser.add_argument("-i", "--identity", type=int, required=True,
-                        help="Minimum identity of the sequence to be considered.")
+    parser = argparse.ArgumentParser(
+        description="Filter sequences using SIDER criteria",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+
+    parser.add_argument(
+        "-f", "--file", 
+        type=str, 
+        required=True,
+        help="Path to the input CSV file containing sequence data."
+    )
+
+    parser.add_argument(
+        "-d", "--dict_path", 
+        type=str, 
+        required=True,
+        help="Path to the genome FASTA file for BLASTN database creation."
+    )
+
+
+    parser.add_argument(
+        "-rf", "--recaught_file", 
+        type=str, 
+        required=True,
+        help="Path to the FASTA file used for recapturing sequences."
+    )
+
+    parser.add_argument(
+        "-rt", "--recaught_threshold", 
+        type=float, 
+        default=1.0E-03,
+        help="E-value threshold for recapturing sequences."
+    )
+
+    parser.add_argument(
+        "-ws", "--word_size", 
+        type=int, 
+        required=True,
+        help="Word size parameter for BLASTN."
+    )
+
+    parser.add_argument(
+        "-e", "--evalue", 
+        type=float, 
+        default=1.0E-09,
+        help="E-value threshold for initial BLASTN filtering."
+    )
+
+    parser.add_argument(
+        "-i", "--identity", 
+        type=int, 
+        required=True,
+        help="Minimum percentage identity for sequence recapturing."
+    )
+
+    parser.add_argument(
+        "-ms", "--min_subjects", 
+        type=int, 
+        default=5,
+        help="Minimum number of unique subjects required for a sequence to be accepted."
+    )
+
     return parser.parse_args()
 
 
-if __name__ == "__main__":
-    # Load all arguments
-    args = parse_arguments()
-    csv_path = os.path.expanduser(args.file)
-    dict_path = os.path.expanduser(args.dict_path)
-    output_dir = os.path.expanduser(args.output)
-    recaught_file_path = os.path.expanduser(args.recaught_file)
-    recaught_threshold = args.recaught_threshold
-    word_size = args.word_size
-    evalue = args.evalue
-    identity = args.identity
+def process_sequence(
+        row: pd.Series, blastn_db_path: str, word_size: int, evalue: float, min_subjects: int = 5
+) -> Dict[str, str]:
+    """
+    Process a single sequence to determine if it meets SIDER criteria.
+
+    Args:
+        row: DataFrame row containing sequence data
+        blastn_db_path: Path to the BLASTN database
+        word_size: Word size parameter for BLASTN
+        evalue: E-value threshold for BLASTN
+        min_subjects: Minimum number of unique subjects required for acceptance (default: 5)
+
+    Returns:
+        Dictionary with name_id and status (Accepted or Rejected)
+    """
+    # Use the sequence directly from the CSV
+    if 'sseq' not in row:
+        logger.warning(f"No sequence found for {row['name_id']}")
+        return {'name_id': row['name_id'], 'status': 'Rejected'}
+
+    sequence = row['sseq']
+    name_id = row['name_id']
+
+    # Create a temporary query file for BLASTN
+    query = f"<(echo -e '>{name_id}\\n{sequence}')"
+
+    try:
+        # Run BLASTN
+        blastn_df = general_blastn_blaster(
+            query_path=query,
+            dict_path=blastn_db_path,
+            word_size=word_size,
+            evalue=evalue
+        )
+
+        # Check BLASTN results - a sequence is accepted if it has hits to at least min_subjects different subjects
+        if not blastn_df.empty and blastn_df["sseqid"].nunique() >= min_subjects:
+            return {'name_id': name_id, 'status': 'Accepted'}
+        else:
+            return {'name_id': name_id, 'status': 'Rejected'}
+    except Exception as e:
+        logger.error(f"Error processing sequence {name_id}: {str(e)}")
+        return {'name_id': name_id, 'status': 'Rejected'}
+
+
+def setup_directories(output_dir: str, dict_path: str) -> Tuple[str, str]:
+    """
+    Create the necessary directories and prepare BLASTN database.
+
+    Args:
+        output_dir: Base output directory (directory of the input file)
+        dict_path: Path to the genome FASTA file
+
+    Returns:
+        Tuple containing paths to the temporary directory and BLASTN database
+    """
+    logger.info("Setting up directories and BLASTN database")
 
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
     # Prepare a subfolder for temporary files
-    folder_path = os.path.join(output_dir, "tmpSiderFilter")
-    os.makedirs(folder_path, exist_ok=True)
+    temp_dir = os.path.join(output_dir, "tmpSiderFilter")
+    os.makedirs(temp_dir, exist_ok=True)
 
     # Prepare BLASTn dict
-    dict_folder_path = os.path.join(folder_path, "blastn_dict")
+    dict_folder_path = os.path.join(temp_dir, "blastn_dict")
     os.makedirs(dict_folder_path, exist_ok=True)
-    dict_file_path_out = os.path.join(dict_folder_path, os.path.basename(dict_path))
-    blastn_dic(path_input=dict_path, path_output=dict_file_path_out)
 
-    # Read input CSV
-    data = pd.read_csv(csv_path, sep=",", header=0)
+    blastn_db_path = os.path.join(dict_folder_path, os.path.basename(dict_path))
 
-    # Group data by sequence identifiers
-    print_message_box("Preparing data for analysis")
-    data['name_id'] = data.apply(lambda row: f"{row['sseqid']}_{row['sstrand']}_{row['sstart']}-{row['send']}", axis=1)
+    try:
+        blastn_dic(path_input=dict_path, path_output=blastn_db_path)
+        logger.info(f"BLASTN database created at {blastn_db_path}")
+    except Exception as e:
+        logger.error(f"Error creating BLASTN database: {str(e)}")
+        raise
 
-    # Apply SIDER filter directly on the DataFrame
-    print_message_box("Applying SIDER filter")
+    return temp_dir, blastn_db_path
 
-    # Function to process a single sequence
-    def process_sequence(row):
-        # Use the sequence directly from the CSV
-        if 'sseq' not in row:
-            return {'name_id': row['name_id'], 'status': 'Rejected'}
 
-        sequence = row['sseq']
+def filter_sequences(
+        data: pd.DataFrame, blastn_db_path: str, word_size: int, evalue: float, min_subjects: int = 5
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Filter sequences using SIDER criteria.
 
-        # Create a temporary query file for BLASTN
-        name_id = row['name_id']
-        query = f"<(echo -e '>{name_id}\\n{sequence}')"
+    Args:
+        data: DataFrame containing sequence data
+        blastn_db_path: Path to the BLASTN database
+        word_size: Word size parameter for BLASTN
+        evalue: E-value threshold for BLASTN
+        min_subjects: Minimum number of unique subjects required for acceptance (default: 5)
 
-        # Run BLASTN
-        blastn_df = general_blastn_blaster(
-            query_path=query,
-            dict_path=dict_file_path_out,
-            word_size=word_size,
-            evalue=evalue
-        )
+    Returns:
+        Tuple containing DataFrames with accepted and rejected sequences
+    """
+    logger.info("Preparing data for analysis")
 
-        # Check BLASTN results
-        if not blastn_df.empty and blastn_df["sseqid"].nunique() >= 5:
-            return {'name_id': name_id, 'status': 'Accepted'}
-        else:
-            return {'name_id': name_id, 'status': 'Rejected'}
-
-    # Process sequences in parallel
-    print(f"Analyzing {len(data)} sequences...")
-    results = Parallel(n_jobs=-1)(
-        delayed(process_sequence)(row) for _, row in data.iterrows()
+    # Create a unique identifier for each sequence
+    data['name_id'] = data.apply(
+        lambda row: f"{row['sseqid']}_{row['sstrand']}_{row['sstart']}-{row['send']}", 
+        axis=1
     )
 
-    # Convert results to DataFrame
-    results_df = pd.DataFrame(results)
+    logger.info("Applying SIDER filter")
+    logger.info(f"Analyzing {len(data)} sequences...")
 
-    # Merge results with original data
-    data = pd.merge(data, results_df, on='name_id', how='left')
+    # Process sequences in parallel
+    try:
+        results = Parallel(n_jobs=-1)(
+            delayed(process_sequence)(row, blastn_db_path, word_size, evalue, min_subjects) 
+            for _, row in data.iterrows()
+        )
 
-    # Split into accepted and rejected
-    accepted_data = data[data['status'] == 'Accepted'].copy()
-    rejected_data = data[data['status'] == 'Rejected'].copy()
+        # Convert results to DataFrame and merge with the original data
+        results_df = pd.DataFrame(results)
+        data = pd.merge(data, results_df, on='name_id', how='left')
 
-    print(f"Accepted sequences: {len(accepted_data)}")
-    print(f"Rejected sequences: {len(rejected_data)}")
+        # Split into accepted and rejected
+        accepted_data = data[data['status'] == 'Accepted'].copy()
+        rejected_data = data[data['status'] == 'Rejected'].copy()
 
-    # Process recaught data
-    print_message_box("Processing recaught data")
+        logger.info(f"Accepted sequences: {len(accepted_data)}")
+        logger.info(f"Rejected sequences: {len(rejected_data)}")
 
-    # Create a FASTA file from the rejected data for BLASTN
-    if not rejected_data.empty:
-        # The sequence data should already be in the CSV
-        # No need to call get_data_sequence
+        return accepted_data, rejected_data
 
-        # Create a FASTA file for BLASTN
-        fasta_file_path = os.path.join(folder_path, "negative_database.fasta")
+    except Exception as e:
+        logger.error(f"Error during sequence filtering: {str(e)}")
+        raise
+
+
+def process_recaught_data(
+    rejected_data: pd.DataFrame, 
+    temp_dir: str, 
+    blastn_db_path: str, 
+    recaught_file_path: str,
+    identity: int,
+    word_size: int,
+    recaught_threshold: float
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Process rejected sequences to recapture potentially valid sequences.
+
+    Args:
+        rejected_data: DataFrame containing rejected sequences
+        temp_dir: Path to the temporary directory
+        blastn_db_path: Path to the BLASTN database
+        recaught_file_path: Path to the recaught file
+        identity: Minimum identity percentage
+        word_size: Word size parameter for BLASTN
+        recaught_threshold: E-value threshold for recapturing
+
+    Returns:
+        Updated DataFrames with accepted and rejected sequences
+    """
+    logger.info("Processing recaught data")
+
+    # If there are no rejected sequences, return empty DataFrames
+    if rejected_data.empty:
+        logger.info("No rejected sequences to process")
+        return pd.DataFrame(), rejected_data
+
+    try:
+        # Create a FASTA file from the rejected data for BLASTN
+        fasta_file_path = os.path.join(temp_dir, "negative_database.fasta")
         with open(fasta_file_path, 'w') as f:
             for idx, row in rejected_data.iterrows():
-                f.write(f">Seq_{idx}_{row['sseqid']}\n{row['sseq']}\n")
+                if 'sseq' in row:
+                    f.write(f">Seq_{idx}_{row['sseqid']}\n{row['sseq']}\n")
+                else:
+                    logger.warning(f"No sequence found for rejected row {idx}")
 
         # Create BLASTN database
-        blastn_dic(path_input=fasta_file_path, path_output=dict_file_path_out)
+        blastn_dic(path_input=fasta_file_path, path_output=blastn_db_path)
 
-        # Run BLASTN on recaught file
+        # Run BLASTN on a recaught file
         caught_data = general_blastn_blaster(
             query_path=recaught_file_path,
-            dict_path=dict_file_path_out,
+            dict_path=blastn_db_path,
             perc_identity=identity,
             word_size=word_size
         )
@@ -161,7 +296,7 @@ if __name__ == "__main__":
         if not caught_data.empty:
             # Filter by e-value
             caught_data = caught_data[caught_data["evalue"] <= recaught_threshold].sort_values(by=["evalue"])
-            print(f"\nRecaught data: {caught_data.shape[0]} elements")
+            logger.info(f"Recaught data: {caught_data.shape[0]} elements")
 
             # Extract sequence indices from sseqid
             caught_data["index"] = caught_data["sseqid"].str.extract(r"Seq_(\d+)_").astype(int)
@@ -169,37 +304,149 @@ if __name__ == "__main__":
             # Get indices of recaught sequences
             recaught_indices = caught_data["index"].unique()
 
-            # Move recaught sequences from rejected to accepted
+            # Move recaught sequences from rejected to accept
             recaught_rows = rejected_data.iloc[recaught_indices].copy()
             if not recaught_rows.empty:
                 recaught_rows['status'] = 'Accepted (Recaught)'
-                accepted_data = pd.concat([accepted_data, recaught_rows], ignore_index=True)
+                accepted_data = recaught_rows
                 rejected_data = rejected_data.drop(recaught_indices)
 
-                print(f"Recaught sequences: {len(recaught_rows)}")
-                print(f"Updated accepted sequences: {len(accepted_data)}")
-                print(f"Updated rejected sequences: {len(rejected_data)}")
+                logger.info(f"Recaught sequences: {len(recaught_rows)}")
+                logger.info(f"Updated rejected sequences: {len(rejected_data)}")
 
-    # Save the final datasets
+                return accepted_data, rejected_data
+
+        logger.info("No sequences were recaptured")
+        return pd.DataFrame(), rejected_data
+
+    except Exception as e:
+        logger.error(f"Error during recaught data processing: {str(e)}")
+        return pd.DataFrame(), rejected_data
+
+
+def save_results(
+    accepted_data: pd.DataFrame, 
+    rejected_data: pd.DataFrame, 
+    output_dir: str, 
+    temp_dir: str
+) -> Tuple[str, str]:
+    """
+    Save filtered sequences to output files and set permissions.
+
+    Args:
+        accepted_data: DataFrame containing accepted sequences
+        rejected_data: DataFrame containing rejected sequences
+        output_dir: Path to the output directory (directory of the input file)
+        temp_dir: Path to the temporary directory
+
+    Returns:
+        Paths to the positive and negative output files
+    """
+    logger.info("Saving results")
+
+    # Define output paths
     positive_path = os.path.join(output_dir, "siders_df.csv")
     negative_path = os.path.join(output_dir, "non_siders_df.csv")
 
-    accepted_data.to_csv(positive_path, index=False)
-    rejected_data.to_csv(negative_path, index=False)
-
-    message_to_print = (
-        f"SIDER filtering completed. Results saved to:\n"
-        f"- Positive: {positive_path}\n"
-        f"- Negative: {negative_path}"
-    )
-    print_message_box(message_to_print)
-
-    # Add right to groups and users
     try:
-        subprocess.run(["chmod", "-R", "a+w", folder_path], check=True)
+        # Save DataFrames to CSV
+        accepted_data.to_csv(positive_path, index=False)
+        rejected_data.to_csv(negative_path, index=False)
+
+        logger.info(f"Positive results saved to: {positive_path}")
+        logger.info(f"Negative results saved to: {negative_path}")
+
+        # Set file permissions
+        subprocess.run(["chmod", "-R", "a+w", temp_dir], check=True)
         subprocess.run(["chmod", "a+w", positive_path], check=True)
         subprocess.run(["chmod", "a+w", negative_path], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred while changing permissions: {e}")
 
-print_message_box("SIDER filtering completed")
+        return positive_path, negative_path
+
+    except Exception as e:
+        logger.error(f"Error saving results: {str(e)}")
+        raise
+
+
+def main():
+    """Main function to run the SIDER filter pipeline."""
+    try:
+        # Parse arguments
+        args = parse_arguments()
+
+        # Expand user paths
+        csv_path = os.path.expanduser(args.file)
+        dict_path = os.path.expanduser(args.dict_path)
+        # Use the directory of the input file as the output location
+        output_dir = os.path.dirname(csv_path)
+        recaught_file_path = os.path.expanduser(args.recaught_file)
+
+        # Setup directories and BLASTN database
+        temp_dir, blastn_db_path = setup_directories(output_dir, dict_path)
+
+        # Read input CSV
+        data = pd.read_csv(csv_path, sep=",", header=0)
+        logger.info(f"Loaded {len(data)} sequences from {csv_path}")
+
+        # Filter sequences
+        print_message_box("Applying SIDER filter")
+        accepted_data, rejected_data = filter_sequences(
+            data, 
+            blastn_db_path, 
+            args.word_size, 
+            args.evalue,
+            args.min_subjects
+        )
+
+        # Process recaught data
+        print_message_box("Processing recaught data")
+        recaught_accepted, updated_rejected = process_recaught_data(
+            rejected_data,
+            temp_dir,
+            blastn_db_path,
+            recaught_file_path,
+            args.identity,
+            args.word_size,
+            args.recaught_threshold
+        )
+
+        # Combine original accepted and recaught accepted data
+        if not recaught_accepted.empty:
+            final_accepted = pd.concat([accepted_data, recaught_accepted], ignore_index=True)
+            logger.info(f"Final accepted sequences: {len(final_accepted)}")
+        else:
+            final_accepted = accepted_data
+
+        # Save results
+        positive_path, negative_path = save_results(
+            final_accepted, 
+            updated_rejected, 
+            output_dir, 
+            temp_dir
+        )
+
+        # Calculate the number of recaught elements
+        num_recaught = len(recaught_accepted) if not recaught_accepted.empty else 0
+
+        # Print counts to STDOUT
+        print(f"Number of elements in accepted data: {len(final_accepted)}")
+        print(f"Number of elements in rejected data: {len(updated_rejected)}")
+        print(f"Number of elements recaught: {num_recaught}")
+
+        # Print completion message
+        message_to_print = (
+            f"SIDER filtering completed. Results saved to:\n"
+            f"- Positive: {positive_path}\n"
+            f"- Negative: {negative_path}"
+        )
+        print_message_box(message_to_print)
+
+    except Exception as e:
+        logger.error(f"Error in SIDER filter pipeline: {str(e)}")
+        print_message_box(f"Error: {str(e)}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+    print_message_box("SIDER filtering completed")
