@@ -1,10 +1,11 @@
 import pandas as pd
 import subprocess
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from joblib import Parallel, delayed
 
 
 def fasta_creator(
@@ -29,7 +30,7 @@ def fasta_creator(
     id_names : pd.DataFrame, optional
         DataFrame containing original sequence identifiers and metadata, used to further annotate FASTA records. 
         Default is None.
-    
+
     Returns
     -------
     None
@@ -58,13 +59,52 @@ def fasta_creator(
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
 
-def get_data_sequence(data: pd.DataFrame, genome_fasta: str) -> pd.DataFrame:
+def _process_single_row(row: pd.Series, genome_fasta: str) -> Dict[str, Any]:
+    """
+    Process a single row from the DataFrame to retrieve sequence data.
+
+    This helper function executes a BLAST command for a single row and returns
+    the sequence data as a dictionary.
+
+    Parameters
+    ----------
+    row : pd.Series
+        A single row from the DataFrame containing sequence details.
+        Must contain 'sseqid', 'sstart', 'send', and 'sstrand' columns.
+    genome_fasta : str
+        The file path to the genome database in fasta format to query against.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing the sequence data with keys:
+        'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'.
+    """
+    sseqid = row['sseqid']
+    start = row['sstart']
+    end = row['send']
+    strand = row['sstrand']
+    cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
+
+    sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
+                              executable="/usr/bin/bash").stdout.strip()
+
+    return {
+        'sseqid': sseqid,
+        'sstart': start,
+        'send': end,
+        'sstrand': strand,
+        'sseq': sequence
+    }
+
+
+def get_data_sequence(data: pd.DataFrame, genome_fasta: str, n_jobs: int = -1) -> pd.DataFrame:
     """
     Fetches nucleotide sequences from a specified genome database using BLAST commands.
 
     This function retrieves specified sequence ranges from a genome database in a fasta format.
     The input strand direction is specified, and BLAST commands are executed to obtain the sequences based on the 
-    provided data.
+    provided data. Uses parallel processing to improve performance when dealing with multiple chromosomes.
 
     Parameters
     ----------
@@ -73,6 +113,9 @@ def get_data_sequence(data: pd.DataFrame, genome_fasta: str) -> pd.DataFrame:
         contain the columns 'sseqid', 'sstart', and 'send'.
     genome_fasta : str
         The file path to the genome database in fasta format to query against.
+    n_jobs : int, optional
+        The number of jobs to run in parallel. -1 means using all processors.
+        Default is -1.
 
     Returns
     -------
@@ -80,25 +123,12 @@ def get_data_sequence(data: pd.DataFrame, genome_fasta: str) -> pd.DataFrame:
         A pandas DataFrame containing the retrieved sequences. The DataFrame includes
         columns for 'sseqid', 'sstart', 'send', 'sstrand', and 'sseq'.
     """
-    sequences = []
-    for _, row in data.iterrows():
-        sseqid = row['sseqid']
-        start = row['sstart']
-        end = row['send']
-        strand = row['sstrand']
-        cmd = f"blastdbcmd -db {genome_fasta} -entry {sseqid} -range {start}-{end} -strand {strand} -outfmt %s"
+    # Process rows in parallel
+    sequences = Parallel(n_jobs=n_jobs)(
+        delayed(_process_single_row)(row, genome_fasta) for _, row in data.iterrows()
+    )
 
-        sequence = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
-                                  executable="/usr/bin/bash").stdout.strip()
-
-        sequences.append({
-            'sseqid': sseqid,
-            'sstart': start,
-            'send': end,
-            'sstrand': strand,
-            'sseq': sequence
-        })
-
+    # Convert results to DataFrame
     sequences_df = pd.DataFrame(sequences)
 
     return sequences_df
@@ -136,7 +166,7 @@ def columns_to_numeric(data_input: pd.DataFrame, columns_to_convert: list[str] |
 def end_always_greater_than_start(data_input: pd.DataFrame) -> pd.DataFrame:
     """
     Ensures that the 'send' value is always greater than 'sstart' value by swapping them if needed.
-    
+
     Parameters:
     -----------
     data_input: pd.DataFrame
