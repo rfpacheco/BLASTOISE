@@ -57,7 +57,7 @@ A coordinate correction step is implemented next. This step addresses the potent
 ### 2.3. Implementing script
 
 ```bash
-python3 extra/filterCoord.py \
+python3 extra/ \
 -f <path_to_blastoise_df_merged.csv> or <path_to_blastoise_df.csv> \
 -d <genome_fasta_file_path> \
 -ws 15 \  # If you used 15 in blastoise.py, if not, use the 'word_size' number as preferred.

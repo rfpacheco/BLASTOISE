@@ -9,16 +9,17 @@ from modules.blaster import blastn_dic
 from extra.second_functions import get_sequence, bedops_merge, csv_to_fasta_creator, general_blastn_blaster
 
 
-def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
+def coordinates_corrector(df: pd.DataFrame, dict_path: str, folder_path: str, word_size: int, min_length: int) -> str:
     """
         Adjusts sequence coordinates using BLASTN and BEDOPS processing and saves the updated results.
 
-        This function takes a DataFrame containing sequence information, utilizes BLASTN to process sequences,
+        This function takes a DataFrame containing sequence information, uses BLASTN to process sequences,
         filters sequences based on coordinate overlap and strand validity, merges the results with BEDOPS,
         and computes updated start and end coordinates. The updated results are stored in a dictionary and saved
         as a JSON file.
 
-        Arguments:
+        Parameters:
+        ---------
         df : DataFrame
             The input pandas DataFrame containing the sequence data with required columns: 'sseqid', 'sstrand',
             'sstart', 'send', and 'sseq'.
@@ -32,17 +33,12 @@ def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
             The minimum required length of the sequences after adjusting their coordinates.
 
         Returns:
+        --------
         str
             The file path of the saved JSON file containing the updated coordinates.
-
-        Raises:
-        TypeError
-            If the types of input arguments do not match the specified types.
-        ValueError
-            If some of the required columns are missing from the DataFrame.
     """
     main_dict = {}
-    for index, row in df.iterrows():
+    for pos, (index, row) in enumerate(df.iterrows(), start=1):
         # Prepare the query data
         name_id = f"{row['sseqid']}_{row['sstrand']}_{row['sstart']}-{row['send']}"  # Create the name_id with the original info of the seq.
         seq = row["sseq"]
@@ -51,7 +47,7 @@ def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
         end_coor = row["send"]  # Get the end coordinate for later
         strand_seq = row["sstrand"]  # Get the strand of the sequence for later
         name_chr = row["sseqid"]  # Get the name of the chromosome for later
-        print(f"Analyzing row {index + 1}/{df.shape[0]} with name_id {name_id}")
+        print(f"Analyzing row {pos}/{df.shape[0]} with name_id {name_id}")
 
         # Call the blastn function
         blastn_df = general_blastn_blaster(query_path=query, dict_path=dict_path, word_size=word_size)
@@ -108,12 +104,13 @@ def coordinates_corrector(df, dict_path, folder_path, word_size, min_length):
 
 # ======================================================================
 # noinspection DuplicatedCode
-def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
+def json_sider_filter(json_file: str, folder_path: str, dict_path: str, word_size: int, evalue: float) -> str:
     """
         Filters and analyzes elements in a JSON file based on specific criteria, identifying whether they
         are accepted or rejected, and outputs the results to a new JSON file.
 
         Parameters:
+        -----------
         json_file: str
             The path to the JSON file containing the original data.
         folder_path: str
@@ -126,17 +123,12 @@ def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
             The e-value threshold for filtering BLASTn hits.
 
         Returns:
+        --------
         str
             The file path to the filtered JSON data stored in 'filtered_data.json'.
-
-        Raises:
-        FileNotFoundError
-            If the JSON file or genome dictionary is not found.
-        ValueError
-            If the JSON file contains invalid or unexpected data.
     """
     with open(json_file, "r") as file:
-        json_data = json.load(file)  # Loading json file into a python dict
+        json_data = json.load(file)  # Loading JSON file into a python dict
         # In the dict for each element:
         # element[0] = chromosome
         # element[1] = strand
@@ -165,7 +157,7 @@ def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
             # Make a BLASTn with this sequence with the filter:
             ## Prepare data
             name_id = f"{key}_{i}"
-            query = f"<(echo -e '>{name_id}\n{sequence}')"  # create bash tmp file
+            query = f"<(echo -e '>{name_id}\n{sequence}')"  # create a bash tmp file
 
             # Run BLASTn
             blastn_df = general_blastn_blaster(query_path=query,
@@ -210,7 +202,8 @@ def json_sider_filter(json_file, folder_path, dict_path, word_size, evalue):
 
 # ======================================================================
 # noinspection DuplicatedCode
-def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file, recaught_threshold, word_size, perc_identity):
+def sider_json_to_csv(json_file: str, folder_path: str, dict_path: str, recaught_file: str, 
+                      recaught_threshold: float, word_size: int, perc_identity: int) -> None:
     """
         Transform data from a JSON file into two CSV files (positive and negative databases),
         process accepted and rejected elements, extract sequences, and handle recaptured data.
@@ -220,50 +213,50 @@ def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file, recaught
         data based on BLASTn results. The positive and negative databases are saved as separate
         CSV files. Additionally, appropriate file permissions are modified.
 
-        Attributes:
-            json_file (str): Path to the input JSON file.
-            folder_path (str): Path to the folder to store intermediate outputs, like the negative
-                database in FASTA format.
-            dict_path (str): Path to the genome dictionary for sequence retrieval.
-            recaught_file (str): Path to the file containing data used for recapturing sequences.
-            recaught_threshold (float): E-value threshold for filtering recaptured data.
-            word_size (int): Word size parameter used in BLASTn analysis for recapturing.
-            perc_identity (float): Percentage identity threshold for BLASTn alignment during
-                recapturing.
-
         Parameters:
-            json_file: The path to the JSON file that contains the data to be processed.
-            folder_path: The destination folder for intermediate generated files.
-            dict_path: The path to the genome dictionary file needed for sequence generation.
-            recaught_file: The input file to capture sequences that may have been rejected or
-                missed.
-            recaught_threshold: Specifies the threshold for e-value in filtering recaught
-                results.
-            word_size: Controls the word size used during recapturing using BLASTn.
-            perc_identity: Minimum identity percentage threshold to consider matches during
-                recapturing.
+        -----------
+        json_file: str
+            Path to the input JSON file.
+        folder_path: str
+            Path to the folder to store intermediate outputs, like the negative
+            database in FASTA format. 
+        dict_path: str
+            Path to the genome dictionary for sequence retrieval.
+        recaught_file: str
+            Path to the file containing data used for recapturing sequences.
+        recaught_threshold: float
+            E-value threshold for filtering recaptured data.
+        word_size: int
+            Word size parameter used in BLASTn analysis for recapturing.
+        perc_identity: int
+            Percentage identity threshold for BLASTn alignment during recapturing.
 
         Raises:
-            FileNotFoundError: If any input file paths do not exist.
-            ValueError: If the input data or parameters do not meet expected criteria.
-            SubprocessError: If external subprocess calls (e.g., for setting file permissions)
-                fail.
+        -------
+        FileNotFoundError
+            If any input file paths do not exist.
+        ValueError  
+            If the input data or parameters do not meet expected criteria.
+        SubprocessError
+            If external subprocess calls (e.g., for setting file permissions) fail.
 
         Returns:
-            None
+        --------
+        None
 
         Notes:
-            The function performs multiple tasks including:
-             - Loading the JSON input file into a pandas DataFrame for processing.
-             - Sorting data columns for consistency and clarity.
-             - Retrieving sequences for positive and negative databases using genomic
-               coordinates.
-             - Generating a BLASTn database and running recapture operations if needed.
-             - Saving final processed data (positive and negative) into separate CSV files.
-             - Modifying file permissions to ensure appropriate access.
+        ------
+        The function performs multiple tasks including
+         - Loading the JSON input file into a pandas DataFrame for processing.
+         - Sorting data columns for consistency and clarity.
+         - Retrieving sequences for positive and negative databases using genomic
+           coordinates.
+         - Generating a BLASTn database and running recapture operations if needed.
+         - Saving final processed data (positive and negative) into separate CSV files.
+         - Modifying file permissions to ensure appropriate access.
 
-            External utility functions and subprocesses (e.g., BLASTn) are required to run this
-            function successfully.
+        External utility functions and subprocesses (e.g., BLASTn) are required to run this
+        function successfully.
     """
     print("1. Loading JSON file...")
     with open(json_file, "r") as file:
@@ -279,7 +272,7 @@ def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file, recaught
     # Let's start by creating the positive database
     print("2. Getting accepted or rejected elements...")
     positive_database = [element[0:4] for value in data_dict.values() for element in value if
-                         element[4] == "Accepted"]  # Save from chromosome to end coordinate
+                         element[4] == "Accepted"]  # Save from chromosome-to-end coordinate
     negative_database = [element[0:4] for value in data_dict.values() for element in value if element[4] != "Accepted"]
     print("\t DONE")
 
@@ -387,7 +380,3 @@ def sider_json_to_csv(json_file, folder_path, dict_path, recaught_file, recaught
     # Add right to groups and users
     subprocess.run(["chmod", "-R", "a+w", positive_path], check=True)
     subprocess.run(["chmod", "-R", "a+w", negative_path], check=True)
-
-
-
-
