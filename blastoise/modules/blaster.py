@@ -64,11 +64,13 @@ def blastn_blaster(
         'slen', 'sstrand', and 'sseq'.
     """
 
-    cmd = f"blastn -word_size {word_size} \
-    -query {query_path} \
-    -db {dict_path} \
-    -perc_identity {perc_identity} \
-    -outfmt '10 qseqid sseqid sstart send sstrand evalue sseq'"
+    cmd = (
+        f"blastn -word_size {word_size} "
+        f"-query {query_path} "
+        f"-db {dict_path} "
+        f"-perc_identity {perc_identity} "
+        f"-outfmt '10 qseqid sseqid sstart send sstrand evalue sseq'"
+    )
     data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
     data.columns = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
