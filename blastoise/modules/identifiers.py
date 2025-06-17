@@ -66,7 +66,7 @@ def genome_specific_chromosome_main(
     # -----------------------------------------------------------------------------
     if coincidence_data is not None: # If coincidence data exist with actual information.
         print("")
-        print('\t\t2.0. Input data information')
+        print('\t\t2.1. Input data information')
         print(f"\t\t\t- Input data row length: {data_input.shape[0]}")
         print(f"\t\t\t- Coincidence data row length: {coincidence_data.shape[0]}")
         # Join the data input coming from run "n" with the coincidence data between run "n" and "n-1"
@@ -79,7 +79,7 @@ def genome_specific_chromosome_main(
     data_to_extend = data_input.copy() # Copy `data_input` to not modify the original data
 
     print("")
-    print(f"\t\t2.1. Sequence extension in both directions to {extend_number} nt:\n",
+    print(f"\t\t2.2. Sequence extension in both directions to {extend_number} nt:\n",
           f"\t\t\t- Data row length: {data_to_extend.shape[0]}")
 
     tic = time.perf_counter()
@@ -98,7 +98,7 @@ def genome_specific_chromosome_main(
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     print("")
-    print(f"\t\t2.2. Fasta {extend_number} nt file creation:")
+    print(f"\t\t2.3. Fasta {extend_number} nt file creation:")
     # Get a fasta file from the `extended_sequences`.
     # Save the coordinates from the `extended_sequences` and the original coordinates before the extension in `data_input` to the fasta file.
     sequences_extended_with_sseq = get_data_sequence(sequences_extended, genome_fasta)
@@ -108,6 +108,8 @@ def genome_specific_chromosome_main(
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     # Launch the `fasta_file` formed with the `extended_sequences` to the genomes
+    print("")
+    print(f"\t\t2.4. BLASTn against genome:")
     second_blaster = blastn_blaster(
         sequences_extended_fasta_path,
         genome_fasta,
@@ -116,14 +118,13 @@ def genome_specific_chromosome_main(
     )
     # Get elems only with a seq length >= `min_length`
     second_blaster = second_blaster[second_blaster['len'] >= min_length]
-
     toc = time.perf_counter()
-    print("")
-    print(f"\t\t2.3. BLASTn against genome:\n",
-          f"\t\t\t- Data row length: {second_blaster.shape[0]}\n",
+    print(f"\t\t\t- Data row length: {second_blaster.shape[0]}\n",
           f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
+    print("")
+    print(f"\t\t2.5. Setting all coordinates information")
     # Removing extended coordinates in `second_blaster` using the `extended_sequences` coordinates.
     second_blaster_not_extended = second_blaster.copy()  # Copy data to not modify the original data
 
@@ -160,7 +161,7 @@ def genome_specific_chromosome_main(
     # -----------------------------------------------------------------------------
     # Set the strand orientation
     print("")
-    print(f"\t\t 2.4. Setting strand orientation")
+    print(f"\t\t 2.6. Setting strand orientation")
     print(f"\t\t\t- Data row length: {second_blaster_not_extended.shape[0]}")
     tic = time.perf_counter()
     second_blaster_not_extended_oriented = set_strand_direction(
@@ -174,7 +175,7 @@ def genome_specific_chromosome_main(
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     print("")
-    print("\t\t2.4. Filtering data:\n")
+    print("\t\t2.7. Filtering data:")
     filtered_data = global_filters_main(
         second_blaster_not_extended_oriented,
         min_length

@@ -9,7 +9,7 @@ from datetime import datetime
 from modules.aesthetics import print_message_box
 from modules.identifiers import genome_specific_chromosome_main
 from modules.compare import compare_main
-from modules.files_manager import end_always_greater_than_start
+from modules.files_manager import end_always_greater_than_start, get_data_sequence
 from extra.csv_to_gff import csv_to_gff
 
 
@@ -150,10 +150,10 @@ def repetitive_blaster(
     tic = time.perf_counter()
     data_ordered = data_input.sort_values(by=["sseqid", "sstrand", "sstart"])
     toc = time.perf_counter()
-    print("")
     print('1. Initial data:\n',
           f"\t- Data row length: {data_input.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
+    print("")
     terminal_width = shutil.get_terminal_size().columns  # Get the terminal width
 
     print("")
@@ -189,10 +189,6 @@ def repetitive_blaster(
 
     # -----------------------------------------------------------------------------
     # Compare part
-    # Prepare folders and path
-    comparison_folder = os.path.join(folder_path, "comparison")
-    os.makedirs(comparison_folder, exist_ok=True)
-
     print("")
     print(f"3. Comparison VS Previous Run:")
     if coincidence_data is not None:
@@ -217,7 +213,7 @@ def repetitive_blaster(
     print("")
     print(f"\t\t- Coincidence data from run 'n' and 'n-1': {coincidence_data.shape[0]}\n",
           f"\t\t- New data detected only from run 'n': {new_data.shape[0]}\n",
-          f"\t\t- Previous data detecte only from 'n-1': {old_data_exclusive.shape[0]}")
+          f"\t\t- Previous data detected only from 'n-1': {old_data_exclusive.shape[0]}")
 
     old_data_exclusive_less_than_100 = None
 
@@ -255,15 +251,14 @@ def repetitive_blaster(
 
     # -----------------------------------------------------------------------------
     # Stopping part
-    stopping_folder = os.path.join(folder_path, "stopping")
-    os.makedirs(stopping_folder, exist_ok=True)
-
     if new_data.shape[0] == 0:
         coincidence_data = coincidence_data[['sseqid', 'sstart', 'send', 'sstrand']].copy()  # #Take only the necessary columns:
         
         # Make it so 'sstart' is always < than 'send'
         coincidence_data = end_always_greater_than_start(coincidence_data)
 
+        # Add the sequence column "sseq"
+        coincidence_data = get_data_sequence(coincidence_data, genome_fasta)
 
         coincidence_data.to_csv(os.path.join(folder_path, "blastoise_df.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
         csv_to_gff(os.path.join(folder_path, "blastoise_df.csv"))

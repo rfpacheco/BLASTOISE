@@ -182,26 +182,22 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
     # -----------------------------------------------------------------------------
     # 1) Filter and sort data
     # -----------------------------------------------------------------------------
-    print("\t\t\t\t- Getting diff. strand data.")
     df_plus = data_input[data_input['sstrand'] == 'plus'].copy()  # filters the "+" strand
     df_minus = data_input[data_input['sstrand'] == 'minus'].copy()  # filters the "-" strand
 
     # Sort the data by the start coordinate
-    print("\t\t\t\t- Sorting data.")
     df_plus = df_plus.sort_values(by=['sseqid', 'sstart'])  # sorts the "+" strand by the start coordinate
     df_minus = df_minus.sort_values(by=['sseqid', 'sstart'])  # sorts the "-" strand by the start coordinate
 
     # -----------------------------------------------------------------------------
     # 2) Merge overlapping intervals using PyRanges for each strand
     # -----------------------------------------------------------------------------
-    print("\t\t\t\t- Merging intervals for plus strand.")
     if not df_plus.empty:
         df_plus_merged = merge_intervals(df_plus)
         df_plus_merged['sstrand'] = 'plus'
     else:
         df_plus_merged = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
 
-    print("\t\t\t\t- Merging intervals for minus strand.")
     if not df_minus.empty:
         df_minus_merged = merge_intervals(df_minus)
         df_minus_merged['sstrand'] = 'minus'
