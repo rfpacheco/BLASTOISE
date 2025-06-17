@@ -1,18 +1,17 @@
 import pandas as pd
 
-from modules.bedops import bedops_coincidence
+from modules.genomic_ranges import compare_genomic_datasets
 from modules.files_manager import columns_to_numeric
 
 
-def compare_main(  # TODO: replace BEDOPS with PyRanges
+def compare_main(
         newest_data: pd.DataFrame,
         contrast_data: pd.DataFrame,
         genome_fasta: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    # TODO: replace BEDOS in docs to PyRanges
     This function performs comparative analysis between two data sets representing genomic
-    features on different strands ('plus' and 'minus') of DNA. It invokes the BEDOPS tool
+    features on different strands ('plus' and 'minus') of DNA. It uses PyRanges tools
     for overlap analysis and processes the results to identify shared, unique, and exclusive
     data points. The concatenated results for both strands are returned separately.
 
@@ -44,10 +43,10 @@ def compare_main(  # TODO: replace BEDOPS with PyRanges
     contrast_data_minus = contrast_data[contrast_data["sstrand"] == "minus"].copy()
         # -----------------------------------------------------------------------------
 
-    # Call BEDOPS on plus
+    # Call PyRanges on plus
     print("")
     print("\t\t- '+' strand:")
-    coincidence_plus, new_data_plus, old_data_exclusive_plus= bedops_coincidence(
+    coincidence_plus, new_data_plus, old_data_exclusive_plus = compare_genomic_datasets(
         newest_data_plus, contrast_data_plus, "plus", genome_fasta
     )
     if not new_data_plus.empty:  # If the data frame has lines
@@ -57,11 +56,11 @@ def compare_main(  # TODO: replace BEDOPS with PyRanges
     if not old_data_exclusive_plus.empty:  # If the data frame has lines
         old_data_exclusive_plus = columns_to_numeric(old_data_exclusive_plus)  # Convert columns to numeric
     # -----------------------------------------------------------------------------
-    # Call BEDOPS on minus.
-    # And now call BEDOPS on minus
+    # Call PyRanges on minus.
+    # And now call PyRanges on minus
     print("")
     print("\t\t- '-' strand:")
-    coincidence_minus, new_data_minus, old_data_exclusive_minus = bedops_coincidence(
+    coincidence_minus, new_data_minus, old_data_exclusive_minus = compare_genomic_datasets(
         newest_data_minus, contrast_data_minus, "minus", genome_fasta
     )
     # Restore the coordinates

@@ -218,3 +218,98 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
     all_data['len'] = all_data['send'] - all_data['sstart'] + 1
 
     return all_data
+
+
+def compare_genomic_datasets(main_data: pd.DataFrame, data_for_contrast: pd.DataFrame, strand: str, genome_fasta: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Compares two genomic datasets to identify overlapping and non-overlapping regions.
+
+    This function processes and identifies overlapping and non-overlapping genomic data between
+    two datasets using PyRanges tools, sorts and merges the results. It replaces the previous
+    bedops_coincidence function, providing the same functionality but using PyRanges instead
+    of BEDOPS tools.
+
+    Parameters:
+    -----------
+    main_data : pd.DataFrame
+        The primary dataset containing genomic data to be analyzed. Expected to have
+        columns 'sseqid', 'sstart', 'send', and 'sstrand'.
+    data_for_contrast : pd.DataFrame
+        The secondary dataset used for comparison against the main dataset. Expected
+        to have the same structure as main_data.
+    strand : str
+        The genomic strand orientation ('+' or '-').
+    genome_fasta : str
+        Path to the genome FASTA file for sequence extraction.
+
+    Returns:
+    --------
+    tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+        A tuple containing:
+        - coincidence_data (pd.DataFrame):
+            Data overlapping in both `main_data` and `data_for_contrast` after merging.
+        - new_data (pd.DataFrame):
+            Data unique to `main_data` (not found in `data_for_contrast`).
+        - only_in_contrast_data (pd.DataFrame):
+            Data unique to `data_for_contrast` (not found in `main_data`).
+    """
+    # Sort the data frames by the start coordinate
+    main_data = main_data.sort_values(by=['sseqid', 'sstart'])
+    data_for_contrast = data_for_contrast.sort_values(by=['sseqid', 'sstart'])
+
+    # Get length of the datasets for reporting
+    main_data_len = main_data.shape[0]
+    data_contrast_len = data_for_contrast.shape[0]
+
+    # Check elements in the "main data" that overlap in the "contrast" data
+    main_exists_in_contrast_data = get_interval_coincidence(main_data, data_for_contrast)
+    print("")
+    print("\t\t\t- Coincidence data:")
+    if main_data_len > 0:
+        print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
+    else:  # In this case `main_data_len == 0`
+        print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len}")
+
+    contrast_exists_in_main_data = get_interval_coincidence(data_for_contrast, main_data)
+    if data_contrast_len > 0:
+        print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
+    else:  # Then `data_contrast_len == 0`
+        print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len}")
+
+    # There would be elements that are in both datasets. The next step is to merge them.
+    # Combine the overlapping data from both directions and merge
+    overlapping_data = pd.concat([main_exists_in_contrast_data, contrast_exists_in_main_data], ignore_index=True)
+    merged_data = merge_intervals(overlapping_data)
+    print(f"\t\t\t\t- Merged data: {merged_data.shape[0]}")
+
+    coincidence_data = merged_data.copy()
+    coincidence_data['sstrand'] = strand
+
+    # Check elements from `main_data` that DO NOT overlap with `data_for_contrast`
+    # Because these elements are not in the contrast data, they will be novice elements.
+    print("")
+    print("\t\t\t- NOT coincidence data:")
+    main_not_exists_in_contrast_data = get_interval_not_coincidence(main_data, data_for_contrast)
+    if main_data_len > 0:
+        print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_not_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
+    else:
+        print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len}")
+
+    if not main_not_exists_in_contrast_data.empty:  # If the data frame has data
+        new_data = main_not_exists_in_contrast_data.copy()
+    else:  # If the data frame is empty
+        new_data = pd.DataFrame()
+
+    # Now check the elements in Old that are not in Last
+    contrast_not_exists_in_main_data = get_interval_not_coincidence(data_for_contrast, main_data)
+    if data_contrast_len > 0:
+        print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_not_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
+    else:
+        print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len}")
+
+    if not contrast_not_exists_in_main_data.empty:  # If the data frame has lines
+        only_in_contrast_data = contrast_not_exists_in_main_data.copy()
+    else:  # If the data frame is empty
+        only_in_contrast_data = pd.DataFrame()
+
+    return coincidence_data, new_data, only_in_contrast_data
