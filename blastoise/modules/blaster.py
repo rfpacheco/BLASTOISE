@@ -86,7 +86,7 @@ def blastn_blaster(
 
 
 def repetitive_blaster(
-        data_input: "pandas.DataFrame",
+        data_input: pd.DataFrame,
         genome_fasta: str,
         folder_path: str,
         numbering: int,

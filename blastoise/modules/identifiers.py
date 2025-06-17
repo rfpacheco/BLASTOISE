@@ -1,8 +1,10 @@
 import os
 import time
+from typing import Optional
+
 import pandas as pd
 
-from modules.files_manager import fasta_creator, columns_to_numeric, end_always_greater_than_start, get_data_sequence
+from modules.files_manager import fasta_creator, get_data_sequence
 from modules.seq_modifier import sequence_extension
 from modules.filters import global_filters_main
 from modules.strand_location import set_strand_direction
@@ -10,26 +12,51 @@ from modules.strand_location import set_strand_direction
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, identity_1, run_phase, word_size, min_length, extend_number, limit_len, coincidence_data=None):
+def genome_specific_chromosome_main(
+        data_input: pd.DataFrame,
+        main_folder_path: str,
+        genome_fasta: str,
+        identity_1: float,
+        run_phase: int,
+        word_size: int,
+        min_length: int,
+        extend_number: int,
+        limit_len: int,
+        coincidence_data: Optional[pd.DataFrame] | None = None
+) -> pd.DataFrame:
     """
-    Executes the main function to process genome-specific chromosomes, extending sequences, performing BLASTn
-    analysis, filtering results, and returning a filtered DataFrame.
+    Processes genome-specific chromosome data by performing several operations such as sequence
+    extensions, BLAST alignments, and data filtering. The function handles optional input for
+    coincidence data and manages intermediate and final results in a structured manner.
 
-    Arguments:
-        data_input (pd.DataFrame): The input data containing sequence information for processing.
-        main_folder_path (str): Path to the folder where output files will be stored.
-        genome_fasta (str): Path to the genome FASTA file used for sequence alignment.
-        identity_1 (float): The minimum percentage of identity required for BLASTn matches.
-        run_phase (int): An integer representing the current processing phase.
-        word_size (int): The BLASTn word size configuration for sequence alignment.
-        min_length (int): The minimum alignment length for filtering BLASTn results.
-        extend_number (int): The number of nucleotides by which the sequences will be extended.
-        limit_len (int): The maximum allowable length for the extended sequences.
-        coincidence_data (pd.DataFrame, optional): Data that incorporates the coincidence elements between the run "n" and run "n-1". Defaults to None.
+    Parameters
+    ----------
+    data_input: pd.DataFrame
+        The primary input data containing sequence information.
+    main_folder_path: str
+        The root folder path where intermediate and final results will be stored.
+    genome_fasta: str
+        Path to the genome FASTA file used for sequence processing.
+    identity_1: float
+        Minimum sequence identity required for BLAST alignment.
+    run_phase: int
+        Current phase of the processing pipeline for directory and log management.
+    word_size: int
+        Word size parameter for BLAST alignment.
+    min_length: int
+        Minimum sequence length required to pass filters.
+    extend_number: int
+        Number of nucleotides by which sequences are extended in both directions.
+    limit_len: int
+        Maximum allowable sequence length for extended sequences.
+    coincidence_data: pd.DataFrame | None, optional
+        Data frame containing information on coinciding sequences between previous and current runs. Default is None.
 
-    Returns:
-        pd.DataFrame: A pandas DataFrame containing filtered results after sequence extension, BLASTn analysis,
-        and post-processing.
+    Returns
+    -------
+    pd.DataFrame
+        A filtered data frame representing the processed result of genome-specific
+        chromosome sequences while adhering to all defined filters and extensions.
     """
     from modules.blaster import blastn_blaster  # Delayed import --> to break the circular import. Need to be at the start of function.
 
@@ -57,10 +84,12 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
 
     tic = time.perf_counter()
     # Extend `data_to_extend` in both directions to `extend_number` nt
-    sequences_extended = sequence_extension(data_input=data_to_extend,
-                                            genome_fasta=genome_fasta,
-                                            extend_number=extend_number,
-                                            limit_len=limit_len)
+    sequences_extended = sequence_extension(
+        data_to_extend,
+        genome_fasta,
+        extend_number,
+        limit_len
+    )
     sequences_extended['len'] = sequences_extended['send'] - sequences_extended['sstart'] + 1
     sequences_extended_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
     toc = time.perf_counter()
@@ -79,10 +108,12 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     # Launch the `fasta_file` formed with the `extended_sequences` to the genomes
-    second_blaster = blastn_blaster(query_path=sequences_extended_fasta_path,
-                                    dict_path=genome_fasta,
-                                    perc_identity=identity_1,
-                                    word_size=word_size)
+    second_blaster = blastn_blaster(
+        sequences_extended_fasta_path,
+        genome_fasta,
+        identity_1,
+        word_size
+    )
     # Get elems only with a seq length >= `min_length`
     second_blaster = second_blaster[second_blaster['len'] >= min_length]
 
@@ -132,9 +163,11 @@ def genome_specific_chromosome_main(data_input, main_folder_path, genome_fasta, 
     print(f"\t\t 2.4. Setting strand orientation")
     print(f"\t\t\t- Data row length: {second_blaster_not_extended.shape[0]}")
     tic = time.perf_counter()
-    second_blaster_not_extended_oriented = set_strand_direction(second_blaster_not_extended,
-                                                                run_phase,
-                                                                main_folder_path)
+    second_blaster_not_extended_oriented = set_strand_direction(
+        second_blaster_not_extended,
+        run_phase,
+        main_folder_path
+    )
     toc = time.perf_counter()
     print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
