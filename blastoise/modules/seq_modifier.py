@@ -1,6 +1,7 @@
 import subprocess
 import pandas as pd
 
+
 def sequence_extension(
         data_input: pd.DataFrame,
         genome_fasta: str,
