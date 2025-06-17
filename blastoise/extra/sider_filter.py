@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from modules.blaster import blastn_dic
 from extra.second_functions import general_blastn_blaster
-from modules.files_manager import get_data_sequence
 from modules.aesthetics import print_message_box
 
 
@@ -90,22 +89,11 @@ if __name__ == "__main__":
 
     # Function to process a single sequence
     def process_sequence(row):
-        # Get the sequence using the parallelized function
-        sequence_df = get_data_sequence(
-            pd.DataFrame([{
-                'sseqid': row['sseqid'],
-                'sstart': row['sstart'],
-                'send': row['send'],
-                'sstrand': row['sstrand']
-            }]),
-            dict_file_path_out,
-            n_jobs=1  # Use 1 job here as we're already parallelizing at a higher level
-        )
-
-        if sequence_df.empty:
+        # Use the sequence directly from the CSV
+        if 'sseq' not in row:
             return {'name_id': row['name_id'], 'status': 'Rejected'}
 
-        sequence = sequence_df.iloc[0]['sseq']
+        sequence = row['sseq']
 
         # Create a temporary query file for BLASTN
         name_id = row['name_id']
@@ -149,13 +137,8 @@ if __name__ == "__main__":
 
     # Create a FASTA file from the rejected data for BLASTN
     if not rejected_data.empty:
-        # Get sequences for rejected data if not already present
-        if 'sseq' not in rejected_data.columns:
-            rejected_data = get_data_sequence(
-                rejected_data[['sseqid', 'sstart', 'send', 'sstrand']],
-                dict_file_path_out,
-                n_jobs=-1
-            )
+        # The sequence data should already be in the CSV
+        # No need to call get_data_sequence
 
         # Create a FASTA file for BLASTN
         fasta_file_path = os.path.join(folder_path, "negative_database.fasta")
