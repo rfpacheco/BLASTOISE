@@ -1,13 +1,17 @@
 import pandas as pd
 import subprocess
+from typing import Optional
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-def fasta_creator(data_input, fasta_output_path, id_names=None):
+
+def fasta_creator(
+        data_input: pd.DataFrame,
+        fasta_output_path: str,
+        id_names: Optional[pd.DataFrame] = None
+) -> None:
     """
     Creates a FASTA file from a DataFrame containing sequence and metadata.
 
@@ -17,12 +21,12 @@ def fasta_creator(data_input, fasta_output_path, id_names=None):
 
     Parameters
     ----------
-    data_input : pandas.DataFrame
+    data_input : pd.DataFrame
         Input data containing sequence information. Assumes the input DataFrame includes a 'sseqid', 'sstart', 'send', 
         'sstrand', and 'sseq' column for the necessary metadata.
     fasta_output_path : str
         File path where the resulting FASTA file will be written.
-    id_names : pandas.DataFrame, optional
+    id_names : pd.DataFrame, optional
         DataFrame containing original sequence identifiers and metadata, used to further annotate FASTA records. 
         Default is None.
     
@@ -53,7 +57,8 @@ def fasta_creator(data_input, fasta_output_path, id_names=None):
         matrix.append(rec)
     SeqIO.write(matrix, fasta_output_path, "fasta")
 
-def get_data_sequence(data, genome_fasta):
+
+def get_data_sequence(data: pd.DataFrame, genome_fasta: str) -> pd.DataFrame:
     """
     Fetches nucleotide sequences from a specified genome database using BLAST commands.
 
@@ -98,7 +103,8 @@ def get_data_sequence(data, genome_fasta):
 
     return sequences_df
 
-def columns_to_numeric(data_input, columns_to_convert=None):
+
+def columns_to_numeric(data_input: pd.DataFrame, columns_to_convert: list[str] | None = None) -> pd.DataFrame:
     """
     Convert specified columns of a DataFrame to numeric datatype.
 
@@ -126,7 +132,8 @@ def columns_to_numeric(data_input, columns_to_convert=None):
         data_input[column] = pd.to_numeric(data_input[column], errors='coerce')
     return data_input
 
-def end_always_greater_than_start(data_input):
+
+def end_always_greater_than_start(data_input: pd.DataFrame) -> pd.DataFrame:
     """
     Ensures that the 'send' value is always greater than 'sstart' value by swapping them if needed.
     
