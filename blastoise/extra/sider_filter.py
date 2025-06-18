@@ -18,6 +18,9 @@ import pandas as pd
 import subprocess
 from typing import Dict, Tuple
 from joblib import Parallel, delayed
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -219,11 +222,11 @@ def filter_sequences(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Filter sequences using SIDER criteria by applying BLASTN-based filtering.
-    
+
     A sequence is accepted if it has BLASTN hits to at least `min_subjects` different subjects,
     in the expected minimum `evalue`, otherwise it is rejected. The function processes sequences
     in parallel using joblib.
-    
+
     For each sequence:
     1. Creates a unique name_id from sequence coordinates
     2. Runs BLASTN against the provided database
@@ -328,15 +331,25 @@ def process_recaught_data(
         return pd.DataFrame(), rejected_data
 
     try:
-        # Create a FASTA file from the rejected data for BLASTN
-        # TODO: user BioPython for fasta creation
+        # Create a FASTA file from the rejected data for BLASTN using BioPython
         fasta_file_path = os.path.join(temp_dir, "negative_database.fasta")
-        with open(fasta_file_path, 'w') as f:
-            for idx, row in rejected_data.iterrows():
-                if 'sseq' in row:
-                    f.write(f">Seq_{idx}_{row['sseqid']}\n{row['sseq']}\n")
-                else:
-                    logger.warning(f"No sequence found for rejected row {idx}")
+
+        # Create a list of SeqRecord objects
+        records = []
+        for idx, row in rejected_data.iterrows():
+            if 'sseq' in row:
+                # Create a SeqRecord with the sequence and an ID
+                record = SeqRecord(
+                    Seq(row['sseq']),
+                    id=f"Seq_{idx}_{row['sseqid']}",
+                    description=""
+                )
+                records.append(record)
+            else:
+                logger.warning(f"No sequence found for rejected row {idx}")
+
+        # Write the records to a FASTA file
+        SeqIO.write(records, fasta_file_path, "fasta")
 
         # Create BLASTN database
         blastn_dic(path_input=fasta_file_path, path_output=blastn_db_path)
