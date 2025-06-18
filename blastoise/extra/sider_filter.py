@@ -154,7 +154,7 @@ def process_sequence(
 
 def setup_directories(output_dir: str, dict_path: str) -> Tuple[str, str]:
     """
-    Create the necessary directories and prepare BLASTN database.
+    Create the necessary directories and prepare a BLASTN database.
 
     Args:
         output_dir: Base output directory (directory of the input file)
