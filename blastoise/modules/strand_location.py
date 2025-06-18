@@ -8,7 +8,7 @@ from typing import Hashable
 
 from modules.genomic_ranges import get_merge_stranded
 from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
-from extra.csv_to_gff import csv_to_gff
+from extra.utils.csv_to_gff import csv_to_gff
 
 
 # noinspection DuplicatedCode
@@ -345,7 +345,7 @@ def smart_merge_across_flips(
               .drop(columns="_block_id", errors="ignore")  # Safe drop temp column
               .sort_values(start_col)
               .reset_index(drop=True))
-    
+
     return result
 
 # noinspection PyUnusedLocal

@@ -10,7 +10,7 @@ from modules.aesthetics import print_message_box
 from modules.identifiers import genome_specific_chromosome_main
 from modules.compare import compare_main
 from modules.files_manager import end_always_greater_than_start, get_data_sequence
-from extra.csv_to_gff import csv_to_gff
+from extra.utils.csv_to_gff import csv_to_gff
 
 
 def blastn_dic(path_input: str, path_output: str) -> None:
@@ -253,7 +253,7 @@ def repetitive_blaster(
     # Stopping part
     if new_data.shape[0] == 0:
         coincidence_data = coincidence_data[['sseqid', 'sstart', 'send', 'sstrand']].copy()  # #Take only the necessary columns:
-        
+
         # Make it so 'sstart' is always < than 'send'
         coincidence_data = end_always_greater_than_start(coincidence_data)
 

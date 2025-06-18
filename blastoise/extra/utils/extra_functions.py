@@ -10,7 +10,7 @@ from Bio.SeqRecord import SeqRecord
 
 # Add the parent directory of 'blastoise' to sys.path if needed
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from modules.blaster import blastn_dic
 
@@ -221,7 +221,7 @@ def setup_directories(base_dir: str, dict_path: str, temp_dir_name: str, logger_
     logger = logging.getLogger(logger_name)
     logger.info("Setting up directories and BLASTN database")
 
-    # Ensure the base directory exists
+    # Ensure base directory exists
     os.makedirs(base_dir, exist_ok=True)
 
     # Prepare a subfolder for temporary files

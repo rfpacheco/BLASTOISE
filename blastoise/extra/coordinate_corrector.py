@@ -17,8 +17,8 @@ import pandas as pd
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.aesthetics import print_message_box
-from extra.extra_functions import setup_directories
-from extra.coordinate_corrector_functions import (
+from extra.utils.extra_functions import setup_directories
+from extra.utils.coordinate_corrector_functions import (
     parse_arguments,
     correct_coordinates,
     create_output_dataframe,

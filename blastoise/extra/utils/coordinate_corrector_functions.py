@@ -23,9 +23,9 @@ import subprocess
 from typing import Dict, List, Any
 
 # Add the parent directory of 'blastoise' to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from extra.extra_functions import fetch_dna_sequence, general_blastn_blaster
+from extra.utils.extra_functions import fetch_dna_sequence, general_blastn_blaster
 from modules.aesthetics import print_message_box
 from modules.genomic_ranges import merge_intervals
 

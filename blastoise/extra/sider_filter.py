@@ -19,8 +19,8 @@ import pandas as pd
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.aesthetics import print_message_box
-from extra.extra_functions import setup_directories
-from extra.sider_filter_functions import (
+from extra.utils.extra_functions import setup_directories
+from extra.utils.sider_filter_functions import (
     parse_arguments,
     filter_sequences,
     process_recaught_data,
