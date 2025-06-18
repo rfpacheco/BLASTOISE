@@ -17,9 +17,9 @@ import pandas as pd
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.aesthetics import print_message_box
+from extra.extra_functions import setup_directories
 from extra.coordinate_corrector_functions import (
     parse_arguments,
-    setup_directories,
     correct_coordinates,
     create_output_dataframe,
     add_sequences,
@@ -66,7 +66,12 @@ def main():
         input_file_dir = os.path.dirname(csv_path)
 
         # Setup directories and BLASTN database
-        temp_dir, blastn_db_path = setup_directories(input_file_dir, dict_path)
+        temp_dir, blastn_db_path = setup_directories(
+            base_dir=input_file_dir,
+            dict_path=dict_path,
+            temp_dir_name="tmpCoordinateCorrector",
+            logger_name="coordinate_corrector"
+        )
 
         # Read input CSV
         data = pd.read_csv(csv_path, sep=",", header=0)
@@ -78,8 +83,7 @@ def main():
         # Correct coordinates
         results_dict = correct_coordinates(
             data, 
-            blastn_db_path, 
-            temp_dir, 
+            blastn_db_path,
             args.word_size, 
             args.min_length
         )

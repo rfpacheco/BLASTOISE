@@ -29,7 +29,7 @@ from Bio.SeqRecord import SeqRecord
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.blaster import blastn_dic
-from extra.second_functions import general_blastn_blaster
+from extra.extra_functions import general_blastn_blaster
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -163,50 +163,6 @@ def process_sequence(
         return {'name_id': name_id, 'status': 'Rejected'}
 
 
-def setup_directories(output_dir: str, dict_path: str) -> Tuple[str, str]:
-    """
-    Create the necessary directories and prepare a BLASTN database.
-
-    Parameters:
-    -----------
-    output_dir: str
-        Base output directory (directory of the input file)
-    dict_path: str
-        Path to the genome FASTA file
-
-    Returns:
-    -------
-    Returns
-    -------
-    Tuple[str, str]
-        A tuple containing:
-        - temp_dir (str): Path to the created temporary directory for intermediate files
-        - blastn_db_path (str): Path to the generated BLASTN database created from the input genome FASTA
-    """
-    logger = logging.getLogger('sider_filter')
-    logger.info("Setting up directories and BLASTN database")
-
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Prepare a subfolder for temporary files
-    temp_dir = os.path.join(output_dir, "tmpSiderFilter")
-    os.makedirs(temp_dir, exist_ok=True)
-
-    # Prepare BLASTn dict
-    dict_folder_path = os.path.join(temp_dir, "blastn_dict")
-    os.makedirs(dict_folder_path, exist_ok=True)
-
-    blastn_db_path = os.path.join(dict_folder_path, os.path.basename(dict_path))
-
-    try:
-        blastn_dic(path_input=dict_path, path_output=blastn_db_path)
-        logger.info(f"BLASTN database created at {blastn_db_path}")
-    except Exception as e:
-        logger.error(f"Error creating BLASTN database: {str(e)}")
-        raise
-
-    return temp_dir, blastn_db_path
 
 
 def filter_sequences(
@@ -410,7 +366,7 @@ def save_results(
     output_dir : str
         Destination directory for the final files.
     temp_dir : str
-        Working directory for intermediate artefacts.
+        Working directory for intermediate artifacts.
 
     Returns
     -------

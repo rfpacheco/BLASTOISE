@@ -20,13 +20,12 @@ import sys
 import logging
 import pandas as pd
 import subprocess
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from modules.blaster import blastn_dic
-from extra.second_functions import get_sequence, general_blastn_blaster
+from extra.extra_functions import fetch_dna_sequence, general_blastn_blaster
 from modules.aesthetics import print_message_box
 from modules.genomic_ranges import merge_intervals
 
@@ -88,52 +87,12 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def setup_directories(input_file_dir: str, dict_path: str) -> Tuple[str, str]:
-    """
-    Create the necessary directories and prepare a BLASTN database.
-
-    Parameters
-    ----------
-    input_file_dir : str
-        Directory of the input file where temporary files will be created.
-    dict_path : str
-        Path to the genome FASTA file used to create the BLASTN database.
-
-    Returns
-    -------
-    Tuple[str, str]
-        A tuple containing:
-        - temp_dir (str): Path to the created temporary directory for intermediate files
-        - blastn_db_path (str): Path to the generated BLASTN database created from the input genome FASTA
-    """
-    logger = logging.getLogger('coordinate_corrector')
-    logger.info("Setting up directories and BLASTN database")
-
-    # Prepare a subfolder for temporary files
-    temp_dir = os.path.join(input_file_dir, "tmpCoordinateCorrector")
-    os.makedirs(temp_dir, exist_ok=True)
-
-    # Prepare BLASTn dict
-    dict_folder_path = os.path.join(temp_dir, "blastn_dict")
-    os.makedirs(dict_folder_path, exist_ok=True)
-
-    blastn_db_path = os.path.join(dict_folder_path, os.path.basename(dict_path))
-
-    try:
-        blastn_dic(path_input=dict_path, path_output=blastn_db_path)
-        logger.info(f"BLASTN database created at {blastn_db_path}")
-    except Exception as e:
-        logger.error(f"Error creating BLASTN database: {str(e)}")
-        raise
-
-    return temp_dir, blastn_db_path
 
 
 def correct_coordinates(
     df: pd.DataFrame, 
     blastn_db_path: str, 
-    temp_dir: str, 
-    word_size: int, 
+    word_size: int,
     min_length: int
 ) -> Dict[str, List[List[Any]]]:
     """
@@ -149,8 +108,6 @@ def correct_coordinates(
         A DataFrame containing sequence data with columns for sseqid, sstrand, sstart, send, and sseq.
     blastn_db_path : str
         Path to the BLASTN database used for sequence alignment.
-    temp_dir : str
-        Path to the temporary directory for intermediate files.
     word_size : int
         Word size parameter for BLASTN search (-W parameter).
     min_length : int
@@ -341,7 +298,7 @@ def add_sequences(df: pd.DataFrame, blastn_db_path: str) -> pd.DataFrame:
 
     # Add sequence data to each row
     df['sseq'] = df.apply(
-        lambda x: get_sequence(
+        lambda x: fetch_dna_sequence(
             start_coor=x['sstart'],
             end_coor=x['send'],
             strand=x['sstrand'],

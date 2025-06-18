@@ -19,9 +19,9 @@ import pandas as pd
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.aesthetics import print_message_box
+from extra.extra_functions import setup_directories
 from extra.sider_filter_functions import (
     parse_arguments,
-    setup_directories,
     filter_sequences,
     process_recaught_data,
     save_results
@@ -49,7 +49,12 @@ def main():
         recaught_file_path = os.path.expanduser(args.recaught_file)
 
         # Setup directories and BLASTN database
-        temp_dir, blastn_db_path = setup_directories(output_dir, dict_path)
+        temp_dir, blastn_db_path = setup_directories(
+            base_dir=output_dir,
+            dict_path=dict_path,
+            temp_dir_name="tmpSiderFilter",
+            logger_name="sider_filter"
+        )
 
         # Read input CSV
         data = pd.read_csv(csv_path, sep=",", header=0)

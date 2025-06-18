@@ -18,8 +18,9 @@ blastoise docker image
 
 The `blastoise_df.csv` represents the distributions of elements in both DNA strands, as BLAST search outputs. However, since the _Leishmania spp._ genome is made out of DGC (Directional Gene Clusters), this matter should not be stated yet. This is both strands shall be joined in a common strand:
 
+TODO: REMOVE
 ```bash
-python3 extra/joinStrands.py \
+python3 extra/.py \
 -f <path_to_blastoise_df.csv> \
 -d <genome_fasta_file_path> \
 --strand plus  # for the strand, can use "minus" as well

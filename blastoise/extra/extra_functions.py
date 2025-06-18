@@ -1,39 +1,18 @@
 import os
 import pandas as pd
 import subprocess
-from typing import Optional
+import logging
+from typing import Optional, Tuple
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-def simple_fasta_creator(sequence: str, fasta_index: int, fasta_output_path: str) -> None:
-    """
-    Create a simple FASTA file with a single sequence.
+# Add the parent directory of 'blastoise' to sys.path if needed
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-    This function generates a FASTA file containing a single sequence and
-    writes it to the specified file path. Each sequence is assigned a unique
-    identifier based on the provided fasta_index.
-
-    Parameters:
-    -----------
-    sequence: str
-        The nucleotide or protein sequence to include in the FASTA
-        file. Must be a valid sequence.
-    fasta_index: int 
-        An integer used to create the sequence identifier.
-    fasta_output_path: str
-        The file path where the FASTA file will be
-        written.
-        
-    Returns:
-        None
-    """
-    rec = SeqRecord(Seq(sequence),
-                    id="Seq_" + str(fasta_index),
-                    description=""
-                    )
-    SeqIO.write(rec, fasta_output_path, "fasta")
+from modules.blaster import blastn_dic
 
 # ======================================================================
 def csv_to_fasta_creator(csv_data: pd.DataFrame, fasta_output_path: str) -> None:
@@ -63,7 +42,7 @@ def csv_to_fasta_creator(csv_data: pd.DataFrame, fasta_output_path: str) -> None
     SeqIO.write(matrix, fasta_output_path, 'fasta')
 
 # ======================================================================
-def get_sequence(start_coor: int, end_coor: int, strand: str, chromosome: str, path_genome: str) -> str:
+def fetch_dna_sequence(start_coor: int, end_coor: int, strand: str, chromosome: str, path_genome: str) -> str:
     """
     Retrieve a DNA sequence from a genome database using BLAST+ commands.
 
@@ -215,3 +194,51 @@ def general_blastn_blaster(query_path: str, dict_path: str, word_size: int,
         )
 
     return data_df
+
+# ======================================================================
+def setup_directories(base_dir: str, dict_path: str, temp_dir_name: str, logger_name: str) -> Tuple[str, str]:
+    """
+    Create the necessary directories and prepare a BLASTN database.
+
+    Parameters
+    ----------
+    base_dir : str
+        Base directory where temporary files will be created.
+    dict_path : str
+        Path to the genome FASTA file used to create the BLASTN database.
+    temp_dir_name : str
+        Name of the temporary directory to create.
+    logger_name : str
+        Name of the logger to use for logging messages.
+
+    Returns
+    -------
+    Tuple[str, str]
+        A tuple containing:
+        - temp_dir (str): Path to the created temporary directory for intermediate files
+        - blastn_db_path (str): Path to the generated BLASTN database created from the input genome FASTA
+    """
+    logger = logging.getLogger(logger_name)
+    logger.info("Setting up directories and BLASTN database")
+
+    # Ensure the base directory exists
+    os.makedirs(base_dir, exist_ok=True)
+
+    # Prepare a subfolder for temporary files
+    temp_dir = os.path.join(base_dir, temp_dir_name)
+    os.makedirs(temp_dir, exist_ok=True)
+
+    # Prepare BLASTn dict
+    dict_folder_path = os.path.join(temp_dir, "blastn_dict")
+    os.makedirs(dict_folder_path, exist_ok=True)
+
+    blastn_db_path = os.path.join(dict_folder_path, os.path.basename(dict_path))
+
+    try:
+        blastn_dic(path_input=dict_path, path_output=blastn_db_path)
+        logger.info(f"BLASTN database created at {blastn_db_path}")
+    except Exception as e:
+        logger.error(f"Error creating BLASTN database: {str(e)}")
+        raise
+
+    return temp_dir, blastn_db_path
