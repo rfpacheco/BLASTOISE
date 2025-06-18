@@ -107,20 +107,33 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def process_sequence(
-        row: pd.Series, blastn_db_path: str, word_size: int, evalue: float, min_subjects: int = 5
+        row: pd.Series,
+        blastn_db_path: str,
+        word_size: int,
+        evalue: float,
+        min_subjects: int = 5
 ) -> Dict[str, str]:
     """
-    Process a single sequence to determine if it meets SIDER criteria.
+    BLAST a single nucleotide sequence against a reference database and decide
+    whether it meets the SIDER acceptance threshold.
 
-    Args:
-        row: DataFrame row containing sequence data
-        blastn_db_path: Path to the BLASTN database
-        word_size: Word size parameter for BLASTN
-        evalue: E-value threshold for BLASTN
-        min_subjects: Minimum number of unique subjects required for acceptance (default: 5)
+    Parameters
+    ----------
+    row : pd.Series
+        Row containing at least the columns ``name_id`` and ``sequence``.
+    blastn_db_path : str
+        Path to the BLAST-formatted nucleotide database.
+    word_size : int
+        BLASTN word size.
+    evalue : float
+        BLASTN E-value cutoff.
+    min_subjects : int, default 5
+        Minimum number of distinct subject hits required for acceptance.
 
-    Returns:
-        Dictionary with name_id and status (Accepted or Rejected)
+    Returns
+    -------
+    Dict[str, str]
+        ``{"name_id": <str>, "status": "Accepted" | "Rejected"}``.
     """
     # Use the sequence directly from the CSV
     if 'sseq' not in row:
@@ -156,12 +169,21 @@ def setup_directories(output_dir: str, dict_path: str) -> Tuple[str, str]:
     """
     Create the necessary directories and prepare a BLASTN database.
 
-    Args:
-        output_dir: Base output directory (directory of the input file)
-        dict_path: Path to the genome FASTA file
+    Parameters:
+    -----------
+    output_dir: str
+        Base output directory (directory of the input file)
+    dict_path: str
+        Path to the genome FASTA file
 
     Returns:
-        Tuple containing paths to the temporary directory and BLASTN database
+    -------
+    Returns
+    -------
+    Tuple[str, str]
+        A tuple containing:
+        - temp_dir (str): Path to the created temporary directory for intermediate files
+        - blastn_db_path (str): Path to the generated BLASTN database created from the input genome FASTA
     """
     logger.info("Setting up directories and BLASTN database")
 
@@ -189,20 +211,45 @@ def setup_directories(output_dir: str, dict_path: str) -> Tuple[str, str]:
 
 
 def filter_sequences(
-        data: pd.DataFrame, blastn_db_path: str, word_size: int, evalue: float, min_subjects: int = 5
+        data: pd.DataFrame,
+        blastn_db_path: str,
+        word_size: int,
+        evalue: float,
+        min_subjects: int = 5
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Filter sequences using SIDER criteria.
+    Filter sequences using SIDER criteria by applying BLASTN-based filtering.
+    
+    A sequence is accepted if it has BLASTN hits to at least `min_subjects` different subjects,
+    in the expected minimum `evalue`, otherwise it is rejected. The function processes sequences
+    in parallel using joblib.
+    
+    For each sequence:
+    1. Creates a unique name_id from sequence coordinates
+    2. Runs BLASTN against the provided database
+    3. Checks if the number of unique subject hits meets minimum threshold
+    4. Labels sequence as 'Accepted' or 'Rejected'
 
-    Args:
-        data: DataFrame containing sequence data
-        blastn_db_path: Path to the BLASTN database
-        word_size: Word size parameter for BLASTN
-        evalue: E-value threshold for BLASTN
-        min_subjects: Minimum number of unique subjects required for acceptance (default: 5)
+    Parameters:
+    -----------
+    data: pd.DataFrame
+        A data frame containing sequence data with columns for sseqid, sstrand, sstart, send,
+        and sseq (the sequence itself)
+    blastn_db_path: str
+        Path to the pre-formatted BLASTN database to search against
+    word_size: int
+        Word size parameter for BLASTN search (-W parameter)
+    evalue: float
+        E-value threshold for BLASTN hits (-e parameter)
+    min_subjects: int
+        Minimum number of unique subjects a sequence must hit to be accepted (default: 5)
 
     Returns:
-        Tuple containing DataFrames with accepted and rejected sequences
+    --------
+    Tuple[pd.DataFrame, pd.DataFrame]
+        A tuple containing:
+        - First DataFrame with accepted sequences that meet the SIDER criteria
+        - Second DataFrame with rejected sequences that don't meet the criteria
     """
     logger.info("Preparing data for analysis")
 
@@ -252,16 +299,25 @@ def process_recaught_data(
     """
     Process rejected sequences to recapture potentially valid sequences.
 
-    Args:
-        rejected_data: DataFrame containing rejected sequences
-        temp_dir: Path to the temporary directory
-        blastn_db_path: Path to the BLASTN database
-        recaught_file_path: Path to the recaught file
-        identity: Minimum identity percentage
-        word_size: Word size parameter for BLASTN
-        recaught_threshold: E-value threshold for recapturing
+    Parameters:
+    -----------
+    rejected_data: pd.DataFrame
+        A DataFrame containing rejected sequences
+    temp_dir: str
+        Path to the temporary directory
+    blastn_db_path: str
+        Path to the BLASTN database
+    recaught_file_path: str
+        Path to the recaught file
+    identity: Minimum identity percentage
+    word_size: int
+        Word size parameter for BLASTN
+    recaught_threshold: int
+        E-value threshold for recapturing
 
     Returns:
+    --------
+    Tuple[pd.DataFrame, pd.DataFrame]
         Updated DataFrames with accepted and rejected sequences
     """
     logger.info("Processing recaught data")
@@ -273,6 +329,7 @@ def process_recaught_data(
 
     try:
         # Create a FASTA file from the rejected data for BLASTN
+        # TODO: user BioPython for fasta creation
         fasta_file_path = os.path.join(temp_dir, "negative_database.fasta")
         with open(fasta_file_path, 'w') as f:
             for idx, row in rejected_data.iterrows():
@@ -331,16 +388,24 @@ def save_results(
     temp_dir: str
 ) -> Tuple[str, str]:
     """
-    Save filtered sequences to output files and set permissions.
+    Persist accepted/rejected sequences to disk and return the resulting file paths.
 
-    Args:
-        accepted_data: DataFrame containing accepted sequences
-        rejected_data: DataFrame containing rejected sequences
-        output_dir: Path to the output directory (directory of the input file)
-        temp_dir: Path to the temporary directory
+    Parameters
+    ----------
+    accepted_data : pd.DataFrame
+        Sequences that passed filtering.
+    rejected_data : pd.DataFrame
+        Sequences that failed filtering.
+    output_dir : str
+        Destination directory for the final files.
+    temp_dir : str
+        Working directory for intermediate artefacts.
 
-    Returns:
-        Paths to the positive and negative output files
+    Returns
+    -------
+    Tuple[str, str]
+        (positive_file_path, negative_file_path)
+
     """
     logger.info("Saving results")
 
