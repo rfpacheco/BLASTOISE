@@ -8,7 +8,7 @@ def global_filters_main(data_input: pd.DataFrame, min_length: int) -> pd.DataFra
     """
     Processes a given DataFrame by applying filtering and modification operations. It adjusts lengths,
     filters data by a specified minimum length, removes dashes from coordinates, and optionally processes
-    with the BEDOPS method if data remains after filtering.
+    with the PyRanges method if data remains after filtering.
 
     Parameters
     ----------
@@ -35,8 +35,8 @@ def global_filters_main(data_input: pd.DataFrame, min_length: int) -> pd.DataFra
     if not data_filtered.empty:  # Checks if the data is empty. If it is, it will skip the next part of the code
         tic = time.perf_counter()
         print("\t\t\t- Processing with PyRange")
-        data_bedops = get_merge_stranded(data_filtered)
-        final_data = data_bedops.copy()
+        data_pyranges = get_merge_stranded(data_filtered)
+        final_data = data_pyranges.copy()
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
     else:

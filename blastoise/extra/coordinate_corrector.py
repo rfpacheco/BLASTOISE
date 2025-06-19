@@ -1,9 +1,9 @@
 """
 Coordinate Corrector Script
 
-This script adjusts sequence coordinates using BLASTN and BEDOPS processing.
+This script adjusts sequence coordinates using BLASTN and PyRanges processing.
 It processes input sequences, filters them based on coordinate overlap and strand validity,
-merges the results with BEDOPS, and computes updated start and end coordinates.
+merges the results with PyRanges, and computes updated start and end coordinates.
 
 The script requires several input parameters and produces a CSV file with the corrected coordinates.
 """

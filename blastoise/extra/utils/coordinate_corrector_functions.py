@@ -96,10 +96,10 @@ def correct_coordinates(
     min_length: int
 ) -> Dict[str, List[List[Any]]]:
     """
-    Adjust sequence coordinates using BLASTN and BEDOPS processing.
+    Adjust sequence coordinates using BLASTN and PyRanges processing.
 
     This function takes a DataFrame containing sequence information, uses BLASTN to process sequences,
-    filters sequences based on coordinate overlap and strand validity, merges the results with BEDOPS,
+    filters sequences based on coordinate overlap and strand validity, merges the results with PyRanges,
     and computes updated start and end coordinates.
 
     Parameters
