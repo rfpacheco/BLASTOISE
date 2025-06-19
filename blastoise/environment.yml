@@ -5,7 +5,6 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
-  - bedops=2.4.41=h4ac6f70_2
   - biopython=1.84=py310hc51659f_0
   - blast=2.16.0=hc155240_2
   - bzip2=1.0.8=h4bc722e_7

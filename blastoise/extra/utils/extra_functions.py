@@ -3,6 +3,7 @@ import pandas as pd
 import subprocess
 import logging
 from typing import Optional, Tuple
+import pyranges as pr
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -79,40 +80,51 @@ def fetch_dna_sequence(start_coor: int, end_coor: int, strand: str, chromosome: 
     return sequence
 
 # ======================================================================================================================
-def bedops_merge(input_df: pd.DataFrame, path_folder: str) -> pd.DataFrame:
+def pyranges_merge(input_df: pd.DataFrame, path_folder: str = None) -> pd.DataFrame:
     """
-    Process input data by creating a temporary BED file, executing the bedops merge
-    command, and processing its output into a pandas DataFrame. This function is
-    used for merging genomic intervals using the BEDOPS tool in a Python workflow.
+    Process input data by merging overlapping genomic intervals using PyRanges.
+    This function replaces the previous bedops_merge function, providing the same
+    functionality but using PyRanges instead of BEDOPS tools.
 
     Parameters:
     -----------
     input_df: pd.DataFrame
         Input DataFrame containing at least 'qstart' and 'qend' columns, which represent genomic interval start and end 
         positions.
-    path_folder: str 
-        Path to the folder where the temporary BED file will be created and processed.
+    path_folder: str, optional
+        Path to a folder. This parameter is kept for backward compatibility but is not used.
 
     Returns:
     --------
         pd.DataFrame: A DataFrame containing the merged interval data with columns
             'sseqid', 'qstart', and 'qend'.
     """
-    # Create a temporary bed file
-    path_bedops_file = os.path.join(path_folder, "tmp.bed")
-    data_bedops = input_df[["qstart", "qend"]].copy()  # in qstart and qend I don't have the "minus" coordinates problem
-    data_bedops.insert(0, "new_column", "test")  # Add a new column with every row with the same value 'test'
-    data_bedops.to_csv(path_bedops_file, sep="\t", header=False, index=False)
+    # Create a copy of the input dataframe with the required columns
+    data_pyranges = input_df[["qstart", "qend"]].copy()
 
-    # Call and process the bedops merge command
-    cmd = f"bedops --merge {path_bedops_file}"
-    data = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
-                          executable="/usr/bin/bash")
-    data = data.stdout  # Get the output
-    data = pd.DataFrame([x.split("\t") for x in data.split("\n") if x], columns=["sseqid", "qstart", "qend"])
-    data[["qstart", "qend"]] = data[["qstart", "qend"]].apply(pd.to_numeric)  # Convert to numeric
+    # Add a dummy chromosome column (required by PyRanges)
+    data_pyranges.insert(0, "Chromosome", "test")
 
-    return data
+    # Rename columns to match PyRanges expectations
+    data_pyranges = data_pyranges.rename(columns={
+        "qstart": "Start",
+        "qend": "End"
+    })
+
+    # Convert to PyRanges
+    pr_data = pr.PyRanges(data_pyranges)
+
+    # Merge overlapping intervals
+    merged = pr_data.merge()
+
+    # Convert back to DataFrame and rename columns
+    result = merged.df.rename(columns={
+        "Chromosome": "sseqid",
+        "Start": "qstart",
+        "End": "qend"
+    })
+
+    return result
 
 # ======================================================================
 # BLAST FUNCTIONS

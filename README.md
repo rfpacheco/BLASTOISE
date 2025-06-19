@@ -13,7 +13,7 @@ BLASTOISE is available as:
 - **Flexible Installation Options**: Supports Docker-based deployment for easy containerized usage, as well as installation via `git clone` and `conda` environments.
 - **Robust Libraries**: Leverages a range of powerful libraries and tools, including:
     - [Pandas](https://pandas.pydata.org/) for data manipulation (McKinney et al., 2010)
-    - [BEDOPS](https://bedops.readthedocs.io/en/latest/) for genomic feature processing (Neph et al., 2012)
+    - [PyRanges](https://pyranges.readthedocs.io/) for genomic feature processing
     - [BioPython](https://biopython.org/) for biological computations (Cock et al., 2009)
     - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK279690/) for sequence alignment (Camacho et al., 2009)
 
@@ -43,4 +43,3 @@ And for the Post-Processing step, use [**BLASTOISE** docker post processing use 
 BLASTOISE is open-source software, licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
 ---
-
