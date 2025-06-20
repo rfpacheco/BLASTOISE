@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 from typing import Hashable
 
 from modules.genomic_ranges import get_merge_stranded
-from modules.genomic_ranges import get_interval_coincidence, get_interval_not_coincidence, merge_intervals
+from modules.genomic_ranges import get_interval_overlap, merge_intervals
 from extra.utils.csv_to_gff import csv_to_gff
 
 
@@ -259,22 +259,22 @@ def smart_merge_across_flips(
 
             # Check if outer blocks (b0,b2) overlap
             ## Get overlapping elements for b0 and b2 blocks 
-            elems_of_b0 = get_interval_coincidence(all_elems_inrange,
+            elems_of_b0 = get_interval_overlap(all_elems_inrange,
                                                    all_og_inrange.loc[all_og_inrange["_block_id"] == b0])
-            elems_of_b2 = get_interval_coincidence(all_elems_inrange,
+            elems_of_b2 = get_interval_overlap(all_elems_inrange,
                                                    all_og_inrange.loc[all_og_inrange["_block_id"] == b2])
             ## Check if they share overlapping elements
-            elems_of_b0_vs_b2 = get_interval_coincidence(elems_of_b0, elems_of_b2)
+            elems_of_b0_vs_b2 = get_interval_overlap(elems_of_b0, elems_of_b2, invert=False)
             outer_overlap = False
             if not elems_of_b0_vs_b2.empty:  # If it has rows
                 outer_overlap = True  # Then the b1 and b1 share overlapping elements
 
             # Check if adjacent blocks (b0,b1) overlap  
             ## Get overlapping elements for b1 block
-            elems_of_b1 = get_interval_coincidence(all_elems_inrange,
+            elems_of_b1 = get_interval_overlap(all_elems_inrange,
                                                    all_og_inrange.loc[all_og_inrange["_block_id"] == b1])
             ## Check if b0,b1 share overlapping elements
-            elems_of_b0_vs_b1 = get_interval_coincidence(elems_of_b0, elems_of_b1)
+            elems_of_b0_vs_b1 = get_interval_overlap(elems_of_b0, elems_of_b1, invert=False)
             inner_overlap = False
             if not elems_of_b0_vs_b1.empty:  # If it has rows
                 inner_overlap = True  # Then the adyacent b0 and b1 share overlapping elements
@@ -315,7 +315,7 @@ def smart_merge_across_flips(
                 # Remove overlapping elements between b0,b1 that connect the two blocks
 
                 # Get elements from b1 that overlap with b0
-                elems_of_b1_vs_b0 = get_interval_coincidence(elems_of_b1, elems_of_b0)
+                elems_of_b1_vs_b0 = get_interval_overlap(elems_of_b1, elems_of_b0, invert=False)
 
                 # Combine and deduplicate overlapping elements
                 elems_to_remove = pd.concat(
@@ -394,29 +394,29 @@ def _set_overlapping_status_single(
 
         # Get elements from `og_df_chr` that overlap with `row`.
         # NOTO: 'vs' will be used instead of 'overlap'
-        og_vs_row = get_interval_coincidence(og_df_chr, row)
+        og_vs_row = get_interval_overlap(og_df_chr, row, invert=False)
 
         # And now, all the elements that overlap with `og_vs_row`. # NOTE: take only True values in `new_df_chr`
-        new_elems_in_og_vs_row = get_interval_coincidence(
-            new_df_chr[new_df_chr['analyze'] == True], og_vs_row
+        new_elems_in_og_vs_row = get_interval_overlap(
+            new_df_chr[new_df_chr['analyze'] == True], og_vs_row, invert=False
         )
 
         # Now get all new elements that overlap with 'new_elems_in_og_vs_row'.
         # NOTE: take only True values in `new_df_chr`
-        new_elems_inrange_of_og = get_interval_coincidence(
-            new_df_chr[new_df_chr['analyze'] == True], new_elems_in_og_vs_row
+        new_elems_inrange_of_og = get_interval_overlap(
+            new_df_chr[new_df_chr['analyze'] == True], new_elems_in_og_vs_row, invert=False
         )
 
         # And get all original elements in the whole range of `all_elems_in_range`
-        og_inrange = get_interval_coincidence(og_df_chr, new_elems_inrange_of_og)
+        og_inrange = get_interval_overlap(og_df_chr, new_elems_inrange_of_og, invert=False)
 
         # Now, get all elems that overlap all this `og_inrange`
-        all_elems_vs_og_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_inrange)
+        all_elems_vs_og_inrange = get_interval_overlap(new_df_chr[new_df_chr['analyze'] == True], og_inrange, invert=False)
 
         # If these new elems in `all_elems_vs_og_inrange` overlap some other new element coming from a little far
         # away original element, we need to detect them.
-        all_og_inrange = get_interval_coincidence(og_df_chr, all_elems_vs_og_inrange)
-        all_elems_inrange = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], all_og_inrange)
+        all_og_inrange = get_interval_overlap(og_df_chr, all_elems_vs_og_inrange, invert=False)
+        all_elems_inrange = get_interval_overlap(new_df_chr[new_df_chr['analyze'] == True], all_og_inrange, invert=False)
 
         # Let's count how many original elements are in "minus" and "plus" strand. There could be 4 cases
         ## 1) There's only 1 original element in range.
@@ -444,10 +444,10 @@ def _set_overlapping_status_single(
                 # of the original element A that overlaps all the elements in `all_elems_inrange` of element B
                 og_a = og_inrange.loc[0:0, :]
                 og_b = og_inrange.loc[1:1, :]
-                elems_of_a =get_interval_coincidence(all_elems_inrange, og_a)
-                elems_of_b =get_interval_coincidence(all_elems_inrange, og_b)
-                elems_to_remove_a = get_interval_coincidence(elems_of_a, elems_of_b)
-                elems_to_remove_b = get_interval_coincidence(elems_of_b, elems_of_a)
+                elems_of_a = get_interval_overlap(all_elems_inrange, og_a, invert=False)
+                elems_of_b = get_interval_overlap(all_elems_inrange, og_b, invert=False)
+                elems_to_remove_a = get_interval_overlap(elems_of_a, elems_of_b, invert=False)
+                elems_to_remove_b = get_interval_overlap(elems_of_b, elems_of_a, invert=False)
                 elems_to_remove = pd.concat(
                     [elems_to_remove_a, elems_to_remove_b]
                 ).drop_duplicates().sort_values(['sstart', 'send'])
@@ -458,8 +458,8 @@ def _set_overlapping_status_single(
                 else:
                     # Now that the connection between the 2 `original_og_inrange` is removed. The rest will behave like
                     # as if it were only one `original_og_inrange`
-                    og_vs_row = get_interval_coincidence(og_inrange, row) # Selects original data that overlaps with row
-                    all_elems_vs_og = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], og_vs_row)
+                    og_vs_row = get_interval_overlap(og_inrange, row, invert=False) # Selects original data that overlaps with row
+                    all_elems_vs_og = get_interval_overlap(new_df_chr[new_df_chr['analyze'] == True], og_vs_row, invert=False)
                     process_overlapping_data(
                         new_df_chr,
                         row,
@@ -486,8 +486,8 @@ def _set_overlapping_status_single(
                     elems_in_minus = all_elems_inrange[all_elems_inrange['sstrand'] == 'minus']
 
                     # Take the elems that overlap each one
-                    elems_in_plus_vs_minus = get_interval_coincidence(elems_in_plus, elems_in_minus)
-                    elems_in_minus_vs_plus = get_interval_coincidence(elems_in_minus, elems_in_plus)
+                    elems_in_plus_vs_minus = get_interval_overlap(elems_in_plus, elems_in_minus, invert=False)
+                    elems_in_minus_vs_plus = get_interval_overlap(elems_in_minus, elems_in_plus, invert=False)
                     elems_to_remove = pd.concat(
                         [elems_in_plus_vs_minus, elems_in_minus_vs_plus]
                     ).sort_values(['sstart', 'send'])
@@ -496,7 +496,7 @@ def _set_overlapping_status_single(
                     if not is_row_removed.empty:
                         continue
                     else:
-                        elems_in_row = get_interval_coincidence(new_df_chr[new_df_chr['analyze'] == True], row)
+                        elems_in_row = get_interval_overlap(new_df_chr[new_df_chr['analyze'] == True], row, invert=False)
                         process_overlapping_data(
                             new_df_chr,
                             row,
@@ -621,7 +621,7 @@ def set_strand_direction(
     # Get the `new_data` that doesn't overlap with `og_data`
     # `new_elems` are considered new elements. Let's save them correctly. From 'new_data', extract the elements
     # that have the same 'sseqid, 'sstart', 'send' and 'sstrand' as in `new_elems`
-    new_elems = get_interval_not_coincidence(new_data, og_data)
+    new_elems = get_interval_overlap(new_data, og_data, invert=True)
     print(f"\t\t\t- New elements: {new_elems.shape[0]}")
 
     # And the rest elements, which for sure, overlap.
@@ -671,11 +671,11 @@ def set_strand_direction(
         new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
 
         # Select elements that overlap between each strand in the 'new_elems'
-        new_elems_plus_in_minus = get_interval_coincidence(
-            new_elems_plus, new_elems_minus
+        new_elems_plus_in_minus = get_interval_overlap(
+            new_elems_plus, new_elems_minus, invert=False
         )
-        new_elems_minus_in_plus = get_interval_coincidence(
-            new_elems_minus, new_elems_plus
+        new_elems_minus_in_plus = get_interval_overlap(
+            new_elems_minus, new_elems_plus, invert=False
         )
 
         # And remove them
@@ -692,8 +692,8 @@ def set_strand_direction(
         # Remove the elements that overlap with the original+overlapping sequences in the opposite strand
         if not og_and_overlap_elems_minus.empty:  # If it has rows
             # Get `new_elems_plus` that overlap in `og_and_overlap_elems_minus`
-            new_elems_plus_vs_og_and_overlap_minus = get_interval_coincidence(
-                new_elems_plus, og_and_overlap_elems_minus
+            new_elems_plus_vs_og_and_overlap_minus = get_interval_overlap(
+                new_elems_plus, og_and_overlap_elems_minus, invert=False
             )
             if not new_elems_plus_vs_og_and_overlap_minus.empty: # If it has rows
                 # Remove from `new_elems_plus` the elements from `new_elems_plus_vs_og_and_overlap_minus`
@@ -701,8 +701,8 @@ def set_strand_direction(
 
         if not og_and_overlap_elems_plus.empty:  # If it has rows
             # Get `new_elems_minus` that overlap in `og_and_overlap_elems_plus`
-            new_elems_minus_vs_og_and_overlap_plus = get_interval_coincidence(
-                new_elems_minus, og_and_overlap_elems_plus
+            new_elems_minus_vs_og_and_overlap_plus = get_interval_overlap(
+                new_elems_minus, og_and_overlap_elems_plus, invert=False
             )
             if not new_elems_minus_vs_og_and_overlap_plus.empty: # If it has rows
                 # Remove from `new_elems_minus` the elements from `new_elems_minus_vs_og_and_overlap_plus`

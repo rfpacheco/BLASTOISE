@@ -2,48 +2,61 @@ import pandas as pd
 import pyranges as pr
 
 
-def pyranges_column_name_change(df: pd.DataFrame) -> pd.DataFrame:
+# Column mapping constants
+BLAST_TO_PYRANGES = {
+    "sseqid": "Chromosome",
+    "sstart": "Start",
+    "send": "End"
+}
+
+PYRANGES_TO_BLAST = {
+    "Chromosome": "sseqid",
+    "Start": "sstart",
+    "End": "send"
+}
+
+
+def to_pyranges_format(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Renames specific columns in a Pandas DataFrame to standardized names related
-    to genomic data representation. The function is expected to handle a DataFrame
-    containing columns such as 'sseqid', 'sstart', and 'send', and convert these
-    to 'Chromosome', 'Start', and 'End', respectively.
+    Renames specific columns in a Pandas DataFrame to standardized names for PyRanges.
 
     Parameters:
     -----------
     df: pd.DataFrame
         A Pandas DataFrame containing the columns 'sseqid', 'sstart', and 'send'.
-        These columns are expected to represent genomic data that will be renamed
-        to standardized identifiers for further processing.
 
     Returns:
     --------
     pd.DataFrame
-        A new DataFrame with renamed columns:
-        - 'sseqid' renamed to 'Chromosome'
-        - 'sstart' renamed to 'Start'
-        - 'send' renamed to 'End'
-
+        A new DataFrame with renamed columns for PyRanges compatibility.
     """
-    df_renamed = df.rename(columns={
-        "sseqid": "Chromosome",
-        "sstart": "Start",
-        "send": "End"
-    })
-
-    return df_renamed
+    return df.rename(columns=BLAST_TO_PYRANGES)
 
 
-def get_interval_coincidence(df: pd.DataFrame, interval_df: pd.DataFrame) -> pd.DataFrame:
+def from_pyranges_format(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Finds overlap intervals between two dataframes using PyRanges.
+    Renames PyRanges columns back to the original BLAST format.
+
+    Parameters:
+    -----------
+    df: pd.DataFrame
+        A Pandas DataFrame with PyRanges column names.
+
+    Returns:
+    --------
+    pd.DataFrame
+        A DataFrame with columns renamed back to BLAST format.
+    """
+    return df.rename(columns=PYRANGES_TO_BLAST)
+
+
+def get_interval_overlap(df: pd.DataFrame, interval_df: pd.DataFrame, invert: bool = False) -> pd.DataFrame:
+    """
+    Finds intervals between two dataframes that either overlap or don't overlap using PyRanges.
 
     This function takes two dataframes as input, converts them into PyRanges
-    objects, calculates the overlapping intervals between them, and then returns
-    the result as a dataframe. Input dataframes should contain genomic interval
-    information. The column names of the dataframes will be preprocessed to match
-    the requirements of PyRanges, and the result will have its columns renamed
-    back before returning.
+    objects, and calculates either the overlapping or non-overlapping intervals
+    between them based on the 'invert' parameter.
 
     Parameters
     ----------
@@ -53,79 +66,29 @@ def get_interval_coincidence(df: pd.DataFrame, interval_df: pd.DataFrame) -> pd.
     interval_df : pd.DataFrame
         The dataframe containing intervals to check for overlap with the main
         dataframe.
+    invert : bool, default=False
+        If True, returns intervals in df that do not overlap with interval_df.
+        If False, returns intervals in df that do overlap with interval_df.
 
     Returns
     -------
     pd.DataFrame
-        A dataframe containing overlapping genomic intervals with standardized
-        column names. The columns of the resulting dataframe will include
-        'sseqid', 'sstart', and 'send'.
+        A dataframe containing the requested genomic intervals with standardized
+        column names.
     """
+    # Convert dataframes to PyRanges format
+    pr_df = pr.PyRanges(to_pyranges_format(df))
+    pr_intervals = pr.PyRanges(to_pyranges_format(interval_df))
 
-    # Rename columns to match PyRanges expectations
-    df_renamed = pyranges_column_name_change(df)
-    interval_df_renamed = pyranges_column_name_change(interval_df)
+    # Perform an overlap operation
+    result_pr = pr_df.overlap(pr_intervals, strandedness=False, invert=invert)
 
-    # Convert to PyRanges
-    pr_df = pr.PyRanges(df_renamed)
-    pr_intervals = pr.PyRanges(interval_df_renamed)
+    # Convert back to DataFrame with original column names
+    if hasattr(result_pr, 'df'):
+        return from_pyranges_format(result_pr.df)
+    else:
+        return pd.DataFrame(columns=['sseqid', 'sstart', 'send'])
 
-    # Perform overlap (intersection)
-    overlaps = pr_df.overlap(pr_intervals, strandedness=False) # TODO: strandedness could be a parameter?
-
-    # Return as DataFrame and rename back
-    result = overlaps.df.rename(columns={
-        "Chromosome": "sseqid",
-        "Start": "sstart",
-        "End": "send"
-    })
-
-    return result
-
-
-def get_interval_not_coincidence(df: pd.DataFrame, interval_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Gets intervals from the first DataFrame that do not coincide with intervals in
-    the second DataFrame. This function converts input data into PyRanges objects to
-    efficiently perform interval operations and identifies intervals from the first
-    DataFrame that do not overlap with those in the second DataFrame.
-
-    Parameters:
-    ----------
-        df: DataFrame
-            The first DataFrame containing intervals to compare. Expected columns
-            are compatible with PyRanges, such as Chromosome, Start, and End.
-        interval_df: DataFrame
-            The second DataFrame representing intervals for comparison. Similar
-            structure to the first DataFrame.
-
-    Returns:
-    ----------
-        DataFrame
-            A DataFrame of intervals from the first DataFrame that do not overlap
-            with any intervals in the second DataFrame. The resulting DataFrame has
-            columns renamed back to match the original format, such as sseqid,
-            sstart, and send.
-    """
-    # Rename columns to match PyRanges expectations
-    df_renamed = pyranges_column_name_change(df)
-    interval_df_renamed = pyranges_column_name_change(interval_df)
-
-    # Convert to PyRanges
-    pr_df = pr.PyRanges(df_renamed)
-    pr_intervals = pr.PyRanges(interval_df_renamed)
-
-    # Perform overlap (intersection)
-    non_overlapping = pr_df.overlap(pr_intervals, strandedness=False, invert=True) # TODO: strandedness could be a parameter?
-
-    # Return as DataFrame and rename back
-    result = non_overlapping.df.rename(columns={
-        "Chromosome": "sseqid",
-        "Start": "sstart",
-        "End": "send"
-    })
-
-    return result
 
 def merge_intervals(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -142,24 +105,15 @@ def merge_intervals(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: A DataFrame with merged genomic intervals, formatted back to
         the original structure with renamed column labels.
     """
-
-    # Rename to PyRanges expected format
-    pr_df = pyranges_column_name_change(df)
-
-    # Get `pr_df` as a PyRanges obejct
-    pr_df = pr.PyRanges(pr_df)
-
-    # Merge (collapse overlapping/adjacent intervals)
+    # Convert to PyRanges, merge, and convert back
+    pr_df = pr.PyRanges(to_pyranges_format(df))
     merged = pr_df.merge()
 
-    # Convert back to DataFrame and rename
-    result = merged.df.rename(columns={
-        "Chromosome": "sseqid",
-        "Start": "sstart",
-        "End": "send"
-    })
-
-    return result
+    # Handle an empty result
+    if hasattr(merged, 'df'):
+        return from_pyranges_format(merged.df)
+    else:
+        return pd.DataFrame(columns=['sseqid', 'sstart', 'send'])
 
 
 def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
@@ -179,41 +133,52 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: A processed DataFrame containing genomic ranges with associated
             sequence data and additional calculated attributes such as sequence length.
     """
-    # -----------------------------------------------------------------------------
-    # 1) Filter and sort data
-    # -----------------------------------------------------------------------------
-    df_plus = data_input[data_input['sstrand'] == 'plus'].copy()  # filters the "+" strand
-    df_minus = data_input[data_input['sstrand'] == 'minus'].copy()  # filters the "-" strand
+    result_dfs = []
 
-    # Sort the data by the start coordinate
-    df_plus = df_plus.sort_values(by=['sseqid', 'sstart'])  # sorts the "+" strand by the start coordinate
-    df_minus = df_minus.sort_values(by=['sseqid', 'sstart'])  # sorts the "-" strand by the start coordinate
+    # Process each strand separately
+    for strand in ['plus', 'minus']:
+        # Filter and sort data for the current strand
+        strand_df = data_input[data_input['sstrand'] == strand].copy()
 
-    # -----------------------------------------------------------------------------
-    # 2) Merge overlapping intervals using PyRanges for each strand
-    # -----------------------------------------------------------------------------
-    if not df_plus.empty:
-        df_plus_merged = merge_intervals(df_plus)
-        df_plus_merged['sstrand'] = 'plus'
+        if not strand_df.empty:
+            # Sort and merge intervals
+            strand_df = strand_df.sort_values(by=['sseqid', 'sstart'])
+            merged_df = merge_intervals(strand_df)
+            merged_df['sstrand'] = strand
+            result_dfs.append(merged_df)
+
+    # Combine results from both strands
+    if result_dfs:
+        all_data = pd.concat(result_dfs, ignore_index=True)
+        # Add a length column
+        all_data['len'] = all_data['send'] - all_data['sstart'] + 1
+        return all_data
     else:
-        df_plus_merged = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
+        # Return empty DataFrame with expected columns
+        return pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand', 'len'])
 
-    if not df_minus.empty:
-        df_minus_merged = merge_intervals(df_minus)
-        df_minus_merged['sstrand'] = 'minus'
+
+def _print_dataset_stats(description: str, data: pd.DataFrame, total: int, label: str) -> None:
+    """
+    Helper function to print dataset statistics.
+
+    Parameters:
+    -----------
+    description : str
+        Description of the data being reported.
+    data : pd.DataFrame
+        The dataset to report statistics for.
+    total : int
+        The total number of items for percentage calculation.
+    label : str
+        Label for the data (e.g., "New data", "Previous data").
+    """
+    count = data.shape[0]
+    if total > 0:
+        percentage = count / total * 100
+        print(f"\t\t\t\t- {label}: {count}/{total} - {percentage:.2f}%")
     else:
-        df_minus_merged = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
-
-    # -----------------------------------------------------------------------------
-    # 3) Combine results and add length column
-    # -----------------------------------------------------------------------------
-    # Join both data frames
-    all_data = pd.concat([df_plus_merged, df_minus_merged], ignore_index=True)
-
-    # Add "len" column
-    all_data['len'] = all_data['send'] - all_data['sstart'] + 1
-
-    return all_data
+        print(f"\t\t\t\t- {label}: {count}/{total}")
 
 
 def compare_genomic_datasets(
@@ -225,9 +190,7 @@ def compare_genomic_datasets(
     Compares two genomic datasets to identify overlapping and non-overlapping regions.
 
     This function processes and identifies overlapping and non-overlapping genomic data between
-    two datasets using PyRanges tools, sorts and merges the results. It replaces the previous
-    bedops_coincidence function, providing the same functionality but using PyRanges instead
-    of BEDOPS tools.
+    two datasets using PyRanges tools, sorts and merges the results.
 
     Parameters:
     -----------
@@ -238,7 +201,7 @@ def compare_genomic_datasets(
         The secondary dataset used for comparison against the main dataset. Expected
         to have the same structure as main_data.
     strand : str
-        The genomic strand orientation ('+' or '-').
+        The genomic strand orientation ('plus' or 'minus').
 
     Returns:
     --------
@@ -259,55 +222,37 @@ def compare_genomic_datasets(
     main_data_len = main_data.shape[0]
     data_contrast_len = data_for_contrast.shape[0]
 
-    # Check elements in the "main data" that overlap in the "contrast" data
-    main_exists_in_contrast_data = get_interval_coincidence(main_data, data_for_contrast)
-    print("")
-    print("\t\t\t- Coincidence data:")
-    if main_data_len > 0:
-        print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
-    else:  # In this case `main_data_len == 0`
-        print(f"\t\t\t\t- New data in Previous data: {main_exists_in_contrast_data.shape[0]}/{main_data_len}")
+    # Find overlapping regions
+    print("\n\t\t\t- Coincidence data:")
+    main_exists_in_contrast = get_interval_overlap(main_data, data_for_contrast, invert=False)
+    _print_dataset_stats("Coincidence", main_exists_in_contrast, main_data_len, 
+                        "New data in Previous data")
 
-    contrast_exists_in_main_data = get_interval_coincidence(data_for_contrast, main_data)
-    if data_contrast_len > 0:
-        print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
-    else:  # Then `data_contrast_len == 0`
-        print(f"\t\t\t\t- Previous data in New data: {contrast_exists_in_main_data.shape[0]}/{data_contrast_len}")
+    contrast_exists_in_main = get_interval_overlap(data_for_contrast, main_data, invert=False)
+    _print_dataset_stats("Coincidence", contrast_exists_in_main, data_contrast_len, 
+                        "Previous data in New data")
 
-    # There would be elements that are in both datasets. The next step is to merge them.
-    # Combine the overlapping data from both directions and merge
-    overlapping_data = pd.concat([main_exists_in_contrast_data, contrast_exists_in_main_data], ignore_index=True)
+    # Merge overlapping regions
+    overlapping_data = pd.concat([main_exists_in_contrast, contrast_exists_in_main], ignore_index=True)
     merged_data = merge_intervals(overlapping_data)
     print(f"\t\t\t\t- Merged data: {merged_data.shape[0]}")
 
+    # Add strand information to coincidence data
     coincidence_data = merged_data.copy()
     coincidence_data['sstrand'] = strand
 
-    # Check elements from `main_data` that DO NOT overlap with `data_for_contrast`
-    # Because these elements are not in the contrast data, they will be novice elements.
-    print("")
-    print("\t\t\t- NOT coincidence data:")
-    main_not_exists_in_contrast_data = get_interval_not_coincidence(main_data, data_for_contrast)
-    if main_data_len > 0:
-        print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len} - {main_not_exists_in_contrast_data.shape[0]/main_data_len*100:.2f}%")
-    else:
-        print(f"\t\t\t\t- New data NOT in Previous data: {main_not_exists_in_contrast_data.shape[0]}/{main_data_len}")
+    # Find non-overlapping regions
+    print("\n\t\t\t- NOT coincidence data:")
+    main_not_in_contrast = get_interval_overlap(main_data, data_for_contrast, invert=True)
+    _print_dataset_stats("Non-coincidence", main_not_in_contrast, main_data_len, 
+                        "New data NOT in Previous data")
 
-    if not main_not_exists_in_contrast_data.empty:  # If the data frame has data
-        new_data = main_not_exists_in_contrast_data.copy()
-    else:  # If the data frame is empty
-        new_data = pd.DataFrame()
+    contrast_not_in_main = get_interval_overlap(data_for_contrast, main_data, invert=True)
+    _print_dataset_stats("Non-coincidence", contrast_not_in_main, data_contrast_len, 
+                        "Previous data NOT in New data")
 
-    # Now check the elements in Old that are not in Last
-    contrast_not_exists_in_main_data = get_interval_not_coincidence(data_for_contrast, main_data)
-    if data_contrast_len > 0:
-        print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len} - {contrast_not_exists_in_main_data.shape[0]/data_contrast_len*100:.2f}%")
-    else:
-        print(f"\t\t\t\t- Previous data NOT in New data: {contrast_not_exists_in_main_data.shape[0]}/{data_contrast_len}")
-
-    if not contrast_not_exists_in_main_data.empty:  # If the data frame has lines
-        only_in_contrast_data = contrast_not_exists_in_main_data.copy()
-    else:  # If the data frame is empty
-        only_in_contrast_data = pd.DataFrame()
+    # Prepare return values, handling empty dataframes
+    new_data = main_not_in_contrast if not main_not_in_contrast.empty else pd.DataFrame()
+    only_in_contrast_data = contrast_not_in_main if not contrast_not_in_main.empty else pd.DataFrame()
 
     return coincidence_data, new_data, only_in_contrast_data
