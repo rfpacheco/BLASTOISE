@@ -10,6 +10,7 @@ from modules.aesthetics import print_message_box
 from modules.seq_identifier import sequence_identifier
 from modules.compare import compare_main
 from modules.files_manager import end_always_greater_than_start, get_data_sequence
+from modules.strand_location import del_last_overlapping_elem
 from extra.utils.csv_to_gff import csv_to_gff
 
 
@@ -204,6 +205,14 @@ def repetitive_blaster(
         print(f"\t- Previous Run data:\n",
               f"\t\t- First Run row length: {data_input.shape[0]}")
 
+    # -----------------------------------------------------------------------------
+    # Check for overlaps
+    # TODO: remove overlapping sequences
+    # In case there are overlapping sequences resulting from the algorithm in
+    # `strand_location._set_overlapping_status_single`, remove the smallest one
+    ## n data := `whole_group`; n-1 data := `data_input`
+    whole_group = del_last_overlapping_elem(whole_group)
+    # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     print("")
     print(f"\t- Results in this RUN:")

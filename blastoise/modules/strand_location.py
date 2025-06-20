@@ -566,7 +566,7 @@ def set_overlapping_status(
         delayed(_set_overlapping_status_single)(
             chrom,
             new_groups[chrom],
-            og_groups.get(chrom, og_df.iloc[0:0],),  # empty DF if missing
+            og_groups.get(chrom, og_df.iloc[0:0],),  # empty DF if missing # TODO: check slicing
             run_phase
         )
         for chrom in chromosomes
@@ -579,7 +579,6 @@ def set_overlapping_status(
     combined_df.sort_values(by=['sseqid', 'sstart'], inplace=True)
     return combined_df
 
-# noinspection DuplicatedCode
 def set_strand_direction(
         data_input: pd.DataFrame,
         run_phase: int,
@@ -717,3 +716,57 @@ def set_strand_direction(
     result.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
     return result
+
+
+def del_last_overlapping_elem(last_run_elems: pd.DataFrame) -> pd.DataFrame:
+    """
+    After completing `smart_merge_across_flips`, sometimes the output will generate a sequence that unifies the blocks
+    b0 and b2, leaving the bloc b1 in another strand. In this case, b1 should be removed
+
+    Parameters:
+    -----------
+    last_run_elems: pd.DataFrame
+        A dataframe with new elements discovered in the current iteration.
+
+    Returns:
+    --------
+    pd.DataFrame:
+        In case there are overlapping elements between the strands, the small one will be removed. If there are not,
+        the original table will be returned
+    """
+    # Divide `last_run_elems` into its strands
+    last_run_elems_plus = last_run_elems[last_run_elems['sstrand'] == 'plus'].copy()
+    last_run_elems_minus = last_run_elems[last_run_elems['sstrand'] == 'minus'].copy()
+
+    # Check the overlaps between each other
+    last_run_elems_plus_vs_minus = get_interval_overlap(last_run_elems_plus, last_run_elems_minus, invert=False)
+    last_run_elems_minus_vs_plus = get_interval_overlap(last_run_elems_minus, last_run_elems_plus, invert=False)
+
+    # If there's data, iterate from one of the data frames
+    if not last_run_elems_plus_vs_minus.empty:
+        elems_to_remove = pd.DataFrame()
+        data_to_analyze = last_run_elems_plus_vs_minus.copy()
+        for idx, row in data_to_analyze.iterrows():
+            # Check where it overlaps against `last_run_elems_minus_vs_plus`
+            row_len = row.send - row.sstart + 1
+
+            # Check for where it overlaps
+            overlapping_with_row = get_interval_overlap(
+                last_run_elems_minus_vs_plus,
+                last_run_elems_plus_vs_minus.iloc[idx:idx+1, :],  # Get the pd.DataFrame version
+                invert=False
+            )
+
+            # Check which element is bigger between row and the elems in `overlapping_with_row`
+            for _, elem in overlapping_with_row.iterrows():
+                elem_len = elem.send - elem.sstart + 1
+                # It's not possible for elem_len == row_len
+                if elem_len < row_len:
+                    elems_to_remove = pd.concat([elems_to_remove, elem_len])
+                else:
+                    elems_to_remove = pd.concat([elems_to_remove, row])
+
+        # Remove the elements from `elems_to_remove` from `last_run_elems`
+        last_run_elems = match_data_and_remove(last_run_elems, elems_to_remove)
+
+    return last_run_elems
