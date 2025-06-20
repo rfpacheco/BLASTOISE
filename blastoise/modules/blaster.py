@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 
 from modules.aesthetics import print_message_box
-from modules.identifiers import genome_specific_chromosome_main
+from modules.seq_identifier import sequence_identifier
 from modules.compare import compare_main
 from modules.files_manager import end_always_greater_than_start, get_data_sequence
 from extra.utils.csv_to_gff import csv_to_gff
@@ -170,7 +170,7 @@ def repetitive_blaster(
     print(f"{start_time_text:>{terminal_width}}")
     print(f"{end_time_text:>{terminal_width}}")
 
-    whole_group = genome_specific_chromosome_main(
+    whole_group = sequence_identifier(
         data_input=data_ordered,
         main_folder_path=folder_path,
         genome_fasta=genome_fasta,

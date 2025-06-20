@@ -12,7 +12,7 @@ from modules.strand_location import set_strand_direction
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
-def genome_specific_chromosome_main(
+def sequence_identifier(
         data_input: pd.DataFrame,
         main_folder_path: str,
         genome_fasta: str,

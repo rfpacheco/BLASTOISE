@@ -1,7 +1,7 @@
 __all__ = [
     'blaster',
     'aesthetics',
-    'identifiers',
+    'seq_identifier.py',
     'files_manager',
     'seq_modifier',
     'filters',
