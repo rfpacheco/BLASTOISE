@@ -216,7 +216,11 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
     return all_data
 
 
-def compare_genomic_datasets(main_data: pd.DataFrame, data_for_contrast: pd.DataFrame, strand: str, genome_fasta: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def compare_genomic_datasets(
+        main_data: pd.DataFrame,
+        data_for_contrast: pd.DataFrame,
+        strand: str
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Compares two genomic datasets to identify overlapping and non-overlapping regions.
 
@@ -235,8 +239,6 @@ def compare_genomic_datasets(main_data: pd.DataFrame, data_for_contrast: pd.Data
         to have the same structure as main_data.
     strand : str
         The genomic strand orientation ('+' or '-').
-    genome_fasta : str
-        Path to the genome FASTA file for sequence extraction.
 
     Returns:
     --------

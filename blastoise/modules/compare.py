@@ -47,7 +47,7 @@ def compare_main(
     print("")
     print("\t\t- '+' strand:")
     coincidence_plus, new_data_plus, old_data_exclusive_plus = compare_genomic_datasets(
-        newest_data_plus, contrast_data_plus, "plus", genome_fasta
+        newest_data_plus, contrast_data_plus, "plus"
     )
     if not new_data_plus.empty:  # If the data frame has lines
         new_data_plus = columns_to_numeric(new_data_plus)  # Convert columns to numeric
@@ -61,7 +61,7 @@ def compare_main(
     print("")
     print("\t\t- '-' strand:")
     coincidence_minus, new_data_minus, old_data_exclusive_minus = compare_genomic_datasets(
-        newest_data_minus, contrast_data_minus, "minus", genome_fasta
+        newest_data_minus, contrast_data_minus, "minus"
     )
     # Restore the coordinates
     if not new_data_minus.empty:  # If the data frame is not empty
