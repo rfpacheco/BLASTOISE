@@ -11,6 +11,7 @@ from modules.seq_identifier import sequence_identifier
 from modules.compare import compare_main
 from modules.files_manager import end_always_greater_than_start, get_data_sequence
 from modules.strand_location import del_last_overlapping_elem
+from modules.genomic_ranges import get_merge_stranded
 from extra.utils.csv_to_gff import csv_to_gff
 
 
@@ -149,7 +150,7 @@ def repetitive_blaster(
 
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
-    data_ordered = data_input.sort_values(by=["sseqid", "sstrand", "sstart"])
+    data_ordered = data_input.sort_values(by=["sseqid", "sstart"])
     toc = time.perf_counter()
     print('1. Initial data:\n',
           f"\t- Data row length: {data_input.shape[0]}\n",
@@ -199,7 +200,7 @@ def repetitive_blaster(
               f"\t\t- New data row length: {data_input.shape[0]}")
         # This part is important to compare with the last run whole data "whole_group", and not only the "new_data" subset.
         data_input = pd.concat([coincidence_data, data_input], ignore_index=True)
-        data_input.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
+        data_input.sort_values(by=["sseqid", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
         print(f"\t\t- Total data row length: {data_input.shape[0]}")
     else:  # when coincidence_data == None
         print(f"\t- Previous Run data:\n",
@@ -242,7 +243,7 @@ def repetitive_blaster(
 
     if old_data_exclusive_less_than_100 is not None: # If `old_data_exclusive_less_than_100` exists
         new_data_and_old = pd.concat([new_data, old_data_exclusive_less_than_100], ignore_index=True)
-        new_data_and_old.sort_values(by=["sseqid", "sstrand", "sstart"], inplace=True)
+        new_data_and_old.sort_values(by=["sseqid", "sstart"], inplace=True)
         print('\t' * 3 + f"- New data + less than {min_length}: {new_data_and_old.shape[0]}")
     else:
         new_data_and_old = new_data
@@ -252,8 +253,11 @@ def repetitive_blaster(
     # the exclusive data from 'n-1' that does not appear in 'n'
     if not coincidence_data.empty and not old_data_exclusive.empty:
         coincidence_data = pd.concat([coincidence_data, old_data_exclusive], ignore_index=True)
-        coincidence_data.sort_values(by=['sseqid', 'sstrand', 'sstart'], inplace=True)
         print(f"\t\t- Coincidence data + Previous data: {coincidence_data.shape[0]}")
+        coincidence_data = get_merge_stranded(coincidence_data)
+        coincidence_data = del_last_overlapping_elem(coincidence_data)
+        coincidence_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
+        print(f"\t\t\t - After merging: {coincidence_data.shape[0]}")
     else:
         pass
     print(f"\t\t- Execution time: {toc - tic:0.2f} seconds")
@@ -285,8 +289,9 @@ def repetitive_blaster(
               f"\t- Execution time: {toc_main - tic_main:0.2f} seconds")
 
         # Now save the information for this data
-        save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)
+        save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)  # NOTE: 'old_data_exclusive_less_than_100' data will be removed in the final file
         save_run_file.sort_values(by=['sseqid', 'sstart'], inplace=True)
+        save_run_file = del_last_overlapping_elem(save_run_file)  # Not needed, implemented for checking the file output
         save_run_file['len'] = save_run_file['send'] - save_run_file['sstart'] + 1
         runs_folder = os.path.join(folder_path, "RUNS")  # Creates the folder for the RUNS
         os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS

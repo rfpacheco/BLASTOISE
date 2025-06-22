@@ -758,13 +758,17 @@ def del_last_overlapping_elem(last_run_elems: pd.DataFrame) -> pd.DataFrame:
             )
 
             # Check which element is bigger between row and the elems in `overlapping_with_row`
-            for _, elem in overlapping_with_row.iterrows():
+            for idx2, elem in overlapping_with_row.iterrows():
                 elem_len = elem.send - elem.sstart + 1
                 # It's not possible for elem_len == row_len
                 if elem_len < row_len:
-                    elems_to_remove = pd.concat([elems_to_remove, elem_len])
+                    elems_to_remove = pd.concat(
+                        [elems_to_remove, overlapping_with_row.iloc[idx2:idx2+1, :]],
+                    )
                 else:
-                    elems_to_remove = pd.concat([elems_to_remove, row])
+                    elems_to_remove = pd.concat(
+                        [elems_to_remove, data_to_analyze.iloc[idx:idx+1, :]]
+                    )
 
         # Remove the elements from `elems_to_remove` from `last_run_elems`
         last_run_elems = match_data_and_remove(last_run_elems, elems_to_remove)
