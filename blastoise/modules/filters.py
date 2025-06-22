@@ -1,7 +1,8 @@
 import time
 import pandas as pd
 
-from modules.genomic_ranges import get_merge_stranded
+from modules.genomic_ranges import get_merge_stranded, get_interval_overlap
+from modules.strand_location import match_data_and_remove
 
 
 def global_filters_main(data_input: pd.DataFrame, min_length: int) -> pd.DataFrame:
@@ -43,3 +44,36 @@ def global_filters_main(data_input: pd.DataFrame, min_length: int) -> pd.DataFra
         pass
 
     return final_data
+
+
+def remove_masking_zone(data_input: pd.DataFrame, masking_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes masked zones from the input data based on provided masking information.
+
+    This function processes two dataframes: the input data and the masking data.
+    It identifies zones in the input data that overlap with the specified masking
+    data and removes the overlapping sections. Any input data that does not overlap
+    with the masking zones is retained.
+
+    Parameters:
+    -----------
+    data_input: pd.DataFrame
+        The dataframe containing the main data with intervals to be evaluated.
+
+    masking_data: pd.DataFrame
+        The dataframe containing masking zones with intervals that need to be removed
+        from the input data.
+
+    Return:
+    -------
+    pd.DataFrame
+        The resulting dataframe with the masked zones removed.
+    """
+    overlaps_with_masking = get_interval_overlap(data_input, masking_data)
+
+    data_masked = data_input.copy()
+    if not overlaps_with_masking.empty:  # If it has lines
+        data_masked = match_data_and_remove(data_input, overlaps_with_masking)
+
+    return data_masked
+

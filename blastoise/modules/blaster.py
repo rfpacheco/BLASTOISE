@@ -102,6 +102,7 @@ def repetitive_blaster(
         extend_number: int,
         limit_len: int,
         coincidence_data: pd.DataFrame | None = None,
+        mask: pd.DataFrame | None = None,
 ) -> None:
     """
     Performs repetitive sequence data processing, filtering, and comparison step-by-step for genomic analysis.
@@ -137,6 +138,8 @@ def repetitive_blaster(
         Length limit used for sequence filtering.
     coincidence_data : pandas.DataFrame | None, optional
         Existing data from a previous run to compare with. Default is None.
+    mask : pandas.DataFrame | None, optional
+        Masking data to be applied to the whole_group DataFrame. Default is None.
 
     Returns
     -------
@@ -184,6 +187,10 @@ def repetitive_blaster(
         limit_len=limit_len,
         extend_number=extend_number
     )
+
+    if mask is not None:
+        from modules.filters import remove_masking_zone
+        whole_group = remove_masking_zone(whole_group, mask)
 
     toc = time.perf_counter()
     print(f"\t- Data row length: {whole_group.shape[0]}\n",
@@ -315,5 +322,6 @@ def repetitive_blaster(
             min_length=min_length,
             extend_number=extend_number,
             limit_len=limit_len,
-            coincidence_data=coincidence_data
+            coincidence_data=coincidence_data,
+            mask=mask
         )

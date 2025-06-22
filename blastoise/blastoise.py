@@ -8,6 +8,7 @@ import subprocess
 from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
 from modules.aesthetics import print_message_box
 from modules.genomic_ranges import get_merge_stranded
+from modules.filters import remove_masking_zone
 
 # Initiate parser
 parser = argparse.ArgumentParser(
@@ -24,6 +25,7 @@ parser.add_argument('-ws', '--word_size', type=int, required=True, help='Word si
 parser.add_argument('-min', '--min_length', type=int, required=True, help='Minimum length value for filtering')
 parser.add_argument('-ext', '--extend', type=int, required=True, help='Extension number value')
 parser.add_argument('-lim', '--limit', type=int, required=True, help='Length limit value')
+parser.add_argument('-m', '--mask', type=str, required=False, help='Path to the mask file')
 
 # Parsing the arguments
 args = parser.parse_args()
@@ -148,6 +150,11 @@ print(f"\t\t- Data row length: {first_blaster_merged.shape[0]}\n",
 # Create a new folder for all the data
 repetitive_blaster_folder = os.path.join(folder_location, 'execution_data')
 os.makedirs(repetitive_blaster_folder, exist_ok=True)
+if args.mask:
+    # Read the mask file into a DataFrame
+    import pandas as pd
+    mask_data = pd.read_csv(args.mask, sep=",", header=0)
+    first_blaster_merged = remove_masking_zone(first_blaster_merged, mask_data)
 
 tic = time.perf_counter()  # Start the timer
 repetitive_blaster(
@@ -161,7 +168,8 @@ repetitive_blaster(
     word_size=word_size_param,
     min_length=min_length_param,
     extend_number=extend_number_param,
-    limit_len=limit_length_param
+    limit_len=limit_length_param,
+    mask=mask_data if args.mask else None
 )
 
 # Move "blastoise_df.csv" to the main folder
