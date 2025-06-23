@@ -19,6 +19,7 @@ import os
 import sys
 import logging
 import pandas as pd
+import pyranges as pr
 import subprocess
 from typing import Dict, List, Any
 
@@ -27,7 +28,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from extra.utils.extra_functions import fetch_dna_sequence, general_blastn_blaster
 from modules.aesthetics import print_message_box
-from modules.genomic_ranges import merge_intervals
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -73,20 +73,75 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-ws", "--word_size", 
         type=int, 
-        required=True,
+        default=15,
         help="Word size parameter for BLASTN."
     )
 
     parser.add_argument(
         "-min", "--min_length", 
         type=int, 
-        required=True,
+        default=100,
         help="Minimum length of the sequence to be considered after correction."
     )
 
     return parser.parse_args()
 
 
+def merge_intervals_qrange(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge overlapping or adjacent genomic intervals within a DataFrame using qstart and qend columns.
+
+    This function takes a DataFrame containing genomic interval information with 'qstart'
+    and 'qend' columns, converts it to PyRanges format for merging, and returns the
+    processed intervals with the original qstart/qend column structure preserved.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing genomic intervals to be merged. Must contain columns
+        'sseqid', 'qstart', and 'qend'.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with merged genomic intervals, maintaining the original
+        structure with columns 'sseqid', 'qstart', and 'qend'. If the input DataFrame
+        is empty or no intervals can be merged, an empty DataFrame with these columns
+        is returned.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the input DataFrame.
+    ValueError
+        If the input DataFrame cannot be converted to a PyRanges object.
+    """
+    if df.empty:
+        return pd.DataFrame(columns=['sseqid', 'qstart', 'qend'])
+
+    # Create a mapping for qstart/qend to PyRanges format
+    df_for_pyranges = df.rename(columns={
+        "qstart": "Start",
+        "qend": "End"
+    })
+
+    # Add a dummy chromosome column since PyRanges requires it
+    df_for_pyranges["Chromosome"] = "dummy"
+
+    # Convert to PyRanges, merge, and convert back
+    pr_df = pr.PyRanges(df_for_pyranges)
+    merged = pr_df.merge()
+
+    # Handle an empty result
+    if hasattr(merged, 'df'):
+        # Convert back to original column names
+        result_df = merged.df.rename(columns={
+            "Start": "qstart",
+            "End": "qend"
+        })
+        return result_df
+    else:
+        return pd.DataFrame(columns=['sseqid', 'qstart', 'qend'])
 
 
 def correct_coordinates(
@@ -128,40 +183,49 @@ def correct_coordinates(
     # Process each row in the DataFrame
     for pos, (index, row) in enumerate(df.iterrows(), start=1):
         # Prepare the query data
-        name_id = f"{row['sseqid']}_{row['sstrand']}_{row['sstart']}-{row['send']}"
-        seq = row["sseq"]
+        name_id = f"{row.sseqid}_{row.sstrand}_{row.sstart}-{row.send}"
+        seq = row.sseq
         query = f"<(echo -e '>{name_id}\\n{seq}')"
-        start_coor = row["sstart"]
-        end_coor = row["send"]
-        strand_seq = row["sstrand"]
-        name_chr = row["sseqid"]
+        start_coor = row.sstart
+        end_coor = row.send
+        strand_seq = row.sstrand
+        name_chr = row.sseqid
 
         logger.info(f"Analyzing row {pos}/{df.shape[0]} with name_id {name_id}")
 
         # Run BLASTN
         blastn_df = general_blastn_blaster(
-            query_path=query, 
-            dict_path=blastn_db_path, 
-            word_size=word_size
+            query_path=query,
+            dict_path=blastn_db_path,
+            word_size=word_size,
+            perc_identity=60,  # TODO: add as parameter
+            evalue=1.0E-09  # TODO: add as parameter
         )
 
         # Filter the BLASTN results
         # Remove rows with coordinates that overlap with the original coordinates
-        blastn_df = filter_blastn_results(
-            blastn_df, 
-            start_coor, 
-            end_coor, 
+        blastn_df: pd.DataFrame = filter_blastn_results(
+            blastn_df,
+            start_coor,
+            end_coor,
             name_chr
         )
 
-        # Sort and merge the filtered results
-        blastn_df.sort_values(by=["qstart"], inplace=True)
+        # Add len column for the subject
+        blastn_df['len'] = abs(blastn_df['send'] - blastn_df['sstart']) + 1
 
-        # Rename columns for the merge_intervals function
-        blastn_df_renamed = blastn_df.rename(columns={"qstart": "sstart", "qend": "send"})
+        # Only when the length is >= min_length
+        blastn_df = blastn_df[blastn_df['len'] >= min_length]
+        blastn_df = blastn_df[blastn_df['len'] <= 1000]
+
+        # Remove if they are equal or longer than the original
+        blastn_df = blastn_df[blastn_df['len'] < int(row.len)]
+
+        # Sort and merge the filtered results
+        blastn_df.sort_values('qstart', inplace=True)
 
         # Merge intervals using PyRanges
-        merged_df = merge_intervals(blastn_df_renamed)
+        merged_df = merge_intervals_qrange(blastn_df)
 
         # Initialize the results for this sequence
         results_dict[name_id] = []
@@ -169,17 +233,21 @@ def correct_coordinates(
         # Calculate new coordinates
         for _, merged_row in merged_df.iterrows():
             # Calculate new start and end coordinates
-            new_start = start_coor + merged_row["sstart"] - 1
-            new_end = start_coor + merged_row["send"] - 1
+            new_start = start_coor + merged_row["qstart"] - 1
+            new_end = start_coor + merged_row["qend"] - 1
 
             # Check if the sequence meets the minimum length requirement
             if abs(new_end - new_start) + 1 >= min_length:
                 results_dict[name_id].append([name_chr, strand_seq, new_start, new_end])
 
         # Log the results
-        logger.info(f"Found {len(results_dict[name_id])} new sequences for {name_id}")
+        print(f"Found {len(results_dict[name_id])} sequences for {name_id} ==> len {end_coor - start_coor + 1}")
         for seq in results_dict[name_id]:
-            logger.info(f"  {seq[0]}:{seq[1]}:{seq[2]}-{seq[3]}")
+            # Check if the coordinates changed:
+            if seq[2] != start_coor or seq[3] != end_coor:
+                print(f"\t{seq[0]}:{seq[1]}:{seq[2]}-{seq[3]} ==> len {seq[3] - seq[2] + 1}")
+            else:
+                print("\tNo changes made")
 
     return results_dict
 
@@ -267,6 +335,9 @@ def create_output_dataframe(results_dict: Dict[str, List[List[Any]]]) -> pd.Data
 
     # Create DataFrame
     result_df = pd.DataFrame(rows)
+
+    # Reorder
+    result_df.sort_values(['sseqid', 'sstart'], inplace=True)
 
     logger.info(f"Created DataFrame with {len(result_df)} rows")
 

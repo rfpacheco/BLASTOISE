@@ -130,7 +130,7 @@ def pyranges_merge(input_df: pd.DataFrame, path_folder: str = None) -> pd.DataFr
 # BLAST FUNCTIONS
 # ======================================================================
 def general_blastn_blaster(query_path: str, dict_path: str, word_size: int, 
-                          perc_identity: Optional[float] = None, evalue: Optional[float] = None) -> pd.DataFrame:
+                          perc_identity: Optional[int] = None, evalue: Optional[float] = None) -> pd.DataFrame:
     """
     Executes a BLASTN command with the specified parameters and processes the output into a
     structured DataFrame.
@@ -182,7 +182,7 @@ def general_blastn_blaster(query_path: str, dict_path: str, word_size: int,
         cmd += f" -evalue {evalue}"
 
     # Use the more detailed output format from simple_blastn_blaster
-    cmd += " -outfmt '10 qseqid sseqid sstrand qstart qend sstart send evalue bitscore length qlen slen'"
+    cmd += " -outfmt '10 qseqid sseqid sstrand qstart qend sstart send pident evalue bitscore length qlen slen'"
 
     data = subprocess.run(cmd, shell=True, capture_output=True, text=True, universal_newlines=True,
                           executable='/usr/bin/bash')
@@ -193,16 +193,16 @@ def general_blastn_blaster(query_path: str, dict_path: str, word_size: int,
 
     if not data_df.empty:
         data_df.columns = ["qseqid", "sseqid", "sstrand", "qstart", "qend", "sstart", "send",
-                           "evalue", "bitscore", "length", "qlen", "slen"]
+                           "pident", "evalue", "bitscore", "length", "qlen", "slen"]
 
         # Convert numeric columns to numeric type
-        numeric_cols = ["qstart", "qend", "sstart", "send", "evalue", "bitscore",
+        numeric_cols = ["qstart", "qend", "sstart", "send", "pident", "evalue", "bitscore",
                         "length", "qlen", "slen"]
         data_df[numeric_cols] = data_df[numeric_cols].apply(pd.to_numeric)
     else:
         # Create an empty DataFrame with the correct columns
         data_df = pd.DataFrame(columns=["qseqid", "sseqid", "sstrand", "qstart", "qend", "sstart", "send",
-                                        "evalue", "bitscore", "length", "qlen", "slen"]
+                                        "pident", "evalue", "bitscore", "length", "qlen", "slen"]
         )
 
     return data_df
