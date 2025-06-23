@@ -329,7 +329,7 @@ def repetitive_blaster(
     # 1. coincidence_data: Sequences found in both current and previous runs
     # 2. new_data: Sequences found only in the current run
     # 3. old_data_exclusive: Sequences found only in previous runs
-    coincidence_data, new_data, old_data_exclusive = compare_main(whole_group, data_input, genome_fasta)
+    coincidence_data, new_data, old_data_exclusive = compare_main(whole_group, data_input)
     toc = time.perf_counter()
 
     # Report comparison results
