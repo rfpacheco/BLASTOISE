@@ -19,7 +19,7 @@ The pipeline executes the following major steps:
     'blastoise_df.csv' in the main output directory.
 
 Author: R. Pacheco
-Version: <0.4.2>
+Version: 0.4.2
 License: MIT
 """
 

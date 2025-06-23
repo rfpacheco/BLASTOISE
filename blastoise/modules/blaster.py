@@ -1,3 +1,27 @@
+"""
+BLASTOISE Module: BLAST Operations and Sequence Processing
+=========================================================
+
+This module provides core functionality for the BLASTOISE pipeline, handling BLAST database
+creation, sequence alignment, and iterative sequence discovery. It serves as the engine
+for identifying repetitive genomic elements through a series of BLAST operations and
+data processing steps.
+
+The module contains three main functions:
+1. `blastn_dic`: Creates a BLAST database from genome FASTA file
+2. `blastn_blaster`: Performs BLASTn alignment and returns results as a DataFrame
+3. `repetitive_blaster`: Executes the iterative process of sequence extension, 
+   re-alignment, and comparison to discover all instances of repetitive elements
+
+These functions work together to implement the core sequence discovery algorithm
+of BLASTOISE, progressively identifying and refining the set of repetitive sequences
+in the target genome.
+
+Author: R. Pacheco
+Version: 0.4.2
+License: MIT
+"""
+
 import os
 import pandas as pd
 import subprocess
@@ -17,17 +41,31 @@ from extra.utils.csv_to_gff import csv_to_gff
 
 def blastn_dic(path_input: str, path_output: str) -> None:
     """
-    Executes a BLAST database build command using the given input file path and output directory. The function attempts
-    to create a BLAST-compatible nucleotide database by invoking the `makeblastdb` command-line utility. Errors during
-    this process are logged appropriately.
+    Create a BLAST-compatible nucleotide database from a FASTA file.
 
-    Parameters:
-    -----------
-    path_input: str
-        Path to the input file to be used for building the BLAST database.
-    path_output: str
-        Path to the output where the database files will be stored.
+    This function executes the NCBI 'makeblastdb' command-line utility to create a 
+    nucleotide database that can be used for subsequent BLAST searches. The database 
+    is configured to preserve sequence IDs for proper reference in search results.
+
+    Parameters
+    ----------
+    path_input : str
+        Path to the input FASTA file to be used for building the BLAST database.
+    path_output : str
+        Path where the database files will be stored.
+
+    Raises
+    ------
+    Exception
+        If the BLAST database creation fails, the error is logged but not raised.
+
+    Notes
+    -----
+    The function suppresses standard output and error streams from the makeblastdb
+    command to avoid cluttering the console. Errors are captured and logged using
+    the logging module.
     """
+    
     try:
         # "parse_seqids" is used to keep the sequence ID in the output.
         cmd = f"makeblastdb -in {path_input} -dbtype nucl -parse_seqids -out {path_output}"
@@ -43,27 +81,49 @@ def blastn_blaster(
         word_size: int = 15
 ) -> pd.DataFrame:
     """
-    Executes the BLASTn sequence alignment tool using the provided input parameters. BLASTn (Basic Local Alignment
-    Search Tool for Nucleotides) is used to compare a nucleotide query sequence against a nucleotide sequence database.
-    The function parses the output into a pandas DataFrame object.
+    Execute BLASTn alignment and return results as a structured DataFrame.
+
+    This function performs a nucleotide BLAST (BLASTn) search using the provided query
+    sequences against a pre-built BLAST database. It configures the search with the
+    specified identity threshold and word size, then parses the results into a pandas
+    DataFrame with standardized column names and data types.
+
+    The function also performs post-processing on the results:
+    1. Converts coordinate and e-value columns to appropriate data types
+    2. Ensures that 'send' is always greater than 'sstart' for consistent orientation
+    3. Calculates sequence length and adds it as a column
+    4. Reorders columns for better readability
 
     Parameters
     ----------
     query_path : str
-        Path to the query nucleotide sequence file to be used in the alignment.
+        Path to the FASTA file containing query nucleotide sequences.
     dict_path : str
-        Path to the database directory containing nucleotide sequences for matching.
+        Path to the pre-built BLAST database (created with blastn_dic).
     perc_identity : float
-        Percentage of identity required for a match between sequences during alignment.
+        a Minimum percentage identity threshold for reporting matches (0-100).
     word_size : int, optional
-        Size of the word used in the alignment by BLASTn algorithm. Default is 15.
+        Size of the word used for seeding alignments in the BLAST algorithm.
+        Default is 15.
 
     Returns
     -------
     pd.DataFrame
-        pandas.DataFrame containing the parsed output of the BLASTn alignment. The columns include:
-        'qseqid', 'sseqid', 'pident', 'length', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen',
-        'slen', 'sstrand', and 'sseq'.
+        A DataFrame containing the parsed and processed BLAST results with columns:
+        'qseqid' (query sequence ID), 'sseqid' (subject sequence ID), 
+        'sstart' (subject start position), 'send' (subject end position),
+        'sstrand' (subject strand), 'evalue' (expectation value),
+        'sseq' (aligned subject sequence), and 'len' (length of alignment).
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        If the BLAST command fails to execute properly.
+
+    Notes
+    -----
+    The BLAST output format is configured to return only specific fields needed
+    for downstream analysis, which may differ from standard BLAST output formats.
     """
 
     cmd = (
@@ -106,48 +166,70 @@ def repetitive_blaster(
         n_jobs: int = -1
 ) -> None:
     """
-    Performs repetitive sequence data processing, filtering, and comparison step-by-step for genomic analysis.
-    The function involves sorting data, individual sequence searching and cleaning, comparison with previous runs,
-    and preparing results for further analysis or stopping the process if no new data is found.
+    Execute the iterative repetitive sequence discovery process.
 
-    The function is designed to handle large genomic datasets, execute BLAST analysis-like operations,
-    and manages data across multiple runs to ensure convergence and completeness of results.
+    This function is the core of the BLASTOISE pipeline, implementing an iterative
+    approach to discovering all instances of repetitive elements in a genome. For each
+    iteration (run), it performs the following steps:
+
+    1. Sorts and prepares input data
+    2. Identifies and extends sequences using sequence_identifier function
+    3. Applies optional masking to filter out predefined genomic regions
+    4. Compares results with previous runs to identify new sequences
+    5. Either terminates if no new sequences are found or continues to the next iteration
+       with the newly discovered sequences
+
+    The function maintains detailed logs of its progress, including timing information
+    and statistics about the number of sequences found in each iteration. Results from
+    each run are saved to disk for traceability and potential reuse.
 
     Parameters
     ----------
-    data_input : pandas.DataFrame
-        The input DataFrame containing genomic data.
+    data_input : pd.DataFrame
+        A DataFrame containing sequence data from previous iterations or initial BLAST results.
+        Must include columns: 'sseqid', 'sstart', 'send', and 'sstrand'.
     genome_fasta : str 
-        Path to the genome FASTA file used for analysis.
+        Path to the BLAST database of the reference genome.
     folder_path : str
         Directory path for saving intermediate files and results.
     numbering : int
-        The identifier for the current run/analysis phase.  
+        The identifier for the current iteration/run number.
     start_time : str
-        The timestamp marking the start of the program execution.
+        Formatted timestamp marking when the overall analysis began.
     identity_1 : float
-        Threshold identity value for filtering genomic sequences.
+        Percentage identity threshold for BLAST searches.
     tic_start : float
-        Initial timer value to measure program execution.
+        Initial timer value to measure total program execution time.
     word_size : int
-        Word size parameter for genomic sequence comparison. 
+        Word size parameter for BLAST searches.
     min_length : int
-        Minimum length of sequences to include in the analysis.
+        Minimum sequence length to retain in the analysis.
     extend_number : int
-        Extends number parameter for sequence range calculations.
+        Number of nucleotides to extend sequences in both directions.
     limit_len : int
-        Length limit used for sequence filtering.
-    coincidence_data : pandas.DataFrame | None, optional
-        Existing data from a previous run to compare with. Default is None.
-    mask : pandas.DataFrame | None, optional
-        Masking data to be applied to the whole_group DataFrame. Default is None.
+        Length threshold that triggers sequence extension.
+    coincidence_data : pd.DataFrame | None, optional
+        Sequences found in common between previous iterations. Default is None.
+    mask : pd.DataFrame | None, optional
+        DataFrame defining regions to exclude from the analysis. Default is None.
     n_jobs : int, optional
         Number of jobs for parallel processing. -1 means using all processors. Default is -1.
 
     Returns
     -------
     None
-        The function performs operations and saves results to files; no explicit return value.
+        Results are saved to disk rather than returned.
+
+    Notes
+    -----
+    This function is recursive, calling itself with updated parameters until the
+    termination condition (no new sequences found) is met. This design allows the
+    algorithm to continue discovering sequences until convergence.
+
+    The function creates several output files:
+    - CSV files containing sequence data for each run
+    - GFF files for visualization in genome browsers
+    - A final consolidated CSV file with all discovered sequences
     """
 
     # Call the aesthetics function RUN identifier.
@@ -192,128 +274,194 @@ def repetitive_blaster(
         n_jobs=n_jobs
     )
 
+    # -----------------------------------------------------------------------------
+    # STEP 3: Apply optional masking to filter out predefined genomic regions
+    # -----------------------------------------------------------------------------
     if mask is not None:
         from modules.filters import remove_masking_zone
+        # Remove sequences that overlap with masked regions
         whole_group = remove_masking_zone(whole_group, mask)
 
+    # Report statistics after sequence identification and optional masking
     toc = time.perf_counter()
     print(f"\t- Data row length: {whole_group.shape[0]}\n",
           f"\t- Execution time: {toc - tic:0.2f} seconds")
 
     # -----------------------------------------------------------------------------
-    # Compare part
+    # STEP 4: Compare results with previous runs
+    # -----------------------------------------------------------------------------
     print("")
     print(f"3. Comparison VS Previous Run:")
+
     if coincidence_data is not None:
+        # Not the first run - we have data from previous iterations
         print("")
         print(f"\t- Previous Run data:\n",
               f"\t\t- Coincidence data row length: {coincidence_data.shape[0]}\n",
               f"\t\t- New data row length: {data_input.shape[0]}")
-        # This part is important to compare with the last run whole data "whole_group", and not only the "new_data" subset.
+
+        # Combine previous coincidence data with current input data for comprehensive comparison
+        # This ensures we compare against all previously discovered sequences, not just the new ones
         data_input = pd.concat([coincidence_data, data_input], ignore_index=True)
-        data_input.sort_values(by=["sseqid", "sstart"], inplace=True)  # Sort the data frame by the start coordinate
+        data_input.sort_values(by=["sseqid", "sstart"], inplace=True)
         print(f"\t\t- Total data row length: {data_input.shape[0]}")
-    else:  # when coincidence_data == None
+    else:
+        # First run - no previous data to compare against
         print(f"\t- Previous Run data:\n",
               f"\t\t- First Run row length: {data_input.shape[0]}")
 
     # -----------------------------------------------------------------------------
-    # Check for overlaps
-    # TODO: remove overlapping sequences
-    # In case there are overlapping sequences resulting from the algorithm in
-    # `strand_location._set_overlapping_status_single`, remove the smallest one
-    ## n data := `whole_group`; n-1 data := `data_input`
+    # Remove overlapping sequences to ensure clean data
+    # -----------------------------------------------------------------------------
+    # When sequences overlap, keep only the largest one to avoid redundancy
+    # whole_group = current run results (n)
+    # data_input = combined previous results (n-1)
     whole_group = del_last_overlapping_elem(whole_group)
+
+    # -----------------------------------------------------------------------------
+    # Compare current run results with previous runs to identify new sequences
     # -----------------------------------------------------------------------------
     tic = time.perf_counter()
     print("")
     print(f"\t- Results in this RUN:")
+
+    # The compare_main function splits the data into three categories:
+    # 1. coincidence_data: Sequences found in both current and previous runs
+    # 2. new_data: Sequences found only in the current run
+    # 3. old_data_exclusive: Sequences found only in previous runs
     coincidence_data, new_data, old_data_exclusive = compare_main(whole_group, data_input, genome_fasta)
     toc = time.perf_counter()
 
+    # Report comparison results
     print("")
     print(f"\t\t- Coincidence data from run 'n' and 'n-1': {coincidence_data.shape[0]}\n",
           f"\t\t- New data detected only from run 'n': {new_data.shape[0]}\n",
           f"\t\t- Previous data detected only from 'n-1': {old_data_exclusive.shape[0]}")
 
-    old_data_exclusive_less_than_100 = None
+    # -----------------------------------------------------------------------------
+    # Process sequences from previous runs that weren't found in current run
+    # -----------------------------------------------------------------------------
+    # Initialize variable to hold sequences below a minimum length threshold
+    old_data_exclusive_less_than_min_length = None
 
+    # Calculate sequence lengths for filtering
     old_data_exclusive['len'] = abs(old_data_exclusive['send'] - old_data_exclusive['sstart']) + 1
-    # noinspection PyUnresolvedReferences
-    # If `old_data_exclusive` has lines and there's some 'len' < `lim_length`
-    if not old_data_exclusive.empty and (old_data_exclusive['len'] < min_length).sum() > 0:  # If there are sequences less than 100 bp. The sum of TRUE (for < 100) has to be > 0
-        old_data_exclusive_less_than_100 = old_data_exclusive[old_data_exclusive['len'] < min_length]
-        old_data_exclusive = old_data_exclusive[old_data_exclusive['len'] >= min_length]
-        # Now drop the 'len' column for both, to not break the following concat
-        old_data_exclusive_less_than_100.drop(columns=['len'], inplace=True)
-        old_data_exclusive.drop(columns=['len'], inplace=True)
-        print(f"\t\t\t- Sequences < {min_length} bp: {old_data_exclusive_less_than_100.shape[0]}")
-        print(f"\t\t\t- Sequences >= {min_length} bp: {old_data_exclusive.shape[0]}")
-    else:
-        pass
 
-    if old_data_exclusive_less_than_100 is not None: # If `old_data_exclusive_less_than_100` exists
-        new_data_and_old = pd.concat([new_data, old_data_exclusive_less_than_100], ignore_index=True)
+    # Split sequences from previous runs into two groups based on length
+    if not old_data_exclusive.empty and (old_data_exclusive['len'] < min_length).sum() > 0:
+        # Extract sequences shorter than the minimum length
+        old_data_exclusive_less_than_min_length = old_data_exclusive[old_data_exclusive['len'] < min_length]
+        # Keep only sequences meeting or exceeding the minimum length
+        old_data_exclusive = old_data_exclusive[old_data_exclusive['len'] >= min_length]
+
+        # Remove length column to avoid conflicts in later concatenation operations
+        old_data_exclusive_less_than_min_length.drop(columns=['len'], inplace=True)
+        old_data_exclusive.drop(columns=['len'], inplace=True)
+
+        # Report statistics on the filtering
+        print(f"\t\t\t- Sequences < {min_length} bp: {old_data_exclusive_less_than_min_length.shape[0]}")
+        print(f"\t\t\t- Sequences >= {min_length} bp: {old_data_exclusive.shape[0]}")
+
+    # -----------------------------------------------------------------------------
+    # Prepare data for next iteration
+    # -----------------------------------------------------------------------------
+    # Combine newly discovered sequences with short sequences from previous runs
+    # Short sequences are included because they might extend in the next iteration
+    if old_data_exclusive_less_than_min_length is not None:
+        new_data_and_old = pd.concat([new_data, old_data_exclusive_less_than_min_length], ignore_index=True)
         new_data_and_old.sort_values(by=["sseqid", "sstart"], inplace=True)
         print('\t' * 3 + f"- New data + less than {min_length}: {new_data_and_old.shape[0]}")
     else:
         new_data_and_old = new_data
 
-    # if `coincidence_data` and `old_data_exclusive` has lines --> join them;
-    # This way we have the `coincidence_data` containing joined data from 'n' and 'n-1' run and
-    # the exclusive data from 'n-1' that does not appear in 'n'
+    # Update coincidence data to include sequences from previous runs that weren't found
+    # in the current run but meet the minimum length requirement
     if not coincidence_data.empty and not old_data_exclusive.empty:
+        # Add sequences from previous runs to coincidence data
         coincidence_data = pd.concat([coincidence_data, old_data_exclusive], ignore_index=True)
         print(f"\t\t- Coincidence data + Previous data: {coincidence_data.shape[0]}")
+
+        # Merge overlapping sequences and remove duplicates
         coincidence_data = get_merge_stranded(coincidence_data)
         coincidence_data = del_last_overlapping_elem(coincidence_data)
         coincidence_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
         print(f"\t\t\t - After merging: {coincidence_data.shape[0]}")
-    else:
-        pass
+
+    # Report timing information
     print(f"\t\t- Execution time: {toc - tic:0.2f} seconds")
 
     # -----------------------------------------------------------------------------
-    # Stopping part
+    # STEP 5: Determine whether to terminate or continue to next iteration
+    # -----------------------------------------------------------------------------
     if new_data.shape[0] == 0:
-        coincidence_data = coincidence_data[['sseqid', 'sstart', 'send', 'sstrand']].copy()  # #Take only the necessary columns:
+        # -----------------------------------------------------------------------------
+        # TERMINATION CONDITION: No new sequences found
+        # -----------------------------------------------------------------------------
+        # Prepare final output by selecting only essential columns
+        coincidence_data = coincidence_data[['sseqid', 'sstart', 'send', 'sstrand']].copy()
 
-        # Make it so 'sstart' is always < than 'send'
+        # Ensure consistent coordinate orientation (sstart < send)
         coincidence_data = end_always_greater_than_start(coincidence_data)
 
-        # Add the sequence column "sseq"
+        # Retrieve the actual sequence data for each genomic region
         coincidence_data = get_data_sequence(coincidence_data, genome_fasta)
 
-        coincidence_data.to_csv(os.path.join(folder_path, "blastoise_df.csv"), index=False, header=True, sep=",")  # Save the data frame to a CSV file
-        csv_to_gff(os.path.join(folder_path, "blastoise_df.csv"))
+        # Save final results to CSV and GFF formats
+        final_csv_path = os.path.join(folder_path, "blastoise_df.csv")
+        coincidence_data.to_csv(final_csv_path, index=False, header=True, sep=",")
+        csv_to_gff(final_csv_path)
+
+        # Report termination and final statistics
         print("")
         print(f"4. Stopping:")
         print(f"\t- No new data found.")
         print(f"\t- BLASTOISE final data row length: {coincidence_data.shape[0]}")
 
+        # Exit the recursive process
         return
     else:
         # -----------------------------------------------------------------------------
+        # CONTINUE: New sequences found, prepare for next iteration
+        # -----------------------------------------------------------------------------
+        # Report timing for current run
         toc_main = time.perf_counter()
         print("")
         print(f"RUN {numbering} finished:\n",
               f"\t- Execution time: {toc_main - tic_main:0.2f} seconds")
 
-        # Now save the information for this data
-        save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)  # NOTE: 'old_data_exclusive_less_than_100' data will be removed in the final file
+        # Save intermediate results for this iteration
+        # Combine all sequences for comprehensive tracking
+        save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)
         save_run_file.sort_values(by=['sseqid', 'sstart'], inplace=True)
-        save_run_file = del_last_overlapping_elem(save_run_file)  # Not needed, implemented for checking the file output
+
+        # Remove any overlapping elements to ensure clean data
+        save_run_file = del_last_overlapping_elem(save_run_file)
+
+        # Calculate sequence lengths
         save_run_file['len'] = save_run_file['send'] - save_run_file['sstart'] + 1
-        runs_folder = os.path.join(folder_path, "RUNS")  # Creates the folder for the RUNS
-        os.makedirs(runs_folder, exist_ok=True)  # Creates the folder for the RUNS
-        run_saver_path = os.path.join(runs_folder, "run_" + str(numbering) + ".csv")  # Path to save the RUN
-        save_run_file.to_csv(run_saver_path, sep=",", header=True, index=False)  # Saves the RUN
+
+        # Create a directory for storing run-specific results
+        runs_folder = os.path.join(folder_path, "RUNS")
+        os.makedirs(runs_folder, exist_ok=True)
+
+        # Save this run's results to CSV and GFF formats
+        run_saver_path = os.path.join(runs_folder, f"run_{numbering}.csv")
+        save_run_file.to_csv(run_saver_path, sep=",", header=True, index=False)
         csv_to_gff(run_saver_path)
+
+        # Report statistics and file location
         print(f"\t- Coincidence data + 'n' exclusive data + 'n-1' exclusive data: {save_run_file.shape[0]}")
         print(f"\t- Data file saved at {run_saver_path}")
 
         # -----------------------------------------------------------------------------
-        numbering += 1  # Increase the numbering
+        # RECURSIVE CALL: Continue to the next iteration with updated data
+        # -----------------------------------------------------------------------------
+        # Increment run counter
+        numbering += 1
+
+        # Call this function recursively with:
+        # - new_data_and_old: Newly discovered sequences to extend in the next iteration
+        # - coincidence_data: Accumulated sequences from all previous iterations
         repetitive_blaster(
             data_input=new_data_and_old,
             genome_fasta=genome_fasta,
