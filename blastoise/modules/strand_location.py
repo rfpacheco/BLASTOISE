@@ -686,7 +686,7 @@ def set_overlapping_status(
         delayed(_set_overlapping_status_single)(
             chrom,
             new_groups[chrom],
-            og_groups.get(chrom, og_df.iloc[0:0],),  # empty DF if missing # TODO: check slicing
+            og_groups.get(chrom, og_df.iloc[0:0],),  # empty DF with iloc[0:0] if missing
             run_phase
         )
         for chrom in chromosomes
