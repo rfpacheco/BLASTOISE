@@ -76,7 +76,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-ws", "--word_size", 
         type=int, 
-        required=True,
+        default=15,
         help="Word size parameter for BLASTN."
     )
 
@@ -90,7 +90,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-i", "--identity", 
         type=int, 
-        required=True,
+        default=15,
         help="Minimum percentage identity for sequence recapturing."
     )
 
