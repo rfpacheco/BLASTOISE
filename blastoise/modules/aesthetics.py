@@ -21,3 +21,39 @@ def print_message_box(message: str, width: int = BOX_WIDTH_DEFAULT) -> None:
     print(f"|{message:^{width}}|")
     print(f"|{border}|")
     print()  # trailing blank line
+
+
+def blastoise_art() -> None:
+    """
+    Print ASCII art of Blastoise.
+    """
+    print("""
+                       o O       o O       o O       o O       o O
+                     o | | O   o | | O   o | | O   o | | O   o | | O
+                   O | | | | O | | | | O | | | | O | | | | O | | | | O
+                  O-oO | | o   O | | o   O | | o   O | | o   O | | oO-o
+                 O---o O o       O o       O o       O o      O o  O---o
+                O-----O                                           O-----o
+                o-----O           ⣠⣴⣾⣶⣿⣿⣶⣶⣶⣿⡟⠀⠀⠀                  o-----O
+                 o---O          ⣠⣼⣿⣿⡿⣋⣠⣿⣿⣿⣿⣿⡶⢶⣶⣤⣤⣀⣤⣶⣿⣗⡤⠶⢦⡀⠀        o---O
+                  o-O          ⣤⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠀⠘⢿⣿⣿⣿⡿⢁⣾⡀⠀⢀⡷⠀         o-O
+                   O           ⠻⣿⠟⠛⠛⠻⠟⠛⠋⢹⣿⣿⣿⢣⡆⠀⠈⠛⠛⠋⠀⢻⣿⣿⣶⠟⣻⣦          O  
+                  o-O             ⣴⡿⠁   ⢸⣿⣿⢇⣿⠃⠀⣠⣤⣤⣤⣤⣀⠉⠙⢁⣴⡿⠁         o-O    
+                 o---O       ⢀⣾⣿⣿ ⢠⠀⠀⠀⣰⣤⣿⣿⢋⣬⡄⢀⣾⣿⣿⣿⣿⣿⣿⣧⠀⣿⣯⠀⠀        o---O    
+                O-----O  ⢀⣾⣿⣿⣿⣿   ⣠⠻⠿⠿⠿⠿⣛⣵⣿⣿⣧⢸⣿⣿⣿⣿⣿⣿⣿⣿⣄⣿⣿⡆⠀       O-----o    
+                O-----O⢀⣾⣿⣿⣿⣿    ⣠⣿⡀⢸⣿⣿⣿⣿⣿⣿⣿⠿⠆⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀       O-----o  
+                O---⣿⣿⣿⣿⣿⣿⣿  ⢀⣀⣴⣾⣿⣿⡇⣬⣭⣭⣭⣭⣭⣶⣶⣿⣷⡄⢈⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀       O-----o  
+                o-⣿⣿⣿⣿⣿      ⠰⢾⣿⣿⣿⣿⡇⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢐⣛⡻⣿⣿⣿⣿⣿⣿⠻⣿⣿⠀       o-----O
+                 o-⣿⣿         ⠁⠀⣠⣶⣿⣷⢸⣿⣿⣿⣿⣿⣿⣿⡿⠿⠛⠋⡵⠿⢿⣿⣿⣿⢟⣄⢹⡏⠀        o---O
+                  o-O          ⣰⣿⣿⣿⣿⣆⢲⣶⣶⣶⣶⣶⣶⣶⣿⢇⣷⣾⣿⡇⣟⣯⣶⣿⣿⡾⠀⠀         o-O  
+                   O           ⣿⣿⣿⣿⣿⣿⣦⠹⣿⣿⣿⣿⣿⣿⣿⡜⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡾⠋          O
+                  O-o          ⠘⣿⣿⣿⣿⣿⣿⣷⣬⠉⠿⣛⣻⣿⣯⣥⣹⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀         O-O
+                 O---o        ⣠⣶⣿⣿⣿⣿⣿⣿⠿⠿⠦⠀⠀⠀⠉⠉⠁⠀⠹⣿⣿⣿⣿⣿⣿⣿⡿⠀⠀        O---o
+                O-----o                         ⠀⠹⠿⠛⠿⣿⠟⠛⠛⠀        O-----o
+                o-----O                                           o-----O
+                 o---O o O       o O       o O       o O       o O o---O
+                  o-Oo | | O   o | | O   o | | O   o | | O   o | | Oo-O
+                   O | | | | O | | | | O | | | | O | | | | O | | | | O
+                     O | | o   O | | o   O | | o   O | | o   O | | o
+                       O o       O o       O o       O o       O o     
+""")
