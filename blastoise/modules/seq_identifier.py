@@ -22,7 +22,8 @@ def sequence_identifier(
         min_length: int,
         extend_number: int,
         limit_len: int,
-        coincidence_data: Optional[pd.DataFrame] | None = None
+        coincidence_data: Optional[pd.DataFrame] | None = None,
+        n_jobs: int = -1
 ) -> pd.DataFrame:
     """
     Processes genome-specific chromosome data by performing several operations such as sequence
@@ -51,6 +52,8 @@ def sequence_identifier(
         Maximum allowable sequence length for extended sequences.
     coincidence_data: pd.DataFrame | None, optional
         Data frame containing information on coinciding sequences between previous and current runs. Default is None.
+    n_jobs: int, optional
+        Number of jobs for parallel processing. -1 means using all processors. Default is -1.
 
     Returns
     -------
@@ -88,7 +91,8 @@ def sequence_identifier(
         data_to_extend,
         genome_fasta,
         extend_number,
-        limit_len
+        limit_len,
+        n_jobs=n_jobs
     )
     sequences_extended['len'] = sequences_extended['send'] - sequences_extended['sstart'] + 1
     sequences_extended_fasta_path = os.path.join(run_phase_extension_path, f"run_{extend_number}nt.fasta")  # Path to the output FASTA file
@@ -167,7 +171,8 @@ def sequence_identifier(
     second_blaster_not_extended_oriented = set_strand_direction(
         second_blaster_not_extended,
         run_phase,
-        main_folder_path
+        main_folder_path,
+        n_jobs=n_jobs
     )
     toc = time.perf_counter()
     print(f"\t\t\t- Execution time: {toc - tic:0.2f} seconds")

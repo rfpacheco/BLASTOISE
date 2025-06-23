@@ -582,7 +582,8 @@ def set_overlapping_status(
 def set_strand_direction(
         data_input: pd.DataFrame,
         run_phase: int,
-        folder_path: str
+        folder_path: str,
+        n_jobs: int = -1
 ) -> pd.DataFrame:
     """
      Analyzes and processes genomic sequence data to determine the correct strand orientation for each sequence.
@@ -598,6 +599,8 @@ def set_strand_direction(
         Indicates the run step iteratoin.
     folder_path: int
         Path to the folder where temporary files are stored.
+    n_jobs: int, optional
+        Number of jobs for parallel processing. -1 means using all processors. Default is -1.
 
     Returns:
     --------
@@ -652,10 +655,8 @@ def set_strand_direction(
         csv_to_gff(
             os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
         )
-        # Set the number of parallel jobs for multiprocessing
-        multiprocessing_jobs = -1  # Use all available CPU cores
         # Process overlapping elements using parallel processing
-        overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=multiprocessing_jobs)
+        overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=n_jobs)
         overlapping_elems = get_merge_stranded(overlapping_elems) # Merge the data
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")

@@ -67,6 +67,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('-ext', '--extend', type=int, default=100, help='Number of nucleotides for sequence extension.')
     parser.add_argument('-lim', '--limit', type=int, default=100, help='Length limit to trigger sequence extension.')
     parser.add_argument('-m', '--mask', type=str, required=False, help='Path to an optional mask file (CSV format).')
+    parser.add_argument('-j', '--jobs', type=int, default=-1, help='Number of jobs for parallel processing. -1 means using all processors.')
 
     return parser.parse_args()
 
@@ -285,7 +286,8 @@ def main() -> None:
             min_length=args.min_length,
             extend_number=args.extend,
             limit_len=args.limit,
-            mask=mask_df
+            mask=mask_df,
+            n_jobs=args.jobs
         )
 
         # 5. Finalize and clean up
@@ -319,7 +321,7 @@ if __name__ == "__main__":
     Entry point for the BLASTOISE application.
 
     When this script is executed directly (not imported as a module),
-    the main function is called to run the BLASTOISE pipelinoe.
+    the main function is called to run the BLASTOISE pipeline.
     """
     main()
     print_message_box("BLASTING OUT!")
