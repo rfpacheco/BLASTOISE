@@ -1,3 +1,31 @@
+"""
+BLASTOISE Module: Strand Orientation and Genomic Interval Processing
+===================================================================
+
+This module provides functionality for handling strand orientation and overlapping
+genomic intervals in the BLASTOISE pipeline. It processes genomic coordinates to
+ensure proper strand assignment and resolves overlapping sequences across different
+strands.
+
+The module contains several key functions:
+1. Data matching and filtering functions (`match_data`, `match_data_and_remove`, 
+   `match_data_and_set_false`) for comparing and processing genomic intervals
+2. Overlapping data processing functions (`process_overlapping_data`, 
+   `smart_merge_across_flips`) for handling complex overlapping scenarios
+3. Strand orientation functions (`set_overlapping_status`, `set_strand_direction`) 
+   for determining the correct strand assignment for sequences
+4. Cleanup functions (`del_last_overlapping_elem`) for removing redundant overlapping
+   elements after processing
+
+These functions work together to ensure that genomic intervals are properly oriented
+and that overlapping sequences are handled consistently, which is critical for
+accurate identification of repetitive elements in the genome.
+
+Author: R. Pacheco
+Version: 0.4.2
+License: MIT
+"""
+
 # Import needed modules
 import pandas as pd
 import os
@@ -14,27 +42,35 @@ from extra.utils.csv_to_gff import csv_to_gff
 # noinspection DuplicatedCode
 def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFrame:
     """
-    Matches data from two DataFrame objects based on specific columns and returns the result.
+    Match data from two DataFrames based on specific genomic coordinate columns.
 
     This function performs an inner join operation between the input DataFrame
     `data_input` and a subset of columns from the DataFrame `to_discard`. The
-    matching is conducted over the columns 'sseqid', 'sstart', 'send', and
-    'sstrand'. The resulting DataFrame contains rows where the values in these
-    columns align in both DataFrames.
+    matching is conducted over the genomic coordinate columns 'sseqid', 'sstart', 
+    'send', and 'sstrand'. The resulting DataFrame contains rows where the values 
+    in these columns align in both DataFrames.
 
-    Parameters:
+    Parameters
     ----------
-    data_input : pandas.DataFrame
-        The primary DataFrame to be matched against.
-    to_discard : pandas.DataFrame
-        The DataFrame from which specific columns are used to find matches in `data_input`.
+    data_input : pd.DataFrame
+        The primary DataFrame to be matched against. Must contain the columns
+        'sseqid', 'sstart', 'send', and 'sstrand'.
+    to_discard : pd.DataFrame
+        The DataFrame from which specific columns are used to find matches in 
+        `data_input`. Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
 
-    Returns:
-    --------
-    pandas.DataFrame
-        A DataFrame containing rows from `data_input` that share the same values in the specified columns with the
-        corresponding rows in `to_discard`.
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing rows from `data_input` that share the same values 
+        in the specified columns with the corresponding rows in `to_discard`.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from either DataFrame.
     """
+
     matches = data_input.merge(
         to_discard[['sseqid', 'sstart', 'send', 'sstrand']],
         on=['sseqid', 'sstart', 'send', 'sstrand'],
@@ -46,25 +82,33 @@ def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFra
 
 def match_data_and_remove(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFrame:
     """
-    Remove rows from a DataFrame based on matching criteria from another DataFrame.
+    Remove rows from a DataFrame based on matching genomic coordinates from another DataFrame.
 
-    This function identifies rows from the given `data_input` DataFrame that matches the rows in the `to_discard`
-    DataFrame based on specific indexing criteria and removes the matched rows. The matching is performed using the
-    columns 'sseqid', 'sstart', 'send' and 'sstrand' as the indices for comparison.
+    This function identifies rows from the given `data_input` DataFrame that matches rows in the 
+    `to_discard` DataFrame based on genomic coordinate columns and removes these matched rows. 
+    The matching is performed using the columns 'sseqid', 'sstart', 'send', and 'sstrand' 
+    as the indices for comparison.
 
-    Parameters:
-    -----------
-    data_input: pandas.DataFrame
+    Parameters
+    ----------
+    data_input : pd.DataFrame
         The input DataFrame from which rows should be evaluated and potentially removed.
-    to_discard: pandas.DataFrame
-        A DataFrame containing rows to be matched and removed from the `data_input` DataFrame based on specified
-        criteria.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
+    to_discard : pd.DataFrame
+        A DataFrame containing rows to be matched and removed from the `data_input` DataFrame.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
 
-    Returns:
-    --------
-    pandas.DataFrame
+    Returns
+    -------
+    pd.DataFrame
         A copy of the `data_input` DataFrame with rows matching the criteria removed.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from either DataFrame.
     """
+
     matches = match_data(data_input, to_discard)
 
     # Remove only the matching data
@@ -79,27 +123,33 @@ def match_data_and_remove(data_input: pd.DataFrame, to_discard: pd.DataFrame) ->
 
 def match_data_and_set_false(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> None:
     """
-    Matches data based on specific conditions and updates a column in the input dataset.
+    Mark matching rows in a DataFrame as False in the 'analyze' column.
 
-    This function takes a primary dataset and a dataset of elements to be discarded, then matches elements based on
-    specific coordinate-based keys. It uses these matches to update a boolean column in the primary dataset, marking
-    the matched elements as `False` in the 'analyze' column.
+    This function takes a primary dataset and a dataset of elements to be discarded, 
+    then matches elements based on genomic coordinate columns. It uses these matches 
+    to update the 'analyze' column in the primary dataset, marking the matched 
+    elements as `False`.
 
-    Parameters:
-    -----------
-    data_input : pandas.DataFrame
-        The primary dataset to be analyzed and updated. It must contain the columns: 'sseqid', 'sstart', 'send', and
-        'sstrand'.
+    Parameters
+    ----------
+    data_input : pd.DataFrame
+        The primary dataset to be analyzed and updated. Must contain the columns:
+        'sseqid', 'sstart', 'send', 'sstrand', and 'analyze'.
+    to_discard : pd.DataFrame
+        The dataset containing elements that should be matched and marked as not 
+        for analysis in the primary dataset. Must contain the columns: 'sseqid', 
+        'sstart', 'send', and 'sstrand'.
 
-    to_discard : pandas.DataFrame
-        The dataset containing elements that should be matched and marked as not for analysis in the primary dataset.
-        Similar to `data_input`, it must also have the columns: 'sseqid', 'sstart', 'send', and 'sstrand'.
-
-    Returns:
-    --------
+    Returns
+    -------
     None
-        The function operates directly on the `data_input` DataFrame, updating its 'analyze' column in-place. No new
-        object is returned.
+        The function operates directly on the `data_input` DataFrame, updating its 
+        'analyze' column in-place. No new object is returned.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from either DataFrame.
     """
 
     # Get any element in `data_input` with the same start and end coordinates as `to_discard` dataset
@@ -119,34 +169,49 @@ def process_overlapping_data(
         row_df: pd.DataFrame,  # will have only 1 sequence
         idx: Hashable,
         all_og_inrange: pd.DataFrame,  # will have only 1 sequence
-        all_elems_inrange: pd.DataFrame  # will have multipel sequences
+        all_elems_inrange: pd.DataFrame  # will have multiple sequences
 ) -> None:
     """
-    Processes overlapping data between sequences in a DataFrame to handle intervals based on strand alignment.
-    This function modifies the provided DataFrame (`new_df`) by analyzing and adjusting certain rows based on 
-    the comparison of overlapping sequences and their strands, as well as merging intervals when applicable.
+    Process overlapping genomic intervals based on strand alignment.
 
-    Parameters:
-    -----------
-    new_df: pandas.DataFrame
-        The main DataFrame containing elements that need to be modified based on overlapping data. Modifications
-        include updating rows to mark intervals merged or analyzed.
-    row_df: pandas.DataFrame
-        A single-row DataFrame representing the sequence currently under analysis. This DataFrame has one sequence that
-        will be compared against overlapping sequences.
-    idx (Hashable):
-        The index of the row in the `new_df` that corresponds to the `row_df`.
-    all_og_inrange: pandas.DataFrame
-        A single-row DataFrame representing the original sequence against which comparisons of overlapping sequences
-        will be made. It contains one sequence.
-    all_elems_inrange: pandas.DataFrame
-        A DataFrame containing multiple sequences/rows that are in the overlapping range with the `row_df` or
-        `all_og_inrange`. This serves as the main pool of sequences to determine strand alignment and merging.
+    This function modifies the provided DataFrame (`new_df`) by analyzing and adjusting 
+    rows based on the comparison of overlapping sequences and their strands. It handles 
+    two main cases:
+    1. When the current row is on the same strand as the original sequence, it merges
+       all overlapping sequences on that strand and updates the coordinates.
+    2. When the current row is on a different strand, it removes overlapping sequences
+       on the same strand as the current row.
 
-    Returns:
+    Parameters
+    ----------
+    new_df : pd.DataFrame
+        The main DataFrame containing elements to be modified based on overlapping data.
+        Must contain the columns 'sseqid', 'sstart', 'send', 'sstrand', and 'analyze'.
+    row_df : pd.DataFrame
+        A single-row DataFrame representing the sequence currently under analysis.
+        Must contain the column 'sstrand'.
+    idx : Hashable
+        The index of the row in `new_df` that corresponds to `row_df`.
+    all_og_inrange : pd.DataFrame
+        A single-row DataFrame representing the original sequence for comparison.
+        Must contain the column 'sstrand'.
+    all_elems_inrange : pd.DataFrame
+        A DataFrame containing multiple sequences that overlap with `row_df` or
+        `all_og_inrange`. Must contain the column 'sstrand'.
+
+    Returns
     -------
-    None: This function directly modifies the `new_df` without returning a new DataFrame.
+    None
+        This function directly modifies the `new_df` without returning a new DataFrame.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the DataFrames.
+    IndexError
+        If `all_og_inrange` or `row_df` do not contain exactly one row.
     """
+
     same_strand = row_df.iloc[0]['sstrand'] == all_og_inrange.iloc[0]['sstrand']
     if same_strand:  # If row is in the same strand as the original data
         # Take from `all_elems_inrange` the ones in the same strand as `all_og_inrange`
@@ -181,34 +246,55 @@ def smart_merge_across_flips(
     end_col: str = "send",
 ) -> pd.DataFrame:
     """
-    Merges overlapping intervals across strand flips intelligently while retaining strand-specific intervals that do
-    not overlap under specific conditions.
+    Intelligently merge overlapping genomic intervals across strand flips.
 
-    This function processes genomic intervals, represented in the form of data frames, by grouping them into
-    "strand blocks" determined by consecutive strands and sliding a window over these blocks to decide merging
-    criteria. It handles three main cases: merging outer blocks with matching strands, handling overlapping
-    blocks, and keeping untouched blocks intact. Results in a cleaned or merged data frame of intervals.
+    This function processes genomic intervals by grouping them into "strand blocks" 
+    determined by consecutive strands and applying a sliding window approach to 
+    determine merging criteria. It handles three main cases:
 
-    Parameters:
-    -----------
-    all_og_inrange: pd.DataFrame
-        Data frame containing the original intervals in range with their corresponding strand and positions.
-    all_elems_inrange: pd.DataFrame
-        Data frame containing elements that may potentially overlap or coincide with intervals in `all_og_inrange`.
-    strand_col: str, optional
-        Column name in `all_og_inrange` representing the strand direction ("+" or "-") of intervals, defaults to
-        "sstrand".
-    start_col: str, optional
-        Column name in `all_og_inrange` representing the start position of intervals, defaults to "sstart".
-    end_col: str, optional
-        Column name in `all_og_inrange` representing the end position of intervals, defaults to "send".
+    1. Outer blocks with matching strands: When two blocks with the same strand 
+       orientation are separated by a block with a different orientation, and the 
+       outer blocks overlap, they are merged while the middle block is removed.
 
-    Returns:
-    --------
-    pd.DataFrame:
-        A data frame that retains strand-specific intervals, intelligently merges overlapping blocks across strand
-        flips, and progressively processes all interval blocks.
+    2. Adjacent blocks with overlap: When adjacent blocks overlap but don't meet 
+       the criteria for case 1, the overlapping elements are removed to maintain 
+       strand specificity.
+
+    3. Default case: Blocks that don't match any special criteria are kept intact.
+
+    Parameters
+    ----------
+    all_og_inrange : pd.DataFrame
+        A DataFrame containing the original intervals with their corresponding strand 
+        and positions. Must contain the columns specified by `strand_col`, `start_col`, 
+        and `end_col`.
+    all_elems_inrange : pd.DataFrame
+        A DataFrame containing elements that may potentially overlap or coincide with 
+        intervals in `all_og_inrange`. Must have the same column structure as 
+        `all_og_inrange`.
+    strand_col : str, optional
+        Column name representing the strand direction ("plus" or "minus"), 
+        defaults to "sstrand".
+    start_col : str, optional
+        Column name representing the start position of intervals, 
+        defaults to "sstart".
+    end_col : str, optional
+        Column name representing the end position of intervals, 
+        defaults to "send".
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame that retains strand-specific intervals, intelligently merges 
+        overlapping blocks across strand flips, and progressively processes all 
+        interval blocks.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the DataFrames.
     """
+
     # ==================================================================
     # 0) Build the strand-block structure
     # ==================================================================
@@ -356,33 +442,45 @@ def _set_overlapping_status_single(
         run_phase: int
 ) -> pd.DataFrame:
     """
-    Set the overlapping status for single chromosome data.
+    Process overlapping genomic intervals for a single chromosome.
 
-    This function analyzes and processes overlapping intervals within two dataframes that represent genomic data for a
-    single chromosome. It ensures that overlapping entries are handled correctly based on specific rules and conditions,
-    updating flags and making adjustments to resolve overlaps.
+    This function analyzes and processes overlapping intervals within two DataFrames 
+    that represent genomic data for a single chromosome. It iterates through each row 
+    in the new DataFrame, identifies overlapping sequences in the original DataFrame, 
+    and applies appropriate processing based on strand orientation and overlap patterns.
 
-    Parameters:
+    The function handles several cases:
+    1. Single strand in original data: Merges overlapping sequences on the same strand
+    2. Two strands with simple overlap: Removes overlapping connections between strands
+    3. Complex strand patterns: Applies specialized processing for interlaced strands
+
+    Parameters
     ----------
-    chrom: str
+    chrom : str
         The name of the chromosome being processed.
-    new_df_chr: pd.DataFrame
-        A dataframe representing new genomic intervals for the chromosome. It must have the column 'analyze'.
-    og_df_chr: pd.DataFrame
-        A dataframe representing the original genomic intervals for the chromosome.
-    run_phase: int
-        An integer representing the phase of the analysis.
+    new_df_chr : pd.DataFrame
+        A DataFrame representing new genomic intervals for the chromosome.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
+        An 'analyze' column will be added if not present.
+    og_df_chr : pd.DataFrame
+        A DataFrame representing the original genomic intervals for the chromosome.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
+    run_phase : int
+        The current phase/iteration of the analysis.
 
-    Returns:
-    --------
+    Returns
+    -------
     pd.DataFrame
-        A dataframe containing the resolved intervals after processing overlaps. The returned dataframe includes
-        new intervals with updated 'analyze' flags and resolved overlaps.
+        A DataFrame containing the resolved intervals after processing overlaps.
+        Only rows with 'analyze' set to True are included in the result.
 
-    Raises:
-    None
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the DataFrames.
     """
     # To avoid taking in data already analyzed, insert a boolean True column. NOTE: important
+
     new_df_chr['analyze'] = True
     for idx, row in new_df_chr.iterrows():
         # Skip already processed elements to avoid processing them again
@@ -531,19 +629,41 @@ def set_overlapping_status(
         n_jobs: int = -1
 ) -> pd.DataFrame:
     """
-    Parallel wrapper around the original algorithm.
+    Process overlapping genomic intervals in parallel across chromosomes.
+
+    This function is a parallel wrapper around the `_set_overlapping_status_single` 
+    function. It splits the input DataFrames by chromosome, processes each chromosome 
+    in parallel using the specified number of jobs, and then combines the results.
+
+    The parallelization strategy follows these steps:
+    1. Split both DataFrames by chromosome
+    2. Process each chromosome independently in parallel
+    3. Combine the results and maintain the original order
 
     Parameters
     ----------
-    new_df : DataFrame
-        Data to analyze.  Must contain the column ``'sseqid'``.
-    og_df  : DataFrame
-        Reference data.  Must contain the column ``'sseqid'``.
+    new_df : pd.DataFrame
+        A DataFrame containing new genomic intervals to analyze.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
+    og_df : pd.DataFrame
+        A DataFrame containing original/reference genomic intervals.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
     run_phase : int
-        Iteration counter
-    n_jobs : int, default ``-1``
-        Number of processes Joblib should spawn.  (``-1`` ⇒ use all cores, ``1`` ⇒ fallback to the original
-        single-process execution.)
+        The current phase/iteration of the analysis.
+    n_jobs : int, default -1
+        Number of parallel jobs to run. -1 means using all available processors,
+        1 means fallback to the original single-process execution.
+
+    Returns
+    -------
+    pd.DataFrame
+        Combined DataFrame containing the processed intervals from all chromosomes,
+        sorted by 'sseqid' and 'sstart'.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the DataFrames.
     """
 
     # Fast exit: keep the exact behavior if the caller explicitly disables parallelism.
@@ -586,48 +706,73 @@ def set_strand_direction(
         n_jobs: int = -1
 ) -> pd.DataFrame:
     """
-     Analyzes and processes genomic sequence data to determine the correct strand orientation for each sequence.
-     It handles both completely new sequences and sequences that overlap with the 'n-1' iteration result, merging and 
-     extending where appropriate, ensuring data consistency between strands.
+    Determine the correct strand orientation for genomic sequences.
 
-    Parameters:
-    -----------
-    data_input: pandas.DataFrame
-        Input DataFrame containing sequence data with columns such as 'og_sseqid', 'og_sstart', 'og_send',
-        'og_sstrand', 'sseqid', 'sstart', 'send', and 'sstrand'.
-    run_phase: int
-        Indicates the run step iteratoin.
-    folder_path: int
-        Path to the folder where temporary files are stored.
-    n_jobs: int, optional
-        Number of jobs for parallel processing. -1 means using all processors. Default is -1.
+    This function analyzes and processes genomic sequence data to determine the correct 
+    strand orientation for each sequence. It handles two main categories of sequences:
 
-    Returns:
-    --------
-    pd.DataFrame:
-        A DataFrame with processed data that includes new elements and overlapping elements with orientation
-        properly set.
+    1. New sequences: Sequences that don't overlap with any sequence from previous iterations
+    2. Overlapping sequences: Sequences that overlap with sequences from previous iterations
+
+    For each category, the function processes plus and minus strands separately, resolves
+    overlaps between strands, and ensures data consistency across iterations.
+
+    The processing follows these main steps:
+    1. Separate original coordinates and new coordinates
+    2. Identify new elements and overlapping elements
+    3. Process overlapping elements using parallel processing
+    4. Handle strand-specific processing for new elements
+    5. Combine the results into a single consistent DataFrame
+
+    Parameters
+    ----------
+    data_input : pd.DataFrame
+        Input DataFrame containing sequence data with columns:
+        'og_sseqid', 'og_sstart', 'og_send', 'og_sstrand', 'sseqid', 'sstart', 
+        'send', and 'sstrand'.
+    run_phase : int
+        The current phase/iteration of the analysis.
+    folder_path : str
+        Path to the folder where temporary files will be stored.
+    n_jobs : int, default -1
+        Number of parallel jobs to run. -1 means using all available processors.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing processed sequences with correct strand orientation,
+        sorted by 'sseqid' and 'sstart'.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the DataFrame.
+    ValueError
+        If the folder_path is invalid or cannot be created.
     """
 
-    # Save the original coordinates before the extension in `og_data`
+    # -----------------------------------------------------------------------------
+    # STEP 1: Prepare original and new coordinate data
+    # -----------------------------------------------------------------------------
+    # Extract and format original coordinates before extension
     og_data = data_input[['og_sseqid', 'og_sstart', 'og_send', 'og_sstrand']].copy()
-    og_data.columns = ['sseqid', 'sstart', 'send', 'sstrand'] # Change column names
+    og_data.columns = ['sseqid', 'sstart', 'send', 'sstrand']  # Rename columns for consistency
     og_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     og_data.drop_duplicates(inplace=True)
 
-    # Save all the new elements discovered in `new_data`
+    # Extract and format new coordinates
     new_data = data_input[['sseqid', 'sstart', 'send', 'sstrand']].copy()
     new_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
     new_data.drop_duplicates(inplace=True)
 
-    # Get the `new_data` that doesn't overlap with `og_data`
-    # `new_elems` are considered new elements. Let's save them correctly. From 'new_data', extract the elements
-    # that have the same 'sseqid, 'sstart', 'send' and 'sstrand' as in `new_elems`
+    # -----------------------------------------------------------------------------
+    # STEP 2: Separate new elements from overlapping elements
+    # -----------------------------------------------------------------------------
+    # Identify elements that don't overlap with original data (truly new elements)
     new_elems = get_interval_overlap(new_data, og_data, invert=True)
     print(f"\t\t\t- New elements: {new_elems.shape[0]}")
 
-    # And the rest elements, which for sure, overlap.
-    ## Keep the data from `new_data` that don't connect with the `new_elems`
+    # Identify elements that overlap with original data
     overlapping_elems = pd.merge(
         new_data, new_elems,
         on=['sseqid', 'sstart', 'send', 'sstrand'],
@@ -635,12 +780,18 @@ def set_strand_direction(
     ).query('_merge == "left_only"').drop('_merge', axis=1)
     print(f"\t\t\t- Overlapping elements: {overlapping_elems.shape[0]}")
 
-    # Now we need to check if the overlapping is in the same strand as the original data
-    og_and_overlap_elems_plus = pd.DataFrame() # Initialization
-    og_and_overlap_elems_minus = pd.DataFrame() # Initialization
-    if not overlapping_elems.empty: # If it has rows
+    # -----------------------------------------------------------------------------
+    # STEP 3: Process overlapping elements
+    # -----------------------------------------------------------------------------
+    # Initialize strand-specific DataFrames
+    og_and_overlap_elems_plus = pd.DataFrame()  # Will hold plus strand overlapping elements
+    og_and_overlap_elems_minus = pd.DataFrame()  # Will hold minus strand overlapping elements
+
+    if not overlapping_elems.empty:
         tic = time.perf_counter()
         print(f"\t\t\t- Checking strand orientation in overlapping elements:")
+
+        # Save intermediate files for debugging and visualization
         save_folder = os.path.join(folder_path, 'RUNS')
         os.makedirs(save_folder, exist_ok=True)
         overlapping_elems.to_csv(
@@ -655,22 +806,29 @@ def set_strand_direction(
         csv_to_gff(
             os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
         )
+
         # Process overlapping elements using parallel processing
         overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=n_jobs)
-        overlapping_elems = get_merge_stranded(overlapping_elems) # Merge the data
+        overlapping_elems = get_merge_stranded(overlapping_elems)  # Merge overlapping intervals
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
-        # Now dive the data in 'minus' and plus' strand if there are rows with 'plus' or 'minus'
+        # Separate overlapping elements by strand
         og_and_overlap_elems_plus = overlapping_elems[overlapping_elems['sstrand'] == 'plus'].copy()
         og_and_overlap_elems_minus = overlapping_elems[overlapping_elems['sstrand'] == 'minus'].copy()
 
-    if not new_elems.empty: # If it has rows
-        # Now dive the data in 'minus' and plus' strand
+    # -----------------------------------------------------------------------------
+    # STEP 4: Process new elements
+    # -----------------------------------------------------------------------------
+    if not new_elems.empty:
+        # Separate new elements by strand
         new_elems_plus = new_elems[new_elems['sstrand'] == 'plus'].copy()
         new_elems_minus = new_elems[new_elems['sstrand'] == 'minus'].copy()
 
-        # Select elements that overlap between each strand in the 'new_elems'
+        # -----------------------------------------------------------------------------
+        # STEP 4.1: Remove overlaps between strands within new elements
+        # -----------------------------------------------------------------------------
+        # Identify elements that overlap between strands
         new_elems_plus_in_minus = get_interval_overlap(
             new_elems_plus, new_elems_minus, invert=False
         )
@@ -678,41 +836,44 @@ def set_strand_direction(
             new_elems_minus, new_elems_plus, invert=False
         )
 
-        # And remove them
+        # Remove overlapping elements from each strand
         if not new_elems_plus_in_minus.empty:
             new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_in_minus)
 
         if not new_elems_minus_in_plus.empty:
             new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_in_plus)
 
-        # Not let's merge the results
+        # Merge overlapping intervals within each strand
         new_elems_plus = get_merge_stranded(new_elems_plus)
         new_elems_minus = get_merge_stranded(new_elems_minus)
 
-        # Remove the elements that overlap with the original+overlapping sequences in the opposite strand
-        if not og_and_overlap_elems_minus.empty:  # If it has rows
-            # Get `new_elems_plus` that overlap in `og_and_overlap_elems_minus`
+        # -----------------------------------------------------------------------------
+        # STEP 4.2: Remove overlaps between new elements and overlapping elements
+        # -----------------------------------------------------------------------------
+        # Handle plus strand new elements that overlap with minus strand overlapping elements
+        if not og_and_overlap_elems_minus.empty:
             new_elems_plus_vs_og_and_overlap_minus = get_interval_overlap(
                 new_elems_plus, og_and_overlap_elems_minus, invert=False
             )
-            if not new_elems_plus_vs_og_and_overlap_minus.empty: # If it has rows
-                # Remove from `new_elems_plus` the elements from `new_elems_plus_vs_og_and_overlap_minus`
+            if not new_elems_plus_vs_og_and_overlap_minus.empty:
                 new_elems_plus = match_data_and_remove(new_elems_plus, new_elems_plus_vs_og_and_overlap_minus)
 
-        if not og_and_overlap_elems_plus.empty:  # If it has rows
-            # Get `new_elems_minus` that overlap in `og_and_overlap_elems_plus`
+        # Handle minus strand new elements that overlap with plus strand overlapping elements
+        if not og_and_overlap_elems_plus.empty:
             new_elems_minus_vs_og_and_overlap_plus = get_interval_overlap(
                 new_elems_minus, og_and_overlap_elems_plus, invert=False
             )
-            if not new_elems_minus_vs_og_and_overlap_plus.empty: # If it has rows
-                # Remove from `new_elems_minus` the elements from `new_elems_minus_vs_og_and_overlap_plus`
+            if not new_elems_minus_vs_og_and_overlap_plus.empty:
                 new_elems_minus = match_data_and_remove(new_elems_minus, new_elems_minus_vs_og_and_overlap_plus)
 
-        # Join again in new_elems and remove tmp files
+        # Combine plus and minus strand new elements
         new_elems = pd.concat([new_elems_plus, new_elems_minus])
         new_elems.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
-    # Combine new elements and processed leftover elements
+    # -----------------------------------------------------------------------------
+    # STEP 5: Combine results and return
+    # -----------------------------------------------------------------------------
+    # Combine new elements and processed overlapping elements
     result = pd.concat([new_elems, overlapping_elems])
     result.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
@@ -721,57 +882,100 @@ def set_strand_direction(
 
 def del_last_overlapping_elem(last_run_elems: pd.DataFrame) -> pd.DataFrame:
     """
-    After completing `smart_merge_across_flips`, sometimes the output will generate a sequence that unifies the blocks
-    b0 and b2, leaving the bloc b1 in another strand. In this case, b1 should be removed
+    Remove redundant overlapping elements between different strands.
 
-    Parameters:
-    -----------
-    last_run_elems: pd.DataFrame
-        A dataframe with new elements discovered in the current iteration.
+    This function performs a final cleanup step after strand processing to ensure
+    that no redundant overlapping elements remain between different strands. When
+    sequences on different strands (plus and minus) overlap, this function determines
+    which sequence to keep based on length - the longer sequence is retained while
+    the shorter one is removed.
 
-    Returns:
-    --------
-    pd.DataFrame:
-        In case there are overlapping elements between the strands, the small one will be removed. If there are not,
-        the original table will be returned
+    This is particularly important after operations like `smart_merge_across_flips`,
+    which may generate sequences that unify blocks b0 and b2 while leaving block b1
+    on another strand. In such cases, b1 should be removed to avoid redundancy.
+
+    Parameters
+    ----------
+    last_run_elems : pd.DataFrame
+        ADataFrame containing genomic elements discovered in the current iteration.
+        Must contain the columns 'sseqid', 'sstart', 'send', and 'sstrand'.
+
+    Returns
+    -------
+    pd.DataFrame
+        A cleaned DataFrame where, in cases of overlapping elements between strands,
+        the smaller element has been removed. If no overlapping elements are found,
+        the original DataFrame is returned unchanged.
+
+    Raises
+    ------
+    KeyError
+        If any of the required columns are missing from the DataFrame.
     """
-    # Divide `last_run_elems` into its strands
+
+    # -----------------------------------------------------------------------------
+    # STEP 1: Separate elements by strand
+    # -----------------------------------------------------------------------------
+    # Divide input elements into plus and minus strand DataFrames
     last_run_elems_plus = last_run_elems[last_run_elems['sstrand'] == 'plus'].copy()
     last_run_elems_minus = last_run_elems[last_run_elems['sstrand'] == 'minus'].copy()
 
-    # Check the overlaps between each other
+    # -----------------------------------------------------------------------------
+    # STEP 2: Identify overlapping elements between strands
+    # -----------------------------------------------------------------------------
+    # Find plus strand elements that overlap with minus strand elements
     last_run_elems_plus_vs_minus = get_interval_overlap(last_run_elems_plus, last_run_elems_minus, invert=False)
+    # Find minus strand elements that overlap with plus strand elements
     last_run_elems_minus_vs_plus = get_interval_overlap(last_run_elems_minus, last_run_elems_plus, invert=False)
 
-    # If there's data, iterate from one of the data frames
+    # -----------------------------------------------------------------------------
+    # STEP 3: Process overlapping elements if any exist
+    # -----------------------------------------------------------------------------
     if not last_run_elems_plus_vs_minus.empty:
+        # Initialize empty DataFrame to collect elements that should be removed
         elems_to_remove = pd.DataFrame()
+        # Use plus strand overlapping elements as the basis for analysis
         data_to_analyze = last_run_elems_plus_vs_minus.copy()
+
+        # -----------------------------------------------------------------------------
+        # STEP 3.1: Compare each overlapping element and determine which to keep
+        # -----------------------------------------------------------------------------
         for idx, row in data_to_analyze.iterrows():
-            # Check where it overlaps against `last_run_elems_minus_vs_plus`
+            # Calculate the length of the current plus strand element
             row_len = row.send - row.sstart + 1
 
-            # Check for where it overlaps
+            # Find minus strand elements that overlap with this specific plus strand element
             overlapping_with_row = get_interval_overlap(
                 last_run_elems_minus_vs_plus,
-                last_run_elems_plus_vs_minus.iloc[idx:idx+1, :],  # Get the pd.DataFrame version
+                # Convert the row to a DataFrame for compatibility with get_interval_overlap
+                last_run_elems_plus_vs_minus.iloc[idx:idx+1, :],
                 invert=False
             )
 
-            # Check which element is bigger between row and the elems in `overlapping_with_row`
+            # -----------------------------------------------------------------------------
+            # STEP 3.2: Compare lengths and mark shorter elements for removal
+            # -----------------------------------------------------------------------------
             for idx2, elem in overlapping_with_row.iterrows():
+                # Calculate the length of the current minus strand element
                 elem_len = elem.send - elem.sstart + 1
-                # It's not possible for elem_len == row_len
+
+                # Keep the longer element and remove the shorter one
+                # Note: It's assumed that elem_len and row_len cannot be equal
                 if elem_len < row_len:
+                    # If a minus strand element is shorter, mark it for removal
                     elems_to_remove = pd.concat(
                         [elems_to_remove, overlapping_with_row.iloc[idx2:idx2+1, :]],
                     )
                 else:
+                    # If a plus strand element is shorter, mark it for removal
                     elems_to_remove = pd.concat(
                         [elems_to_remove, data_to_analyze.iloc[idx:idx+1, :]]
                     )
 
-        # Remove the elements from `elems_to_remove` from `last_run_elems`
+        # -----------------------------------------------------------------------------
+        # STEP 4: Remove the identified elements from the original DataFrame
+        # -----------------------------------------------------------------------------
         last_run_elems = match_data_and_remove(last_run_elems, elems_to_remove)
 
+    # Return the cleaned DataFrame with redundant overlapping elements removed
     return last_run_elems
