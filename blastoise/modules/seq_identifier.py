@@ -25,10 +25,10 @@ from typing import Optional
 
 import pandas as pd
 
-from modules.files_manager import fasta_creator, get_data_sequence
-from modules.seq_modifier import sequence_extension
-from modules.filters import global_filters_main
-from modules.strand_location import set_strand_direction
+from .files_manager import fasta_creator, get_data_sequence
+from .seq_modifier import sequence_extension
+from .filters import global_filters_main
+from .strand_location import set_strand_direction
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -55,7 +55,7 @@ def sequence_identifier(
     1. Merges input data with coincidence data from previous runs (if provided)
     2. Extends sequences in both directions to capture flanking regions
     3. Creates FASTA files from the extended sequences
-    4. Performs BLAST alignment against the reference genome
+    4. Performs BLAST alignment against reference genome
     5. Extracts and processes coordinate information from alignment results
     6. Sets strand orientation for each sequence
     7. Applies filters to remove unwanted sequences
@@ -104,7 +104,7 @@ def sequence_identifier(
     """
 
     # Import blastn_blaster here to avoid circular import issues
-    from modules.blaster import blastn_blaster  # Delayed import to break the circular import
+    from blastoise.modules.blaster import blastn_blaster  # Delayed import to break the circular import
 
     # -----------------------------------------------------------------------------
     # STEP 1: Setup output directory for this run phase

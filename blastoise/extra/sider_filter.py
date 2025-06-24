@@ -18,9 +18,9 @@ import pandas as pd
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from modules.aesthetics import print_message_box
-from extra.utils.extra_functions import setup_directories
-from extra.utils.sider_filter_functions import (
+from blastoise.modules.aesthetics import print_message_box
+from .utils.extra_functions import setup_directories
+from .utils.sider_filter_functions import (
     parse_arguments,
     filter_sequences,
     process_recaught_data,

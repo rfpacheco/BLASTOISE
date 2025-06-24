@@ -13,7 +13,7 @@ from Bio.SeqRecord import SeqRecord
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from modules.blaster import blastn_dic
+from blastoise.modules.blaster import blastn_dic
 
 # ======================================================================
 def csv_to_fasta_creator(csv_data: pd.DataFrame, fasta_output_path: str) -> None:

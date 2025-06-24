@@ -28,8 +28,8 @@ from Bio.SeqRecord import SeqRecord
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from modules.blaster import blastn_dic
-from extra.utils.extra_functions import general_blastn_blaster
+from blastoise.modules.blaster import blastn_dic
+from .extra_functions import general_blastn_blaster
 
 
 def parse_arguments() -> argparse.Namespace:

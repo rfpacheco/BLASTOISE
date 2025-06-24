@@ -22,8 +22,8 @@ License: MIT
 import time
 import pandas as pd
 
-from modules.genomic_ranges import get_merge_stranded, get_interval_overlap
-from modules.strand_location import match_data_and_remove
+from .genomic_ranges import get_merge_stranded, get_interval_overlap
+from .strand_location import match_data_and_remove
 
 
 def global_filters_main(data_input: pd.DataFrame, min_length: int) -> pd.DataFrame:

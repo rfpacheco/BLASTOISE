@@ -34,9 +34,9 @@ from joblib import Parallel, delayed
 
 from typing import Hashable
 
-from modules.genomic_ranges import get_merge_stranded
-from modules.genomic_ranges import get_interval_overlap, merge_intervals
-from extra.utils.csv_to_gff import csv_to_gff
+from .genomic_ranges import get_merge_stranded
+from .genomic_ranges import get_interval_overlap, merge_intervals
+from blastoise.extra.utils.csv_to_gff import csv_to_gff
 
 
 # noinspection DuplicatedCode

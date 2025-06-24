@@ -10,5 +10,13 @@ __all__ = [
     'genomic_ranges'
 ]
 
-# noinspection PyUnresolvedReferences
-from modules import *
+# Import all modules using relative imports
+from . import blaster
+from . import aesthetics
+from . import seq_identifier
+from . import files_manager
+from . import seq_modifier
+from . import filters
+from . import compare
+from . import strand_location
+from . import genomic_ranges

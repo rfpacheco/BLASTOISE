@@ -21,8 +21,8 @@ License: MIT
 
 import pandas as pd
 
-from modules.genomic_ranges import compare_genomic_datasets
-from modules.files_manager import columns_to_numeric
+from .genomic_ranges import compare_genomic_datasets
+from .files_manager import columns_to_numeric
 
 
 def compare_main(

@@ -16,9 +16,9 @@ import pandas as pd
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from modules.aesthetics import print_message_box
-from extra.utils.extra_functions import setup_directories
-from extra.utils.coordinate_corrector_functions import (
+from blastoise.modules.aesthetics import print_message_box
+from .utils.extra_functions import setup_directories
+from .utils.coordinate_corrector_functions import (
     parse_arguments,
     correct_coordinates,
     create_output_dataframe,
@@ -26,13 +26,13 @@ from extra.utils.coordinate_corrector_functions import (
     save_results
 )
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('coordinate_corrector')
-
 
 
 def main():

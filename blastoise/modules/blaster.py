@@ -30,13 +30,13 @@ import shutil
 import logging
 from datetime import datetime
 
-from modules.aesthetics import print_message_box
-from modules.seq_identifier import sequence_identifier
-from modules.compare import compare_main
-from modules.files_manager import end_always_greater_than_start, get_data_sequence
-from modules.strand_location import del_last_overlapping_elem
-from modules.genomic_ranges import get_merge_stranded
-from extra.utils.csv_to_gff import csv_to_gff
+from .aesthetics import print_message_box
+from .seq_identifier import sequence_identifier
+from .compare import compare_main
+from .files_manager import end_always_greater_than_start, get_data_sequence
+from .strand_location import del_last_overlapping_elem
+from .genomic_ranges import get_merge_stranded
+from blastoise.extra.utils.csv_to_gff import csv_to_gff
 
 
 def blastn_dic(path_input: str, path_output: str) -> None:
@@ -278,7 +278,7 @@ def repetitive_blaster(
     # STEP 3: Apply optional masking to filter out predefined genomic regions
     # -----------------------------------------------------------------------------
     if mask is not None:
-        from modules.filters import remove_masking_zone
+        from blastoise.modules.filters import remove_masking_zone
         # Remove sequences that overlap with masked regions
         whole_group = remove_masking_zone(whole_group, mask)
 

@@ -33,10 +33,10 @@ from typing import Tuple
 
 import pandas as pd
 
-from modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
-from modules.aesthetics import print_message_box, blastoise_art
-from modules.genomic_ranges import get_merge_stranded
-from modules.filters import remove_masking_zone
+from blastoise.modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
+from blastoise.modules.aesthetics import print_message_box, blastoise_art
+from blastoise.modules.genomic_ranges import get_merge_stranded
+from blastoise.modules.filters import remove_masking_zone
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -65,7 +65,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('-ws', '--word_size', type=int, default=15, help='Word size for BLASTn.')
     parser.add_argument('-min', '--min_length', type=int, default=100, help='Minimum sequence length for filtering.')
     parser.add_argument('-ext', '--extend', type=int, default=100, help='Number of nucleotides for sequence extension.')
-    parser.add_argument('-lim', '--limit', type=int, default=100, help='Length limit to trigger sequence extension.')
+    parser.add_argument('-lim', '--limit', type=int, default=1000, help='Length limit to trigger sequence extension.')
     parser.add_argument('-m', '--mask', type=str, required=False, help='Path to an optional mask file (CSV format).')
     parser.add_argument('-j', '--jobs', type=int, default=-1, help='Number of jobs for parallel processing. -1 means using all processors.')
 

@@ -26,8 +26,8 @@ from typing import Dict, List, Any
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from extra.utils.extra_functions import fetch_dna_sequence, general_blastn_blaster
-from modules.aesthetics import print_message_box
+from .extra_functions import fetch_dna_sequence, general_blastn_blaster
+from blastoise.modules.aesthetics import print_message_box
 
 
 def parse_arguments() -> argparse.Namespace:
