@@ -17,7 +17,7 @@ RUN mkdir /app/data
 RUN echo "conda activate blastoise" > ~/.bashrc
 
 # Copy the application code into the container
-COPY . .
+COPY blastoise .
 
 # Set the default command to start with the environment ready.
 ## --login will execute the .bashrc scripts.
