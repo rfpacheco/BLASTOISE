@@ -1,0 +1,126 @@
+# =============================================================================
+# BUILD SYSTEM CONFIGURATION
+# =============================================================================
+[build-system]
+# setuptools>=64 is needed for modern pyproject.toml support
+# wheel is needed to create wheel distributions (.whl files)
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"  # Backend to build your package
+
+# =============================================================================
+# PROJECT METADATA
+# =============================================================================
+[project]
+name = "blastoise"
+version = "0.4.2"
+authors = [
+    {name = "R. Pacheco", email = "ronnyfph@gmail.com"}
+]
+description = "A Tool for SIDER Repetitive Sequence Discovery in Genomic Data"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+keywords = [
+    "bioinformatics",
+    "genomics",
+    "repetitive-sequences",
+    "blast",
+    "siders",
+    "leishmania",
+    "sequence-analysis"
+]
+
+# Classifiers to categorize the package on PyPI
+# Full list: https://pypi.org/classifiers/
+classifiers = [
+    # Development status
+    "Development Status :: 4 - Beta",
+
+    # Intended audience
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+
+    # License
+    "License :: OSI Approved :: MIT License",
+
+    # Operating systems
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+
+    # Programming language versions
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+
+    # Topic categories
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+# =============================================================================
+# DEPENDENCIES
+# =============================================================================
+# Runtime dependencies (packages needed to run the code)
+# Empty since conda is needed for dependencies outpise python
+dependencies = [
+]
+
+# =============================================================================
+# PROJECT URLS
+# =============================================================================
+[project.urls]
+Homepage = "https://github.com/rfpacheco"
+Repository = "https://github.com/rfpacheco/BLASTOISE"
+Issues = "https://github.com/rfpacheco/BLASTOISE/issues"
+Documentation = "https://github.com/rfpacheco/BLASTOISE#readme"
+
+# =============================================================================
+# CONSOLE SCRIPTS (COMMAND LINE TOOLS)
+# =============================================================================
+# Executable commands that users can run from their terminal
+[project.scripts]
+# Main blastoise command: 'blastoise' will run the main() function from blastoise.main
+blastoise = "blastoise.main:main"
+
+# Additional tools to use as separate commands
+blastoise-coordinate-corrector = "blastoise.extra.coordinate_corrector:main"
+blastoise-sider-filter = "blastoise.extra.sider_filter:main"
+
+# =============================================================================
+# OPTIONAL DEPENDENCIES
+# =============================================================================
+# These are dependency groups that users can install optionally
+[project.optional-dependencies]
+# Development dependencies: pip install -e ".[dev]"
+dev = [
+    "pytest>=7.0",           # Testing framework
+    "pytest-cov>=4.0",      # Coverage reporting
+    "black>=23.0",           # Code formatter
+    "flake8>=6.0",           # Linting
+    "mypy>=1.0",             # Type checking
+    "pre-commit>=3.0",       # Git hooks for code quality
+]
+
+# Testing dependencies: pip install -e ".[test]"
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.0",
+]
+
+# Documentation dependencies: pip install -e ".[docs]"
+docs = [
+    "sphinx>=5.0",
+    "sphinx-rtd-theme>=1.0",
+    "myst-parser>=0.18",
+]
+
+# =============================================================================
+# SETUPTOOLS CONFIGURATION
+# =============================================================================
+# Configuration specific to setuptools (the build backend we're using)
+[tool.setuptools]
+# Automatically find all packages in the project
+packages = ["blastoise"]

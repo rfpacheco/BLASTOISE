@@ -54,7 +54,7 @@ def parse_arguments() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         prog='BLASTOISE',
-        description='A program to search for repetitive sequences like SIDERs in Leishmania spp. genomes.',
+        description='BLASTOISE: A Tool for Repetitive Sequence Discovery in Genomic Data',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
