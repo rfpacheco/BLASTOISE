@@ -90,7 +90,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-i", "--identity", 
         type=int, 
-        default=15,
+        default=60,
         help="Minimum percentage identity for sequence recapturing."
     )
 
