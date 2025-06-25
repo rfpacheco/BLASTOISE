@@ -237,14 +237,11 @@ def correct_coordinates(
         )
 
         # Add len column for the subject
-        blastn_df['len'] = abs(blastn_df['send'] - blastn_df['sstart']) + 1
+        blastn_df['len'] = abs(blastn_df['qend'] - blastn_df['qstart']) + 1
 
         # Only when the length is >= min_length
         blastn_df = blastn_df.loc[blastn_df['len'] >= min_length]
         blastn_df = blastn_df.loc[blastn_df['len'] <= max_length]
-
-        # Remove if they are equal or longer than the original
-        blastn_df = blastn_df.loc[blastn_df['len'] < seq_len]
 
         # Sort and merge the filtered results
         blastn_df.sort_values('qstart', inplace=True)
