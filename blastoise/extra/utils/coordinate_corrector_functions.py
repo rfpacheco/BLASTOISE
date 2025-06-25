@@ -40,9 +40,10 @@ def parse_arguments() -> argparse.Namespace:
         Parsed command-line arguments with the following attributes:
         - file: Path to the input CSV file
         - dict_path: Path to the genome FASTA file
-        - output: Path to the output CSV file
         - word_size: Word size parameter for BLASTN
         - min_length: Minimum length of the sequence to be considered
+        - identity: Percentage identity threshold for BLASTN
+        - evalue: E-value threshold for BLASTN
     """
     parser = argparse.ArgumentParser(
         description="Correct coordinates for sequences in a CSV file",
@@ -64,13 +65,6 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "-o", "--output", 
-        type=str, 
-        required=True,
-        help="Path to the output CSV file where corrected coordinates will be saved."
-    )
-
-    parser.add_argument(
         "-ws", "--word_size", 
         type=int, 
         default=15,
@@ -82,6 +76,27 @@ def parse_arguments() -> argparse.Namespace:
         type=int, 
         default=100,
         help="Minimum length of the sequence to be considered after correction."
+    )
+
+    parser.add_argument(
+        "-max", "--max_length",
+        type=int,
+        default=1000,
+        help="Maximum length of the sequence to be considered after correction."
+    )
+
+    parser.add_argument(
+        "-i", "--identity",
+        type=int,
+        default=60,
+        help="Percentage identity threshold for BLASTN search."
+    )
+
+    parser.add_argument(
+        "-e", "--evalue",
+        type=float,
+        default=1.0E-09,
+        help="E-value threshold for BLASTN search."
     )
 
     return parser.parse_args()
@@ -148,7 +163,10 @@ def correct_coordinates(
     df: pd.DataFrame, 
     blastn_db_path: str, 
     word_size: int,
-    min_length: int
+    min_length: int,
+    max_length: int,
+    identity: int,
+    evalue: float
 ) -> Dict[str, List[List[Any]]]:
     """
     Adjust sequence coordinates using BLASTN and PyRanges processing.
@@ -167,6 +185,12 @@ def correct_coordinates(
         Word size parameter for BLASTN search (-W parameter).
     min_length : int
         Minimum length of the sequence to be considered after correction.
+    max_length: int
+        Maximum length of the sequence to be considered after correction.
+    identity : int, optional
+        Percentage identity threshold for BLASTN search. Default is 60.
+    evalue : float, optional
+        E-value threshold for BLASTN search. The default is 1.0E-09.
 
     Returns
     -------
@@ -190,6 +214,7 @@ def correct_coordinates(
         end_coor = row.send
         strand_seq = row.sstrand
         name_chr = row.sseqid
+        seq_len = end_coor - start_coor + 1
 
         logger.info(f"Analyzing row {pos}/{df.shape[0]} with name_id {name_id}")
 
@@ -198,8 +223,8 @@ def correct_coordinates(
             query_path=query,
             dict_path=blastn_db_path,
             word_size=word_size,
-            perc_identity=60,  # TODO: add as parameter
-            evalue=1.0E-09  # TODO: add as parameter
+            perc_identity=identity,
+            evalue=evalue
         )
 
         # Filter the BLASTN results
@@ -215,11 +240,11 @@ def correct_coordinates(
         blastn_df['len'] = abs(blastn_df['send'] - blastn_df['sstart']) + 1
 
         # Only when the length is >= min_length
-        blastn_df = blastn_df[blastn_df['len'] >= min_length]
-        blastn_df = blastn_df[blastn_df['len'] <= 1000]
+        blastn_df = blastn_df.loc[blastn_df['len'] >= min_length]
+        blastn_df = blastn_df.loc[blastn_df['len'] <= max_length]
 
         # Remove if they are equal or longer than the original
-        blastn_df = blastn_df[blastn_df['len'] < int(row.len)]
+        blastn_df = blastn_df.loc[blastn_df['len'] < seq_len]
 
         # Sort and merge the filtered results
         blastn_df.sort_values('qstart', inplace=True)

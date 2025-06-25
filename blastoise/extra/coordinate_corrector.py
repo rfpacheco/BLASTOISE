@@ -60,7 +60,12 @@ def main():
         # Expand user paths
         csv_path = os.path.expanduser(args.file)
         dict_path = os.path.expanduser(args.dict_path)
-        output_path = os.path.expanduser(args.output)
+
+        # User as an output path to the folder where the csv_path is
+        ## File name as the original file without the extension + corrected.csv
+        out_file_name = os.path.splitext(os.path.basename(csv_path))[0] + "_corrected.csv"
+        output_path = os.path.join(os.path.dirname(csv_path), out_file_name)
+        output_path = str(output_path)
 
         # Get the directory of the input file
         input_file_dir = os.path.dirname(csv_path)
@@ -85,7 +90,10 @@ def main():
             data, 
             blastn_db_path,
             args.word_size, 
-            args.min_length
+            args.min_length,
+            args.max_length,
+            args.identity,
+            args.evalue
         )
 
         # Create output DataFrame

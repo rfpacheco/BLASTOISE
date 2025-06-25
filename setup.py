@@ -11,6 +11,9 @@ setup(
     entry_points={
         "console_scripts": [
             "blastoise=blastoise.main:main",
+            "blastoise_coordinate_corrector=blastoise.extra.coordinate_corrector:main",
+            "blastoise_sider_filter=blastoise.extra.sider_filter:main",
+
         ],
     },
 )
