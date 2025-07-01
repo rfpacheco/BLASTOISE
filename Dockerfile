@@ -34,7 +34,7 @@ RUN apt-get update && \
 # =============================================================================
 # Copy the conda environment file first (for better Docker layer caching)
 # Docker caches layers, so if environment.yml doesn't change, this layer is reused
-COPY environment.yml .
+COPY environment.yaml .
 
 # Create the conda environment from the environment.yml file
 RUN conda env create --name blastoise --file environment.yml
