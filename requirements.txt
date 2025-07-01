@@ -2,5 +2,4 @@ setuptools>=75.1.0
 pandas>=2.2.3
 pyranges>=0.1.4
 biopython>=1.84
-blastoise>=0.4.2
 joblib>=1.5.1
