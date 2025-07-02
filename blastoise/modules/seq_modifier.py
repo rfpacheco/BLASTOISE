@@ -17,8 +17,6 @@ are of sufficient length for reliable analysis, extending shorter sequences by
 adjusting their coordinates and retrieving the extended sequences from the genome.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import subprocess
@@ -128,30 +126,34 @@ def _process_single_row_extension(
         new_subject_len = upper_coor - lower_coor + 1
 
         # -----------------------------------------------------------------------------
-        # STEP 4: Retrieve the extended sequence using BLAST command
+        # STEP 4: Check if the new length is < limit_len
         # -----------------------------------------------------------------------------
-        # Construct the BLAST command to extract the sequence
-        cmd = (
-            f"blastdbcmd -db {genome_fasta} "
-            f"-entry {element['sseqid']} "
-            f"-range {lower_coor}-{upper_coor} "
-            f"-strand {element['sstrand']} "
-            "-outfmt %s"
-        )
+        if new_subject_len < limit_len:
+            # -----------------------------------------------------------------------------
+            # STEP 5: Retrieve the extended sequence using BLAST command
+            # -----------------------------------------------------------------------------
+            # Construct the BLAST command to extract the sequence
+            cmd = (
+                f"blastdbcmd -db {genome_fasta} "
+                f"-entry {element['sseqid']} "
+                f"-range {lower_coor}-{upper_coor} "
+                f"-strand {element['sstrand']} "
+                "-outfmt %s"
+            )
 
-        # Execute the command to get the sequence
-        seq = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+            # Execute the command to get the sequence
+            seq = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
 
-        # -----------------------------------------------------------------------------
-        # STEP 5: Update the result with the modified sequence information
-        # -----------------------------------------------------------------------------
-        result.update({
-            'modified': True,
-            'length': new_subject_len,
-            'sstart': int(lower_coor),
-            'send': int(upper_coor),
-            'sseq': seq
-        })
+            # -----------------------------------------------------------------------------
+            # STEP 6: Update the result with the modified sequence information
+            # -----------------------------------------------------------------------------
+            result.update({
+                'modified': True,
+                'length': new_subject_len,
+                'sstart': int(lower_coor),
+                'send': int(upper_coor),
+                'sseq': seq
+            })
 
     # Return either the modified data or the default "not modified" result
     return result
