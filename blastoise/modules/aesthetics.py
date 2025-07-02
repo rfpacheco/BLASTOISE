@@ -17,8 +17,6 @@ cues about the progress and status of the analysis, making the console output mo
 readable and user-friendly.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 BOX_WIDTH_DEFAULT = 80

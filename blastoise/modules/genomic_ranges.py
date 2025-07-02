@@ -22,8 +22,6 @@ manipulation, which is essential for the identification and analysis of repetiti
 elements in genomic data.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import pandas as pd

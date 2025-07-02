@@ -18,8 +18,6 @@ for the BLASTOISE pipeline, enabling efficient processing and storage of genomic
 sequence data.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import pandas as pd

@@ -15,8 +15,6 @@ similarities and differences between genomic datasets, which is essential for tr
 the evolution of repetitive element discovery across iterations.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import pandas as pd

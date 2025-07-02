@@ -18,8 +18,6 @@ of BLASTOISE, progressively identifying and refining the set of repetitive seque
 in the target genome.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import os

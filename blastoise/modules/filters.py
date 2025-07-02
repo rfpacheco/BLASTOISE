@@ -15,8 +15,6 @@ meets quality criteria and excludes regions that should not be considered in the
 such as known repetitive elements or low-complexity regions.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import time

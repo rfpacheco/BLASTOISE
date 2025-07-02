@@ -22,8 +22,6 @@ and that overlapping sequences are handled consistently, which is critical for
 accurate identification of repetitive elements in the genome.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 # Import needed modules

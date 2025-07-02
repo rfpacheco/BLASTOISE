@@ -15,8 +15,6 @@ raw genomic coordinates into properly extended, aligned, and filtered sequences
 that can be used for downstream analysis of repetitive elements.
 
 Author: R. Pacheco
-Version: 0.4.2
-License: MIT
 """
 
 import os
