@@ -68,7 +68,7 @@ def parse_arguments() -> argparse.Namespace:
 
     parser.add_argument(
         "-rt", "--recaught_threshold", 
-        type=float, 
+        type=float,
         default=1.0E-03,
         help="E-value threshold for recapturing sequences."
     )
@@ -285,12 +285,15 @@ def process_recaught_data(
         return pd.DataFrame(), rejected_data
 
     try:
+        # Reset index to ensure continuous indexing for iloc operations
+        rejected_data_reset = rejected_data.reset_index(drop=True)
+
         # Create a FASTA file from the rejected data for BLASTN using BioPython
         fasta_file_path = os.path.join(temp_dir, "negative_database.fasta")
 
         # Create a list of SeqRecord objects
         records = []
-        for idx, row in rejected_data.iterrows():
+        for idx, row in rejected_data_reset.iterrows():
             if 'sseq' in row:
                 # Create a SeqRecord with the sequence and an ID
                 record = SeqRecord(
@@ -328,17 +331,26 @@ def process_recaught_data(
             # Get indices of recaught sequences
             recaught_indices = caught_data["index"].unique()
 
+            # Validate indices are within bounds
+            valid_indices = [idx for idx in recaught_indices if idx < len(rejected_data_reset)]
+
+            if len(valid_indices) != len(recaught_indices):
+                logger.warning(
+                    f"Some recaught indices were out of bounds. Using {len(valid_indices)} out of {len(recaught_indices)} indices.")
+
             # Move recaught sequences from rejected to accept
-            recaught_rows = rejected_data.iloc[recaught_indices].copy()
-            if not recaught_rows.empty:
+            if valid_indices:
+                recaught_rows = rejected_data_reset.iloc[valid_indices].copy()
                 recaught_rows['status'] = 'Accepted (Recaught)'
                 accepted_data = recaught_rows
-                rejected_data = rejected_data.drop(recaught_indices)
+
+                # Remove recaught sequences from rejected data
+                remaining_rejected = rejected_data_reset.drop(rejected_data_reset.index[valid_indices])
 
                 logger.info(f"Recaught sequences: {len(recaught_rows)}")
-                logger.info(f"Updated rejected sequences: {len(rejected_data)}")
+                logger.info(f"Updated rejected sequences: {len(remaining_rejected)}")
 
-                return accepted_data, rejected_data
+                return accepted_data, remaining_rejected
 
         logger.info("No sequences were recaptured")
         return pd.DataFrame(), rejected_data
