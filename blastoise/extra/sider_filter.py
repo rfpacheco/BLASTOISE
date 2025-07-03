@@ -14,6 +14,7 @@ import os
 import sys
 import logging
 import pandas as pd
+import argparse
 
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -21,11 +22,82 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from blastoise.modules.aesthetics import print_message_box
 from .utils.extra_functions import setup_directories
 from .utils.sider_filter_functions import (
-    parse_arguments,
     filter_sequences,
     process_recaught_data,
     save_results
 )
+
+def parse_arguments() -> argparse.Namespace:
+    """
+    Parse command-line arguments for the SIDER filter script.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description="Filter sequences using SIDER criteria",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+
+    parser.add_argument(
+        "-f", "--file", 
+        type=str, 
+        required=True,
+        help="Path to the input CSV file containing sequence data."
+    )
+
+    parser.add_argument(
+        "-d", "--dict_path", 
+        type=str, 
+        required=True,
+        help="Path to the genome FASTA file for BLASTN database creation."
+    )
+
+
+    parser.add_argument(
+        "-rf", "--recaught_file", 
+        type=str, 
+        required=True,
+        help="Path to the FASTA file used for recapturing sequences."
+    )
+
+    parser.add_argument(
+        "-rt", "--recaught_threshold", 
+        type=float,
+        default=1.0E-03,
+        help="E-value threshold for recapturing sequences."
+    )
+
+    parser.add_argument(
+        "-ws", "--word_size", 
+        type=int, 
+        default=15,
+        help="Word size parameter for BLASTN."
+    )
+
+    parser.add_argument(
+        "-e", "--evalue", 
+        type=float, 
+        default=1.0E-09,
+        help="E-value threshold for initial BLASTN filtering."
+    )
+
+    parser.add_argument(
+        "-i", "--identity", 
+        type=int, 
+        default=60,
+        help="Minimum percentage identity for sequence recapturing."
+    )
+
+    parser.add_argument(
+        "-ms", "--min_subjects", 
+        type=int, 
+        default=5,
+        help="Minimum number of unique subjects required for a sequence to be accepted."
+    )
+
+    return parser.parse_args()
+
 
 # Configure logging
 logging.basicConfig(
