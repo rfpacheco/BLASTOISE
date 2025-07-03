@@ -58,21 +58,36 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument('-d', '--data', type=str, required=True, help='Path to the input data file.')
-    parser.add_argument('-g', '--genome', type=str, required=True, help='Path to the reference genome file.')
-    parser.add_argument('-o', '--output', type=str, required=True, help='Path for the output working directory.')
-    parser.add_argument('-i', '--identity', type=int, default=60, help='Identity percentage for the first BLASTn step.')
-    parser.add_argument('-ws', '--word_size', type=int, default=15, help='Word size for BLASTn.')
-    parser.add_argument('-min', '--min_length', type=int, default=100, help='Minimum sequence length for filtering.')
-    parser.add_argument('-ext', '--extend', type=int, default=100, help='Number of nucleotides for sequence extension.')
-    parser.add_argument('-lim', '--limit', type=int, default=1000, help='Length limit to trigger sequence extension.')
-    parser.add_argument('-m', '--mask', type=str, required=False, help='Path to an optional mask file (CSV format).')
-    parser.add_argument('-j', '--jobs', type=int, default=-1, help='Number of jobs for parallel processing. -1 means using all processors.')
+    parser.add_argument('-d', '--data', type=str, required=True, 
+                        help='Path to the input data file.')
+    parser.add_argument('-g', '--genome', type=str, required=True, 
+                        help='Path to the reference genome file.')
+    parser.add_argument('-o', '--output', type=str, required=True,
+                        help='Path for the output working directory. The specified directory will be created if '
+                             'it does not exist.')
+    parser.add_argument('-i', '--identity', type=int, default=60, 
+                        help='Identity percentage for the first BLASTn step.')
+    parser.add_argument('-ws', '--word_size', type=int, default=15, 
+                        help='Word size for BLASTn.')
+    parser.add_argument('-min', '--min_length', type=int, default=100, 
+                        help='Minimum sequence length for filtering.')
+    parser.add_argument('-ext', '--extend', type=int, default=100, 
+                        help='Number of nucleotides for sequence extension.')
+    parser.add_argument('-lim', '--limit', type=int, default=1000, 
+                        help='Length limit to trigger sequence extension.')
+    parser.add_argument('-m', '--mask', type=str, required=False, 
+                        help='Path to an optional mask file (CSV format).')
+    parser.add_argument('-j', '--jobs', type=int, default=-1, 
+                        help='Number of jobs for parallel processing. -1 means using all processors.')
 
     return parser.parse_args()
 
 
-def setup_workspace(output_dir: str, data_file: str, genome_file: str) -> Tuple[str, str, str]:
+def setup_workspace(
+        output_dir: str, 
+        data_file: str, 
+        genome_file: str
+) -> Tuple[str, str, str]:
     """
     Creates the main output directory and a subdirectory for original data,
     then copies the input files into it.
