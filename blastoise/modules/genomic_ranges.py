@@ -241,12 +241,6 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
     ValueError
         If the 'sstrand' column contains values other than 'plus' or 'minus'.
 
-    Notes
-    -----
-    This function replaces the previous bedops_main function, providing the same
-    functionality but using PyRanges instead of BEDOPS tools, which improves
-    performance and maintainability.
-
     See Also
     --------
     merge_intervals : Merge overlapping intervals without considering strand.
