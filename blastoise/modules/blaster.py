@@ -314,7 +314,7 @@ def repetitive_blaster(
     # When sequences overlap, keep only the largest one to avoid redundancy
     # whole_group = current run results (n)
     # data_input = combined previous results (n-1)
-    whole_group = del_last_overlapping_elem(whole_group)
+    whole_group = del_last_overlapping_elem(whole_group)  # TODO: is it needed?
 
     # -----------------------------------------------------------------------------
     # Compare current run results with previous runs to identify new sequences
