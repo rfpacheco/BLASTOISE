@@ -802,7 +802,7 @@ def set_strand_direction(
 
         # Process overlapping elements using parallel processing
         overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=n_jobs)
-        overlapping_elems = get_merge_stranded(overlapping_elems)  # Merge overlapping intervals
+        overlapping_elems = get_merge_stranded(overlapping_elems)  # Merge overlapping intervals  # TODO: is it needed?
         toc = time.perf_counter()
         print(f"\t\t\t\t- Execution time: {toc - tic:0.2f} seconds")
 
