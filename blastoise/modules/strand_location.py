@@ -771,12 +771,7 @@ def set_strand_direction(
     print(f"\t\t\t- New elements: {new_elems.shape[0]}")
 
     # Identify elements that overlap with original data
-    overlapping_elems = pd.merge(
-        new_data, new_elems,
-        on=['sseqid', 'sstart', 'send', 'sstrand'],
-        how='left', indicator=True
-    ).query('_merge == "left_only"').drop('_merge', axis=1)
-    print(f"\t\t\t- Overlapping elements: {overlapping_elems.shape[0]}")
+    overlapping_elems = get_interval_overlap(new_data, og_data)
 
     # -----------------------------------------------------------------------------
     # STEP 3: Process overlapping elements
@@ -790,20 +785,20 @@ def set_strand_direction(
         print(f"\t\t\t- Checking strand orientation in overlapping elements:")
 
         # Save intermediate files for debugging and visualization
-        save_folder = os.path.join(folder_path, 'RUNS')
-        os.makedirs(save_folder, exist_ok=True)
-        overlapping_elems.to_csv(
-            os.path.join(save_folder, f"run_{run_phase - 1}_new_df.csv"), index=False
-        )
-        csv_to_gff(
-            os.path.join(save_folder, f"run_{run_phase - 1}_new_df.csv")
-        )
-        og_data.to_csv(
-            os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv"), index=False
-        )
-        csv_to_gff(
-            os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
-        )
+        # save_folder = os.path.join(folder_path, 'RUNS')
+        # os.makedirs(save_folder, exist_ok=True)
+        # overlapping_elems.to_csv(
+        #     os.path.join(save_folder, f"run_{run_phase - 1}_new_df.csv"), index=False
+        # )
+        # csv_to_gff(
+        #     os.path.join(save_folder, f"run_{run_phase - 1}_new_df.csv")
+        # )
+        # og_data.to_csv(
+        #     os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv"), index=False
+        # )
+        # csv_to_gff(
+        #     os.path.join(save_folder, f"run_{run_phase - 1}_og_df.csv")
+        # )
 
         # Process overlapping elements using parallel processing
         overlapping_elems = set_overlapping_status(overlapping_elems, og_data, run_phase, n_jobs=n_jobs)
