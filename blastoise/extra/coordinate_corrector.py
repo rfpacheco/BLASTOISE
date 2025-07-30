@@ -130,8 +130,8 @@ def main():
         args = parse_arguments()
 
         # Expand user paths
-        csv_path = os.path.expanduser(args.file)
-        dict_path = os.path.expanduser(args.dict_path)
+        csv_path = os.path.expanduser(args.data)
+        dict_path = os.path.expanduser(args.genome_path)
 
         # User as an output path to the folder where the csv_path is
         ## File name as the original file without the extension + corrected.csv
