@@ -56,14 +56,14 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "-f", "--file", 
+        "-d", "--data",
         type=str, 
         required=True,
         help="Path to the input CSV file containing sequence data."
     )
 
     parser.add_argument(
-        "-d", "--dict_path", 
+        "-g", "--genome_path",
         type=str, 
         required=True,
         help="Path to the genome FASTA file for BLASTN database creation."
