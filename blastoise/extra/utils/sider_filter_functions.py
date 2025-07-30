@@ -246,13 +246,14 @@ def process_recaught_data(
             query_path=recaught_file_path,
             dict_path=blastn_db_path,
             perc_identity=identity,
-            word_size=word_size
+            word_size=word_size,
+            evalue=recaught_threshold
         )
 
         # Process recaught data
         if not caught_data.empty:
             # Filter by e-value
-            caught_data = caught_data[caught_data["evalue"] <= recaught_threshold].sort_values(by=["evalue"])
+            caught_data = caught_data.sort_values(by=["evalue"])
             logger.info(f"Recaught data: {caught_data.shape[0]} elements")
 
             # Extract sequence indices from sseqid
