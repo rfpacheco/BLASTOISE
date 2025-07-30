@@ -129,8 +129,13 @@ def pyranges_merge(input_df: pd.DataFrame, path_folder: str = None) -> pd.DataFr
 # ======================================================================
 # BLAST FUNCTIONS
 # ======================================================================
-def general_blastn_blaster(query_path: str, dict_path: str, word_size: int, 
-                          perc_identity: Optional[int] = None, evalue: Optional[float] = None) -> pd.DataFrame:
+def general_blastn_blaster(
+        query_path: str,
+        dict_path: str,
+        word_size: int,
+        perc_identity: Optional[int] = None,
+        evalue: Optional[float] = None
+) -> pd.DataFrame:
     """
     Executes a BLASTN command with the specified parameters and processes the output into a
     structured DataFrame.
