@@ -114,8 +114,8 @@ def main():
         args = parse_arguments()
 
         # Expand user paths
-        csv_path = os.path.expanduser(args.file)
-        dict_path = os.path.expanduser(args.dict_path)
+        csv_path = os.path.expanduser(args.data)
+        dict_path = os.path.expanduser(args.genome)
         # Use the directory of the input file as the output location
         output_dir = os.path.dirname(csv_path)
         recaught_file_path = os.path.expanduser(args.recaught_file)
