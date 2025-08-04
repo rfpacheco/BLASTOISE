@@ -308,13 +308,6 @@ def repetitive_blaster(
         print(f"\t- Previous Run data:\n",
               f"\t\t- First Run row length: {data_input.shape[0]}")
 
-    # -----------------------------------------------------------------------------
-    # Remove overlapping sequences to ensure clean data
-    # -----------------------------------------------------------------------------
-    # When sequences overlap, keep only the largest one to avoid redundancy
-    # whole_group = current run results (n)
-    # data_input = combined previous results (n-1)
-    whole_group = del_last_overlapping_elem(whole_group)  # TODO: is it needed?
 
     # -----------------------------------------------------------------------------
     # Compare current run results with previous runs to identify new sequences
@@ -431,9 +424,6 @@ def repetitive_blaster(
         # Combine all sequences for comprehensive tracking
         save_run_file = pd.concat([new_data_and_old, coincidence_data], ignore_index=True)
         save_run_file.sort_values(by=['sseqid', 'sstart'], inplace=True)
-
-        # Remove any overlapping elements to ensure clean data
-        save_run_file = del_last_overlapping_elem(save_run_file)
 
         # Calculate sequence lengths
         save_run_file['len'] = save_run_file['send'] - save_run_file['sstart'] + 1
