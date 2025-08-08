@@ -37,6 +37,7 @@ from blastoise.modules.blaster import blastn_dic, blastn_blaster, repetitive_bla
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
 from blastoise.modules.genomic_ranges import get_merge_stranded
 from blastoise.modules.filters import remove_masking_zone
+from blastoise.modules.seq_modifier import sequence_extension
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -280,28 +281,16 @@ def main() -> None:
             word_size=args.word_size
         )
 
-        # 3. Apply optional mask
-        mask_df = None
-        if args.mask:
-            mask_df = pd.read_csv(args.mask, sep=",", header=0)
-            initial_data = remove_masking_zone(initial_data, mask_df)
-
-        # 4. Run the iterative blaster
-        execution_dir = os.path.join(output_dir, 'execution_data')
-        os.makedirs(execution_dir, exist_ok=True)
-        repetitive_blaster(
-            data_input=initial_data,
-            genome_fasta=blast_db_path,
-            folder_path=execution_dir,
-            numbering=1,
-            start_time=formatted_start_time,
-            identity_1=args.identity,
-            tic_start=tic_main,
-            word_size=args.word_size,
-            min_length=args.min_length,
+        # 3. Run extension algorithm
+        extended_data = sequence_extension(
+            initial_data,
+            genome_path,
             extend_number=args.extend,
             limit_len=args.limit,
-            mask=mask_df,
+            identity=args.identity,
+            word_size=args.word_size,
+            min_length=args.min_length,
+            extension_direction='both',
             n_jobs=args.jobs
         )
 

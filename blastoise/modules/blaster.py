@@ -76,7 +76,8 @@ def blastn_blaster(
         query_path: str,
         dict_path: str,
         perc_identity: float,
-        word_size: int = 15
+        word_size: int = 15,
+        query_coor: bool = False
 ) -> pd.DataFrame:
     """
     Execute BLASTn alignment and return results as a structured DataFrame.
@@ -103,12 +104,16 @@ def blastn_blaster(
     word_size : int, optional
         Size of the word used for seeding alignments in the BLAST algorithm.
         Default is 15.
+    query_coor : bool, optional
+        Whether to include query coordinates (qstart and qend) in the output.
+        Default is True.
 
     Returns
     -------
     pd.DataFrame
         A DataFrame containing the parsed and processed BLAST results with columns:
-        'qseqid' (query sequence ID), 'sseqid' (subject sequence ID), 
+        'qseqid' (query sequence ID), 'sseqid' (subject sequence ID),
+        'qstart' (query start position, if query_coor=True), 'qend' (query end position, if query_coor=True),
         'sstart' (subject start position), 'send' (subject end position),
         'sstrand' (subject strand), 'evalue' (expectation value),
         'sseq' (aligned subject sequence), and 'len' (length of alignment).
@@ -124,26 +129,46 @@ def blastn_blaster(
     for downstream analysis, which may differ from standard BLAST output formats.
     """
 
+    # Build the command with conditional query coordinates
+    if query_coor:
+        outfmt = "'10 qseqid sseqid qstart qend sstart send sstrand evalue sseq'"
+        columns = ['qseqid', 'sseqid', 'qstart', 'qend', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
+        numeric_columns = ['qstart', 'qend', 'sstart', 'send']
+        final_column_order = ['qseqid', 'sseqid', 'qstart', 'qend', 'sstart', 'send', 'sstrand', 'evalue', 'sseq',
+                              'len']
+    else:
+        outfmt = "'10 qseqid sseqid sstart send sstrand evalue sseq'"
+        columns = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
+        numeric_columns = ['sstart', 'send']
+        final_column_order = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq', 'len']
+
     cmd = (
         f"blastn -word_size {word_size} "
         f"-query {query_path} "
         f"-db {dict_path} "
         f"-perc_identity {perc_identity} "
-        f"-outfmt '10 qseqid sseqid sstart send sstrand evalue sseq'"
+        f"-outfmt {outfmt}"
     )
+
     data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
-    data.columns = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
-    # Get 'sstart', 'send' to 'int' type
-    data[['sstart', 'send']] = data[['sstart', 'send']].astype(int)
+    data.columns = columns
+
+    # Convert coordinate columns to int type
+    data[numeric_columns] = data[numeric_columns].astype(int)
+
     # get 'evalue' as a 'float' type
     data['evalue'] = data['evalue'].astype(float)
+
     # Make sure 'send' > 'sstart'
     data = end_always_greater_than_start(data)
-    # Create 'len' colum
+
+    # Create 'len' column
     data['len'] = data['send'] - data['sstart'] + 1
-    # Place it between 'sent' and 'sstrand' column
-    data = data[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq', 'len']]
+
+    # Reorder columns for better readability
+    data = data[final_column_order]
+
     return data
 
 

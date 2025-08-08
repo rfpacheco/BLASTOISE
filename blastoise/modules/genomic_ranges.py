@@ -161,29 +161,38 @@ def get_interval_overlap(df: pd.DataFrame, interval_df: pd.DataFrame, invert: bo
         return pd.DataFrame(columns=['sseqid', 'sstart', 'send'])
 
 
-def merge_intervals(df: pd.DataFrame) -> pd.DataFrame:
+def merge_intervals(
+    df: pd.DataFrame,
+    chr_col: str = "sseqid",
+    start_col: str = "sstart",
+    end_col: str = "send",
+) -> pd.DataFrame:
     """
     Merge overlapping or adjacent genomic intervals within a DataFrame.
 
-    This function takes a DataFrame containing genomic interval information, converts
-    it to PyRanges format, merges overlapping or adjacent intervals, and returns the
-    processed intervals in the original DataFrame structure. Merging intervals is a
-    common operation in genomic analysis to consolidate fragmented regions that
-    represent the same biological feature.
+    This function takes a DataFrame containing genomic interval information, maps the
+    provided columns to PyRanges format, merges overlapping or adjacent intervals, and
+    returns the processed intervals using the same column names provided.
 
     Parameters
     ----------
     df : pd.DataFrame
         A DataFrame containing genomic intervals to be merged. Must contain columns
-        'sseqid', 'sstart', and 'send'.
+        specified by `chr_col`, `start_col`, and `end_col`.
+    chr_col : str, default="sseqid"
+        Column name representing the chromosome/sequence identifier.
+    start_col : str, default="sstart"
+        Column name representing the start coordinate.
+    end_col : str, default="send"
+        Column name representing the end coordinate.
 
     Returns
     -------
     pd.DataFrame
         A DataFrame with merged genomic intervals, formatted back to the original
-        structure with columns 'sseqid', 'sstart', and 'send'. If the input DataFrame
-        is empty or no intervals can be merged, an empty DataFrame with these columns
-        is returned.
+        column names given by `chr_col`, `start_col`, and `end_col`. If the input
+        DataFrame is empty or no intervals can be merged, an empty DataFrame with
+        these columns is returned.
 
     Raises
     ------
@@ -198,15 +207,38 @@ def merge_intervals(df: pd.DataFrame) -> pd.DataFrame:
     get_merge_stranded : Merge intervals while respecting strand information.
     """
 
-    # Convert to PyRanges, merge, and convert back
-    pr_df = pr.PyRanges(to_pyranges_format(df))
+    required = {chr_col, start_col, end_col}  # Needed columns to be present
+    missing = required - set(df.columns)  # Check which needed columns are not present in the data frame
+    if missing:
+        raise KeyError(f"Missing required columns: {', '.join(sorted(missing))}")
+
+    if df.empty:
+        return pd.DataFrame(columns=[chr_col, start_col, end_col])
+
+    # Map to PyRanges format
+    pr_input = df[[chr_col, start_col, end_col]].rename(
+        columns={chr_col: "Chromosome", start_col: "Start", end_col: "End"}
+    )
+
+    pr_df = pr.PyRanges(pr_input)
     merged = pr_df.merge()
 
-    # Handle an empty result
-    if hasattr(merged, 'df'):
-        return from_pyranges_format(merged.df)
+    # Convert back to the original column names
+    if hasattr(merged, "df"):
+        out = merged.df.rename(
+            columns={"Chromosome": chr_col, "Start": start_col, "End": end_col}
+        )[[chr_col, start_col, end_col]]
+
+        # Ensure integer type for coordinates, if possible
+        for col in (start_col, end_col):
+            if pd.api.types.is_numeric_dtype(out[col]):
+                out[col] = out[col].astype(int)
+
+        # Optional: sort for consistency
+        out = out.sort_values(by=[chr_col, start_col], kind="mergesort").reset_index(drop=True)
+        return out
     else:
-        return pd.DataFrame(columns=['sseqid', 'sstart', 'send'])
+        return pd.DataFrame(columns=[chr_col, start_col, end_col])
 
 
 def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
