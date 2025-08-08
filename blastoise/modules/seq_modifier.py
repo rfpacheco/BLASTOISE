@@ -25,22 +25,26 @@ import tempfile
 import os
 from typing import Dict, Any, Tuple
 from joblib import Parallel, delayed
-from genomic_ranges import merge_intervals, get_interval_overlap
-from blaster import blastn_blaster
-from strand_location import match_data_and_remove
+from .genomic_ranges import merge_intervals, get_interval_overlap
+from .strand_location import match_data_and_remove
 
 
 def next_side_extension_checker(
         data_input: pd.DataFrame,
         query_data: pd.DataFrame,
+        previous_extension: str = None
 ) -> tuple[pd.DataFrame, str]:
     """
     Check if query data satisfies the left and/or right sides of the original sequence coordinates.
-    
+
     This function analyzes query sequences to determine if they completely cover the left side,
-    right side, or both sides of an original sequence. Based on the coverage, it returns
-    the modified coordinates and indicates which side(s) were satisfied.
-    
+    right side, or both sides of an original sequence. Based on the coverage and the previous
+    extension direction, it returns the modified coordinates and indicates which side(s) were satisfied.
+
+    The previous_extension parameter constrains the output:
+    - If previous_extension was 'right', even if both sides are satisfied, only 'right' can be returned
+    - If previous_extension was 'left', even if both sides are satisfied, only 'left' can be returned
+
     Parameters
     ----------
     data_input : pd.DataFrame
@@ -49,7 +53,10 @@ def next_side_extension_checker(
     query_data : pd.DataFrame
         A DataFrame with other sequences containing query data.
         Must have 'qstart' and 'qend' columns.
-        
+    previous_extension : str, optional
+        The direction of the previous extension ('left', 'right', or None).
+        Constrains the possible return values when both sides are satisfied.
+
     Returns
     -------
     tuple[pd.DataFrame, str]
@@ -57,24 +64,18 @@ def next_side_extension_checker(
         - Modified data_input DataFrame with updated coordinates if needed
         - String indicating satisfaction: "both", "left", "right", or None
     """
-    
+
     # Extract start and end coordinates from the single row in data_input
     extended_start = data_input['sstart'].iloc[0]
     extended_end = data_input['send'].iloc[0]
-    
+
     # If query_data is empty, return original data with None
     if query_data.empty:
         return data_input.copy(), None
-    
-    # Ensure query coordinates are properly oriented (qstart < qend)
-    # TODO: this should be ensured when the query data frame was created
-    query_data_corrected = query_data.copy()
-    mask = query_data_corrected['qstart'] > query_data_corrected['qend']
-    query_data_corrected.loc[mask, ['qstart', 'qend']] = query_data_corrected.loc[mask, ['qend', 'qstart']].values
-    
+
     # Merge overlapping intervals in query data
-    query_merge = merge_intervals(query_data_corrected, start_col='qstart', end_col='qend')
-    
+    query_merge = merge_intervals(query_data, start_col='qstart', end_col='qend')
+
     # Get the range covered by query data
     query_left_value = query_merge['qstart'].min()
     query_right_value = query_merge['qend'].max()
@@ -82,28 +83,50 @@ def next_side_extension_checker(
     start_coordinate_with_query = extended_start + query_left_value - 1
     end_coordinate_with_query = extended_start + query_right_value - 1
 
-    
     # Check coverage on both sides
     left_satisfied = start_coordinate_with_query == extended_start
     right_satisfied = end_coordinate_with_query == extended_end
-    
+
     # Create a copy of the input data for modification
     result_data = data_input.copy()
-    
+
     if left_satisfied and right_satisfied:
         # Both sides are completely satisfied
-        return result_data, "both"
-    
+        # But check previous_extension constraint
+        if previous_extension == 'right':
+            # Previous extension was right, so left part was already discarded
+            # Can only return 'right'
+            return result_data, "right"
+        elif previous_extension == 'left':
+            # Previous extension was left, so right part was already discarded
+            # Can only return 'left'
+            return result_data, "left"
+        else:
+            # No previous extension constraint. Can return 'both'
+            return result_data, "both"
+
     elif left_satisfied and not right_satisfied:
         # Only left side is satisfied, modify coordinates to where satisfaction ends
-        result_data.loc[result_data.index[0], 'send'] = end_coordinate_with_query
-        return result_data, "left"
-    
+        # Check previous extension
+        if previous_extension == 'right':
+            # Modify right coordinate
+            result_data.loc[result_data.index[0], 'send'] = end_coordinate_with_query
+            return result_data, None
+        else:
+            result_data.loc[result_data.index[0], 'send'] = end_coordinate_with_query
+            return result_data, "left"
+
     elif not left_satisfied and right_satisfied:
         # Only right side is satisfied, modify coordinates to where satisfaction begins
-        result_data.loc[result_data.index[0], 'sstart'] = start_coordinate_with_query
-        return result_data, "right"
-    
+        # Check previous extensions
+        if previous_extension == 'left':
+            # Modify left coordinate
+            result_data.loc[result_data.index[0], 'sstart'] = start_coordinate_with_query
+            return result_data, None
+        else:
+            result_data.loc[result_data.index[0], 'sstart'] = start_coordinate_with_query
+            return result_data, "right"
+
     else:
         # Neither side is completely satisfied
         # Modify coordinates to the range that was satisfied
@@ -120,7 +143,7 @@ def _process_single_row_extension(
         extension_direction: str = "both",
         identity: int = 60,
         word_size: int = 15,
-        min_length: int = 100
+        min_length: int = 100,
 ) -> Dict[str, Any]:
     """
     Process a single row for sequence extension with recursive extension capability.
@@ -131,18 +154,6 @@ def _process_single_row_extension(
     right side, ensuring they don't go beyond valid genome boundaries. After extension, it performs 
     a BLAST search and uses the results to determine if further extension is possible through 
     recursive calls based on the next_side_extension_checker analysis.
-
-    The function performs several key steps:
-    1. Extracts the index and data from the input tuple
-    2. Calculates the current sequence length
-    3. If the sequence is shorter than the limit, extends it by adjusting coordinates
-    4. Ensures coordinates remain within valid genome boundaries
-    5. Retrieves the extended sequence using blastdbcmd
-    6. Performs BLAST search with the extended sequence against the genome
-    7. Filters BLAST results by minimum length
-    8. Uses next_side_extension_checker to determine if further extension is possible
-    9. Recursively calls itself if extension is possible until limit is reached or no more extension possible
-    10. Returns the final modified data
 
     Parameters
     ----------
@@ -191,6 +202,7 @@ def _process_single_row_extension(
     ValueError
         If extension_direction is not one of "both", "left", or "right".
     """
+    from .blaster import blastn_blaster
 
     # -----------------------------------------------------------------------------
     # STEP 1: Validate extension direction parameter
@@ -225,21 +237,23 @@ def _process_single_row_extension(
     # -----------------------------------------------------------------------------
     if extension_direction == "both":
         # Extend equally on both sides
-        lower_coor = lower_coor - extend_number  # Extend at the 5' end
-        upper_coor = upper_coor + extend_number  # Extend at the 3' end
+        lower_coor_extended = lower_coor - extend_number  # Extend at the 5' end
+        upper_coor_extended = upper_coor + extend_number  # Extend at the 3' end
     elif extension_direction == "left":
         # Extend only on the left side (5' end)
-        lower_coor = lower_coor - extend_number
+        lower_coor_extended = lower_coor - extend_number
+        upper_coor_extended = upper_coor
     elif extension_direction == "right":
+        lower_coor_extended = lower_coor
         # Extend only on the right side (3' end)
-        upper_coor = upper_coor + extend_number
+        upper_coor_extended = upper_coor + extend_number
 
     # -----------------------------------------------------------------------------
     # STEP 5: Ensure coordinates remain within valid genome boundaries
     # -----------------------------------------------------------------------------
     # Ensure lower coordinate is not negative (BLAST coordinates start at 1)
-    if lower_coor <= 0:
-        lower_coor = 1
+    if lower_coor_extended <= 0:
+        lower_coor_extended = 1
 
     # Ensure upper coordinate doesn't exceed chromosome length
     ## Get the maximum length of the chromosome to avoid exceeding boundaries
@@ -248,11 +262,11 @@ def _process_single_row_extension(
     chrom_max_len = int(chrom_max_len)
 
     ## Now, ensure the coordinate
-    if upper_coor > chrom_max_len:
-        upper_coor = chrom_max_len
+    if upper_coor_extended > chrom_max_len:
+        upper_coor_extended = chrom_max_len
 
     # Calculate the new sequence length after boundary adjustments
-    new_subject_len = upper_coor - lower_coor + 1
+    new_subject_len = upper_coor_extended - lower_coor_extended + 1
 
     # -----------------------------------------------------------------------------
     # STEP 6: Check if the new length is still < limit_len
@@ -265,7 +279,7 @@ def _process_single_row_extension(
         cmd = (
             f"blastdbcmd -db {genome_fasta} "
             f"-entry {element['sseqid']} "
-            f"-range {lower_coor}-{upper_coor} "
+            f"-range {lower_coor_extended}-{upper_coor_extended} "
             f"-strand {element['sstrand']} "
             "-outfmt %s"
         )
@@ -287,29 +301,30 @@ def _process_single_row_extension(
                 query_path=temp_fasta_path,
                 dict_path=genome_fasta,
                 perc_identity=identity,
-                word_size=word_size
+                word_size=word_size,
+                query_coor=True
             )
             
             # -----------------------------------------------------------------------------
             # STEP 9: Filter BLAST results by minimum length
             # -----------------------------------------------------------------------------
             # Calculate sequence length for filtering (if not already present)
-            if 'len' not in blast_results.columns:  # TODO: check if this is needed
+            if 'len' not in blast_results.columns:  # TODO: check if this is needed --> REMOVE, already checked
                 blast_results['len'] = blast_results['send'] - blast_results['sstart'] + 1
             
             # Filter results by minimum length
             blast_filtered = blast_results[blast_results['len'] >= min_length].copy()
             
             # Clean up temporary file
-            os.unlink(temp_fasta_path)
+            os.unlink(temp_fasta_path)  # TODO: does this remove the file?
 
             # -----------------------------------------------------------------------------
             # STEP 10: Filter elements from the blast data that overlap our row data
             # -----------------------------------------------------------------------------
             # Create a DataFrame with the current element for checking
             current_element_df = pd.DataFrame([{
-                'sstart': lower_coor,
-                'send': upper_coor,
+                'sstart': lower_coor_extended,
+                'send': upper_coor_extended,
                 'sseqid': element['sseqid'],
                 'sstrand': element['sstrand']
             }])
@@ -318,21 +333,22 @@ def _process_single_row_extension(
                 blast_filtered,
                 current_element_df
             )
-            final_blast_filtered = match_data_and_remove(blast_filtered, elems_to_remove)
+            final_blast_filtered = match_data_and_remove(blast_filtered, elems_to_remove)  # TODO: reset index in function?
+            final_blast_filtered.reset_index(drop=True, inplace=True)
 
             # -----------------------------------------------------------------------------
-            # STEP 11: Use next_side_extension_checker to determine further extension
+            # STEP 10: Use next_side_extension_checker to determine further extension
             # -----------------------------------------------------------------------------
             if not final_blast_filtered.empty:
-
                 # Check extension possibilities
                 final_row_df, extension_status = next_side_extension_checker(
                     current_element_df,
-                    final_blast_filtered
+                    final_blast_filtered,
+                    extension_direction
                 )
                 
                 # -----------------------------------------------------------------------------
-                # STEP 12: Recursive extension based on extension_status
+                # STEP 11: Recursive extension based on extension_status
                 # -----------------------------------------------------------------------------
                 if extension_status in ["both", "left", "right"]:
                     # Further extension is possible, prepare for recursive call
@@ -342,22 +358,14 @@ def _process_single_row_extension(
                         'sseqid': element['sseqid'],
                         'sstrand': element['sstrand']
                     })
-                    
-                    # Determine the next extension direction
-                    if extension_status == "both":
-                        next_extension_direction = "both"
-                    elif extension_status == "left":
-                        next_extension_direction = "right"  # Continue extending right
-                    elif extension_status == "right":
-                        next_extension_direction = "left"   # Continue extending left
-                    
-                    # Recursive call with updated coordinates and direction
+
+                    # Recursive call with updated coordinates, direction, and previous extension tracking
                     recursive_result = _process_single_row_extension(
                         row_data=(index, updated_element),
                         genome_fasta=genome_fasta,
                         extend_number=extend_number,
                         limit_len=limit_len,
-                        extension_direction=next_extension_direction,
+                        extension_direction=extension_status,
                         identity=identity,
                         word_size=word_size,
                         min_length=min_length
@@ -370,7 +378,7 @@ def _process_single_row_extension(
                         # If recursive call didn't modify (reached limit), return current state
                         result.update({
                             'modified': True,
-                            'length': final_row_df['send'].iloc[0] - final_row_df['sstart'].iloc[0] + 1,
+                            'len': final_row_df['send'].iloc[0] - final_row_df['sstart'].iloc[0] + 1,
                             'sstart': int(final_row_df['sstart'].iloc[0]),
                             'send': int(final_row_df['send'].iloc[0]),
                             'sseq': seq  # Note: This might need to be updated to reflect final coordinates
@@ -393,7 +401,7 @@ def _process_single_row_extension(
                     
                     result.update({
                         'modified': True,
-                        'length': final_seq_len,
+                        'len': final_seq_len,
                         'sstart': int(final_row_df['sstart'].iloc[0]),
                         'send': int(final_row_df['send'].iloc[0]),
                         'sseq': final_seq
@@ -403,9 +411,9 @@ def _process_single_row_extension(
                 # No BLAST results after filtering - return current extension
                 result.update({
                     'modified': True,
-                    'length': new_subject_len,
-                    'sstart': int(lower_coor),
-                    'send': int(upper_coor),
+                    'len': new_subject_len,
+                    'sstart': int(lower_coor_extended),
+                    'send': int(upper_coor_extended),
                     'sseq': seq
                 })
                 return result
@@ -422,7 +430,7 @@ def _process_single_row_extension(
         final_cmd = (
             f"blastdbcmd -db {genome_fasta} "
             f"-entry {element['sseqid']} "
-            f"-range {lower_coor}-{upper_coor} "
+            f"-range {lower_coor_extended}-{upper_coor_extended} "
             f"-strand {element['sstrand']} "
             "-outfmt %s"
         )
@@ -430,9 +438,9 @@ def _process_single_row_extension(
         
         result.update({
             'modified': True,
-            'length': new_subject_len,
-            'sstart': int(lower_coor),
-            'send': int(upper_coor),
+            'len': new_subject_len,
+            'sstart': int(lower_coor_extended),
+            'send': int(upper_coor_extended),
             'sseq': final_seq
         })
         return result
@@ -551,11 +559,11 @@ def sequence_extension(
         if result['modified']:
             index = result['index']
             # Update the relevant columns with the new values
-            data_input.loc[index, 'length'] = result['length']
+            data_input.loc[index, 'len'] = result['len']
             data_input.loc[index, 'sstart'] = result['sstart']
             data_input.loc[index, 'send'] = result['send']
             data_input.loc[index, 'sseq'] = result['sseq']
-            
+
             # Note: BLAST results are available in result['blast_results'] 
             # but are not currently integrated into the main DataFrame
             # This could be implemented in future iterations if needed

@@ -284,7 +284,7 @@ def main() -> None:
         # 3. Run extension algorithm
         extended_data = sequence_extension(
             initial_data,
-            genome_path,
+            blast_db_path,
             extend_number=args.extend,
             limit_len=args.limit,
             identity=args.identity,
