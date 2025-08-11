@@ -36,7 +36,6 @@ import pandas as pd
 from blastoise.modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
 from blastoise.modules.genomic_ranges import get_merge_stranded
-from blastoise.modules.filters import remove_masking_zone
 from blastoise.modules.seq_extension import sequence_extension
 
 
