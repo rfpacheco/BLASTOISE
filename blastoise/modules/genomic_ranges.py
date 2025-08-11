@@ -164,7 +164,7 @@ def get_interval_overlap(df: pd.DataFrame, interval_df: pd.DataFrame, invert: bo
         return pd.DataFrame(columns=['sseqid', 'sstart', 'send'])
 
 
-def get_overlapping_info(df: pd.DataFrame, interval_df: Optional[pd.DataFrame]) -> dict[str, pd.DataFrame]:
+def get_overlapping_info(df: pd.DataFrame, interval_df: Optional[pd.DataFrame] = None) -> dict[str, pd.DataFrame]:
     """
     Identifies and separates overlapping genomic intervals by strand relationship in the
     provided DataFrame(s) using PyRanges.

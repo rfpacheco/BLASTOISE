@@ -28,15 +28,17 @@ import os
 import shutil
 import time
 import subprocess
+import tempfile
 from datetime import datetime
 from typing import Tuple
-
+# noinspection PyPackageRequirements
 import pandas as pd
 
-from blastoise.modules.blaster import blastn_dic, blastn_blaster, repetitive_blaster
+from blastoise.modules.blaster import blastn_dic, blastn_blaster
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
-from blastoise.modules.genomic_ranges import get_merge_stranded
+from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap
 from blastoise.modules.seq_extension import sequence_extension
+from blastoise.modules.strand_location import match_data_and_remove
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -206,40 +208,149 @@ def run_initial_blast(
     return merged_results, blast_db_path
 
 
-def finalize_results(output_dir: str) -> None:
-    """
-    Cleans up intermediate files by moving them into a temporary directory.
+def repetitive_sider_searcher(
+        data_input: pd.DataFrame,
+        genome_path: str,
+        extend_number: int,
+        word_size: int,
+        identity: int,
+        min_length: int,
+        limit_len: int,
+) -> pd.DataFrame:
 
-    This function organizes the output directory by moving the final results file
-    to the root of the output directory and relocating all intermediate files and
-    directories to a temporary subdirectory. This makes it easier for users to
-    find the final results while still preserving all intermediate data.
+    # Extend data using the recursive method
+    # -------------------------------------------------------------------
+    # STEP 1: Extend the input data using the recursive method
+    # -------------------------------------------------------------------
+    data_extended = sequence_extension(
+        data_input=data_input,
+        genome_fasta=genome_path,
+        extend_number=extend_number,
+        limit_len=limit_len,
+        identity=identity,
+        word_size=word_size,
+        min_length=min_length,
+        n_jobs=-1
+    )
+
+    # -------------------------------------------------------------------
+    # STEP 2: Check for the existence of overlapping data
+    # -------------------------------------------------------------------
+    # Check for overlapping data
+    # noinspection PyArgumentList
+    overlapping_info = get_overlapping_info(data_extended)
+    ## Print overlapping information
+    same_strand = len(overlapping_info.get("same_strand", []))
+    opposite_strand = len(overlapping_info.get("opposite_strand", []))
+    print(f"Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
+
+    # -------------------------------------------------------------------
+    # STEP 3: Launch second Blast to find new elements
+    # -------------------------------------------------------------------
+    iteration = 1
+    are_there_new_elems = True
+    while are_there_new_elems:
+        print(f"Iteration {iteration}:")
+        iteration += 1
+        new_elems = pd.DataFrame()  # Will hold the newly discovered elements. Will be used to reject overlaps
+        for i, row in data_extended.iterrows():
+            # -------------------------------------------------------------------
+            # STEP 3.1: Perform the BLASTn to find new elements
+            # -------------------------------------------------------------------
+            # Create a temporary FAST file with the sequence
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_fasta:
+                temp_fasta.write(f">{row.i}\n{row.sequence}\n")
+                temp_fasta_path = temp_fasta.name
+
+            # Perform the BLAST search
+            blast_results = blastn_blaster(
+                query_path=temp_fasta_path,
+                dict_path=genome_path,
+                perc_identity=identity,
+                word_size=word_size
+            )
+
+            # -------------------------------------------------------------------
+            # STEP 3.2: Filter the data
+            # -------------------------------------------------------------------
+            # Remove elements with a len < min_length
+            blast_results = blast_results[blast_results['len'] >= min_length]
+
+            # Remove sequences that overlap with `data_extended` or `new_elems`
+            ## With `data_extended`
+            rm_from_data_extended = get_interval_overlap(blast_results, data_extended)
+            match_data_and_remove(blast_results, rm_from_data_extended)
+
+            ## With `new_elems`  # TODO: I am not so sure about this one
+            rm_from_new_elems = get_interval_overlap(blast_results, new_elems)
+            match_data_and_remove(blast_results, rm_from_new_elems)
+
+            # -------------------------------------------------------------------
+            # STEP 3.3: Add data to the collection of `new_elems`
+            # -------------------------------------------------------------------
+            if not blast_results.empty:
+                new_elems = pd.concat([new_elems, blast_results], ignore_index=True)
+
+        # -------------------------------------------------------------------
+        # STEP 4a: No new elements found
+        # -------------------------------------------------------------------
+        # If nothing was found, exit while loop
+        if new_elems.empty:
+            are_there_new_elems = False
+        else:
+            # -------------------------------------------------------------------
+            # STEP 4b: New elements found
+            # -------------------------------------------------------------------
+            new_elems_extended = sequence_extension(
+                data_input=new_elems,
+                genome_fasta=genome_path,
+                extend_number=extend_number,
+                limit_len=limit_len,
+                identity=identity,
+                word_size=word_size,
+                min_length=min_length,
+                n_jobs=-1
+            )
+            # Check overlapping data inside `new_elems_extended`
+            overlapping_info = get_overlapping_info(new_elems_extended)
+            same_strand = len(overlapping_info.get("same_strand", []))
+            opposite_strand = len(overlapping_info.get("opposite_strand", []))
+            print(f"Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
+
+            # Check overlapping data of `new_elems_extended` with `data_extended`
+            overlapping_info = get_overlapping_info(new_elems_extended, data_extended)
+            same_strand = len(overlapping_info.get("same_strand", []))
+            opposite_strand = len(overlapping_info.get("opposite_strand", []))
+            print(f"Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
+
+            # Merge newly extended elems with the accumulated dataset
+            total_data = pd.concat([data_extended, new_elems_extended], ignore_index=True)
+            total_data.sort_values(by=['sseqid', 'sstart'], inplace=True)  # Sort by 'sseqid' and 'sstart'
+            total_data.reset_index(drop=True, inplace=True)  # Reset index
+
+            # Replace `data_extended` that entered the while loop with our new `total_data
+            data_extended = total_data.copy()
+
+    # -------------------------------------------------------------------
+    # STEP 5: Outside while-loop
+    # -------------------------------------------------------------------
+    print("Repetitive SIDE-eR search completed.")
+    return data_extended
+
+
+def finalize_results(output_dir: str, df: pd.DataFrame) -> None:
+    """
+    Saves a DataFrame as a CSV file in the specified output directory.
 
     Parameters
     ----------
     output_dir : str
-        The main output directory containing all results and intermediate files.
+        The directory where the CSV file will be saved.
+    df : pd.DataFrame
+        The DataFrame to be saved.
     """
-    final_data_path = os.path.join(output_dir, "execution_data", "blastoise_df.csv")
-    new_final_data_path = os.path.join(output_dir, "blastoise_df.csv")
-
-    # Move the final result file to the root output directory
-    if os.path.exists(final_data_path):
-        shutil.move(final_data_path, new_final_data_path)
-
-    # Create a temporary folder for intermediate files
-    tmp_dir = os.path.join(output_dir, "tmpBlastoise")
-    os.makedirs(tmp_dir, exist_ok=True)
-
-    # List of items to keep in the root output directory
-    items_to_keep = {"original_data", "tmpBlastoise", "blastoise_df.csv"}
-
-    # Move all other files and folders to the temporary directory
-    for item in os.listdir(output_dir):
-        if item not in items_to_keep:
-            source_path = os.path.join(output_dir, item)
-            destination_path = os.path.join(tmp_dir, item)
-            shutil.move(source_path, destination_path)
+    output_file = os.path.join(output_dir, "blastoise_df.csv")
+    df.to_csv(output_file, index=False)
 
 
 def main() -> None:
@@ -293,8 +404,19 @@ def main() -> None:
             n_jobs=args.jobs
         )
 
+        # 4. Run the iterative part
+        final_data = repetitive_sider_searcher(
+            data_input=extended_data,
+            genome_path=genome_path,
+            extend_number=args.extend,
+            word_size=args.word_size,
+            identity=args.identity,
+            min_length=args.min_length,
+            limit_len=args.limit
+        )
+
         # 5. Finalize and clean up
-        finalize_results(output_dir)
+        finalize_results(output_dir, final_data)
 
     except Exception as e:
         print_message_box(f"An unexpected error occurred: {e}")
