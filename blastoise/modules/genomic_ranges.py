@@ -164,6 +164,61 @@ def get_interval_overlap(df: pd.DataFrame, interval_df: pd.DataFrame, invert: bo
         return pd.DataFrame(columns=['sseqid', 'sstart', 'send'])
 
 
+def get_overlapping_info(df: pd.DataFrame, interval_df: Optional[pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """
+    Identifies and separates overlapping genomic intervals by strand relationship in the
+    provided DataFrame(s) using PyRanges.
+
+    This function takes a primary DataFrame containing genomic interval data and an optional
+    interval DataFrame. It computes the overlaps between the primary DataFrame and the interval
+    DataFrame (if provided) based on strand relationships. Overlaps are classified into two
+    categories: overlaps on the "same strand" or on the "opposite strand".
+
+    The function returns a dictionary containing the overlapping intervals classified by these
+    two strand relationships.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Primary DataFrame containing genomic interval data. This DataFrame must adhere
+        to PyRanges-compatible format including required columns such as 'Chromosome',
+        'Start', 'End', and 'Strand'.
+    interval_df : pd.DataFrame or None, optional
+        An optional DataFrame containing genomic intervals to compare against. If None,
+        overlaps will be computed within the primary DataFrame itself.
+
+    Returns
+    -------
+    dict of str, pd.DataFrame
+        A dictionary containing two keys:
+        - "same_strand": pd.DataFrame
+            A DataFrame of intervals overlapping on the same strand.
+        - "opposite_strand": pd.DataFrame
+            A DataFrame of intervals overlapping on the opposite strand.
+        Each DataFrame in the returned dictionary will have columns for sequences, start,
+        and end positions (e.g., 'sseqid', 'sstart', 'send'), or will be empty if no
+        overlaps are detected.
+    """
+    # Convert input DataFrame to PyRanges format
+    pr_df = pr.PyRanges(to_pyranges_format(df))
+    # Use input DataFrame if interval_df is None, otherwise convert interval_df to PyRanges
+    pr_other = pr_df if interval_df is None else pr.PyRanges(to_pyranges_format(interval_df))
+
+    # Find overlapping intervals on the same strand
+    same_pr = pr_df.overlap(pr_other, strandedness="same", invert=False)
+    # Find overlapping intervals on opposite strands
+    opp_pr = pr_df.overlap(pr_other, strandedness="opposite", invert=False)
+
+    # Convert results back to DataFrames, use empty DataFrame if no overlaps found
+    same_df = from_pyranges_format(same_pr.df) if hasattr(same_pr, "df") else \
+        pd.DataFrame(columns=["sseqid", "sstart", "send"])
+    opp_df = from_pyranges_format(opp_pr.df) if hasattr(opp_pr, "df") else \
+        pd.DataFrame(columns=["sseqid", "sstart", "send"])
+
+    # Return dictionary with overlaps separated by strand relationship
+    return {"same_strand": same_df, "opposite_strand": opp_df}
+
+
 def merge_intervals(
     df: pd.DataFrame,
     chr_col: str = "sseqid",
