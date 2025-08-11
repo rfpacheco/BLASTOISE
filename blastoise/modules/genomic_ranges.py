@@ -208,7 +208,7 @@ def merge_intervals(
     """
 
     required = {chr_col, start_col, end_col}  # Needed columns to be present
-    missing = required - set(df.columns)  # Check which needed columns are not present in the data frame
+    missing = required - set(df.columns)  # Check which necessary columns are not present in the data frame
     if missing:
         raise KeyError(f"Missing required columns: {', '.join(sorted(missing))}")
 
