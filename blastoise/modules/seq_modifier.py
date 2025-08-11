@@ -340,7 +340,11 @@ def _process_single_row_extension(
             # STEP 10: Use next_side_extension_checker to determine further extension
             # -----------------------------------------------------------------------------
             if not final_blast_filtered.empty:
-                # Check extension possibilities
+                # Check extension possibilities for the next recursvie call:
+                ## both: both sides can be extended
+                ## left: only left side will be extended
+                ## right: only right side can be extended
+                ## None: neither side can be extended
                 final_row_df, extension_status = next_side_extension_checker(
                     current_element_df,
                     final_blast_filtered,
@@ -375,13 +379,14 @@ def _process_single_row_extension(
                     if recursive_result['modified']:
                         return recursive_result
                     else:
-                        # If recursive call didn't modify (reached limit), return current state
+                        # TODO: will this ever reach? should I prepare for it?
+                        # If recursive call didn't modify (reached recursive limit), return current state
                         result.update({
                             'modified': True,
                             'len': final_row_df['send'].iloc[0] - final_row_df['sstart'].iloc[0] + 1,
                             'sstart': int(final_row_df['sstart'].iloc[0]),
                             'send': int(final_row_df['send'].iloc[0]),
-                            'sseq': seq  # Note: This might need to be updated to reflect final coordinates
+                            'sseq': seq  # TODO: This might need to be updated to reflect final coordinates
                         })
                         return result
                 else:
