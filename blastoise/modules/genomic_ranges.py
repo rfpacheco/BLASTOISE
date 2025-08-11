@@ -31,38 +31,41 @@ import pyranges as pr
 from typing import Optional
 
 
-# Column mapping constants
+# Update the mapping dictionaries to include strand information
 BLAST_TO_PYRANGES = {
-    "sseqid": "Chromosome",
-    "sstart": "Start",
-    "send": "End"
+    'sseqid': 'Chromosome',
+    'sstart': 'Start',
+    'send': 'End',
+    'sstrand': 'Strand'
 }
 
 PYRANGES_TO_BLAST = {
-    "Chromosome": "sseqid",
-    "Start": "sstart",
-    "End": "send"
+    'Chromosome': 'sseqid',
+    'Start': 'sstart',
+    'End': 'send',
+    'Strand': 'sstrand'
 }
-
 
 def to_pyranges_format(df: pd.DataFrame) -> pd.DataFrame:
     """
     Rename specific columns in a DataFrame to standardized names for PyRanges.
 
-    This function converts column names from BLAST format ('sseqid', 'sstart', 'send')
-    to PyRanges format ('Chromosome', 'Start', 'End') to ensure compatibility with
+    This function converts column names from BLAST format ('sseqid', 'sstart', 'send', 'sstrand')
+    to PyRanges format ('Chromosome', 'Start', 'End', 'Strand') to ensure compatibility with
     PyRanges operations. The mapping is defined in the BLAST_TO_PYRANGES dictionary.
+    Additionally, it converts strand notation from 'plus'/'minus' to '+'/'-' format.
 
     Parameters
     ----------
     df : pd.DataFrame
         A DataFrame containing genomic interval data with columns 'sseqid', 'sstart',
-        and 'send'.
+        'send', and optionally 'sstrand'.
 
     Returns
     -------
     pd.DataFrame
-        A new DataFrame with columns renamed according to PyRanges conventions.
+        A new DataFrame with columns renamed according to PyRanges conventions
+        and strand values converted to PyRanges format.
 
     Raises
     ------
@@ -74,40 +77,51 @@ def to_pyranges_format(df: pd.DataFrame) -> pd.DataFrame:
     --------
     from_pyranges_format : Convert column names from PyRanges format back to BLAST format.
     """
-
-    return df.rename(columns=BLAST_TO_PYRANGES)
+    # Create a copy to avoid modifying the original DataFrame
+    df_renamed = df.rename(columns=BLAST_TO_PYRANGES)
+    
+    # Convert strand notation if Strand column exists
+    if 'Strand' in df_renamed.columns:
+        # Map plus/minus to +/-
+        strand_mapping = {'plus': '+', 'minus': '-'}
+        df_renamed['Strand'] = df_renamed['Strand'].map(strand_mapping).fillna(df_renamed['Strand'])
+    
+    return df_renamed
 
 
 def from_pyranges_format(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Rename PyRanges columns back to the original BLAST format.
+    Rename specific columns in a DataFrame from PyRanges format back to BLAST format.
 
-    This function converts column names from PyRanges format ('Chromosome', 'Start', 'End')
-    back to BLAST format ('sseqid', 'sstart', 'send') after PyRanges operations have been
-    completed. The mapping is defined in the PYRANGES_TO_BLAST dictionary.
+    This function converts column names from PyRanges format ('Chromosome', 'Start', 'End', 'Strand')
+    back to BLAST format ('sseqid', 'sstart', 'send', 'sstrand') and converts strand notation
+    from '+'/'-' back to 'plus'/'minus' format.
 
     Parameters
     ----------
     df : pd.DataFrame
-        A DataFrame with PyRanges column names ('Chromosome', 'Start', 'End').
+        A DataFrame with PyRanges-formatted column names.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame with columns renamed back to BLAST format ('sseqid', 'sstart', 'send').
-
-    Raises
-    ------
-    KeyError
-        If any of the required columns ('Chromosome', 'Start', 'End') are missing
-        from the input DataFrame.
+        A DataFrame with columns renamed back to BLAST format and strand values
+        converted to BLAST format.
 
     See Also
     --------
     to_pyranges_format : Convert column names from BLAST format to PyRanges format.
     """
-
-    return df.rename(columns=PYRANGES_TO_BLAST)
+    # Create a copy to avoid modifying the original DataFrame
+    df_renamed = df.rename(columns=PYRANGES_TO_BLAST)
+    
+    # Convert strand notation back if sstrand column exists
+    if 'sstrand' in df_renamed.columns:
+        # Map +/- back to plus/minus
+        strand_mapping = {'+': 'plus', '-': 'minus'}
+        df_renamed['sstrand'] = df_renamed['sstrand'].map(strand_mapping).fillna(df_renamed['sstrand'])
+    
+    return df_renamed
 
 
 def get_interval_overlap(df: pd.DataFrame, interval_df: pd.DataFrame, invert: bool = False) -> pd.DataFrame:
@@ -174,6 +188,9 @@ def get_overlapping_info(df: pd.DataFrame, interval_df: Optional[pd.DataFrame] =
     DataFrame (if provided) based on strand relationships. Overlaps are classified into two
     categories: overlaps on the "same strand" or on the "opposite strand".
 
+    When interval_df is None (self-overlap), the function automatically excludes self-matches
+    to avoid reporting every interval as overlapping with itself.
+
     The function returns a dictionary containing the overlapping intervals classified by these
     two strand relationships.
 
@@ -203,6 +220,9 @@ def get_overlapping_info(df: pd.DataFrame, interval_df: Optional[pd.DataFrame] =
     pr_df = pr.PyRanges(to_pyranges_format(df))
     # Use input DataFrame if interval_df is None, otherwise convert interval_df to PyRanges
     pr_other = pr_df if interval_df is None else pr.PyRanges(to_pyranges_format(interval_df))
+    
+    # Flag to check if we're doing self-overlap (comparing df against itself)
+    is_self_overlap = interval_df is None
 
     # Find overlapping intervals on the same strand
     same_pr = pr_df.overlap(pr_other, strandedness="same", invert=False)
@@ -215,8 +235,63 @@ def get_overlapping_info(df: pd.DataFrame, interval_df: Optional[pd.DataFrame] =
     opp_df = from_pyranges_format(opp_pr.df) if hasattr(opp_pr, "df") else \
         pd.DataFrame(columns=["sseqid", "sstart", "send"])
 
+    # If this is a self-overlap, remove self-matches (intervals overlapping with themselves)
+    if is_self_overlap:
+        same_df = _remove_self_matches(same_df, df)
+        opp_df = _remove_self_matches(opp_df, df)
+
     # Return dictionary with overlaps separated by strand relationship
     return {"same_strand": same_df, "opposite_strand": opp_df}
+
+
+def _remove_self_matches(overlap_df: pd.DataFrame, original_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove self-matches from overlap results where an interval overlaps with itself.
+    
+    This function identifies exact matches between the overlap results and the original
+    DataFrame to remove trivial self-overlaps that occur when comparing a DataFrame 
+    against itself.
+    
+    Parameters
+    ----------
+    overlap_df : pd.DataFrame
+        DataFrame containing overlap results from PyRanges.
+    original_df : pd.DataFrame
+        The original DataFrame that was used for self-overlap detection.
+        
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with self-matches removed.
+    """
+    if overlap_df.empty or original_df.empty:
+        return overlap_df
+    
+    # Create a set of tuples representing the original intervals for fast lookup
+    original_intervals = set()
+    for _, row in original_df.iterrows():
+        # Use the key columns that uniquely identify an interval
+        key_cols = ['sseqid', 'sstart', 'send', 'sstrand']
+        if all(col in row.index for col in key_cols):
+            interval_key = tuple(row[col] for col in key_cols)
+            original_intervals.add(interval_key)
+    
+    # Filter out self-matches from overlap results
+    if not original_intervals:
+        return overlap_df
+    
+    # Create mask to identify self-matches
+    self_match_mask = pd.Series(False, index=overlap_df.index)
+    
+    for idx, row in overlap_df.iterrows():
+        key_cols = ['sseqid', 'sstart', 'send', 'sstrand']
+        if all(col in row.index for col in key_cols):
+            interval_key = tuple(row[col] for col in key_cols)
+            if interval_key in original_intervals:
+                self_match_mask.loc[idx] = True
+    
+    # Return DataFrame with self-matches removed
+    return overlap_df[~self_match_mask].copy()
 
 
 def merge_intervals(

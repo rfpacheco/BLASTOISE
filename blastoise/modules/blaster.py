@@ -151,10 +151,12 @@ def blastn_blaster(
     )
 
     data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    if not data:
+        return pd.DataFrame(columns=columns)
     data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
     data.columns = columns
 
-    # Convert coordinate columns to int type
+    # Convert coordinate columns to int type 
     data[numeric_columns] = data[numeric_columns].astype(int)
 
     # get 'evalue' as a 'float' type

@@ -247,19 +247,20 @@ def repetitive_sider_searcher(
     # -------------------------------------------------------------------
     # STEP 3: Launch second Blast to find new elements
     # -------------------------------------------------------------------
+    accumulated_data = data_extended.copy()
     iteration = 1
     are_there_new_elems = True
     while are_there_new_elems:
         print(f"Iteration {iteration}:")
-        iteration += 1
         new_elems = pd.DataFrame()  # Will hold the newly discovered elements. Will be used to reject overlaps
         for i, row in data_extended.iterrows():
+            print(f"\n-Analyzing row {i}/{len(data_extended) - 1}:")
             # -------------------------------------------------------------------
             # STEP 3.1: Perform the BLASTn to find new elements
             # -------------------------------------------------------------------
             # Create a temporary FAST file with the sequence
             with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_fasta:
-                temp_fasta.write(f">{row.i}\n{row.sequence}\n")
+                temp_fasta.write(f">{i}_{row.sseqid}_{row.sstart}_{row.send}\n{row.sseq}\n")
                 temp_fasta_path = temp_fasta.name
 
             # Perform the BLAST search
@@ -269,27 +270,37 @@ def repetitive_sider_searcher(
                 perc_identity=identity,
                 word_size=word_size
             )
+            blast_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
+
+            # Unlink tmp file
+            os.unlink(temp_fasta_path)
 
             # -------------------------------------------------------------------
             # STEP 3.2: Filter the data
             # -------------------------------------------------------------------
             # Remove elements with a len < min_length
-            blast_results = blast_results[blast_results['len'] >= min_length]
+            if not blast_results.empty:
+                blast_results = blast_results[blast_results['len'] >= min_length]
 
-            # Remove sequences that overlap with `data_extended` or `new_elems`
+            # Remove sequences that overlap with `accumulated_data` or `new_elems`
             ## With `data_extended`
-            rm_from_data_extended = get_interval_overlap(blast_results, data_extended)
-            match_data_and_remove(blast_results, rm_from_data_extended)
+            rm_from_accumulated_data = get_interval_overlap(blast_results, accumulated_data)
+            if not blast_results.empty:
+                blast_results = match_data_and_remove(blast_results, rm_from_accumulated_data)
+                print(f"\t- Remove overlaps with accumulated_data: {len(rm_from_accumulated_data)}")
 
             ## With `new_elems`  # TODO: I am not so sure about this one
-            rm_from_new_elems = get_interval_overlap(blast_results, new_elems)
-            match_data_and_remove(blast_results, rm_from_new_elems)
+            if not new_elems.empty:
+                rm_from_new_elems = get_interval_overlap(blast_results, new_elems)
+                if not rm_from_new_elems.empty:
+                    blast_results = match_data_and_remove(blast_results, rm_from_new_elems)
 
             # -------------------------------------------------------------------
             # STEP 3.3: Add data to the collection of `new_elems`
             # -------------------------------------------------------------------
             if not blast_results.empty:
                 new_elems = pd.concat([new_elems, blast_results], ignore_index=True)
+                new_elems.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
         # -------------------------------------------------------------------
         # STEP 4a: No new elements found
@@ -301,6 +312,12 @@ def repetitive_sider_searcher(
             # -------------------------------------------------------------------
             # STEP 4b: New elements found
             # -------------------------------------------------------------------
+            # Check overlapping data of `new_elems_extended` with `data_extended`
+            overlapping_info = get_overlapping_info(new_elems, accumulated_data)
+            same_strand = len(overlapping_info.get("same_strand", []))
+            opposite_strand = len(overlapping_info.get("opposite_strand", []))
+            print(f"1) Overlapping elements vs. OG: same strand = {same_strand}, different strand = {opposite_strand}")
+
             new_elems_extended = sequence_extension(
                 data_input=new_elems,
                 genome_fasta=genome_path,
@@ -315,27 +332,42 @@ def repetitive_sider_searcher(
             overlapping_info = get_overlapping_info(new_elems_extended)
             same_strand = len(overlapping_info.get("same_strand", []))
             opposite_strand = len(overlapping_info.get("opposite_strand", []))
-            print(f"Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
+            print(f"2) Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
 
             # Check overlapping data of `new_elems_extended` with `data_extended`
-            overlapping_info = get_overlapping_info(new_elems_extended, data_extended)
+            overlapping_info = get_overlapping_info(new_elems_extended, accumulated_data)
             same_strand = len(overlapping_info.get("same_strand", []))
             opposite_strand = len(overlapping_info.get("opposite_strand", []))
-            print(f"Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
+            print(f"3) Overlapping elements EXT vs. OG: same strand = {same_strand}, different strand = {opposite_strand}")
 
-            # Merge newly extended elems with the accumulated dataset
-            total_data = pd.concat([data_extended, new_elems_extended], ignore_index=True)
-            total_data.sort_values(by=['sseqid', 'sstart'], inplace=True)  # Sort by 'sseqid' and 'sstart'
-            total_data.reset_index(drop=True, inplace=True)  # Reset index
+            # Remove if they match each other:
+            if same_strand > 0:
+                new_elems_extended = match_data_and_remove(
+                    new_elems_extended,
+                    overlapping_info.get("same_strand", [])
+                )
+            if opposite_strand > 0:
+                new_elems_extended = match_data_and_remove(
+                    new_elems_extended,
+                    overlapping_info.get("opposite_strand", [])
+                )
 
-            # Replace `data_extended` that entered the while loop with our new `total_data
-            data_extended = total_data.copy()
+            accumulated_data = pd.concat([accumulated_data, new_elems_extended], ignore_index=True)
+            accumulated_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
+            accumulated_data.reset_index(drop=True, inplace=True)
+
+            # Replace `data_extended` that entered the while loop with the new elements discovered
+            data_extended = new_elems_extended.copy()
+            data_extended.sort_values(by=['sseqid', 'sstart'], inplace=True)
+            data_extended.reset_index(drop=True, inplace=True)
+
+            iteration += 1
 
     # -------------------------------------------------------------------
     # STEP 5: Outside while-loop
     # -------------------------------------------------------------------
     print("Repetitive SIDE-eR search completed.")
-    return data_extended
+    return accumulated_data
 
 
 def finalize_results(output_dir: str, df: pd.DataFrame) -> None:
@@ -391,23 +423,10 @@ def main() -> None:
             word_size=args.word_size
         )
 
-        # 3. Run extension algorithm
-        extended_data = sequence_extension(
-            initial_data,
-            blast_db_path,
-            extend_number=args.extend,
-            limit_len=args.limit,
-            identity=args.identity,
-            word_size=args.word_size,
-            min_length=args.min_length,
-            extension_direction='both',
-            n_jobs=args.jobs
-        )
-
         # 4. Run the iterative part
         final_data = repetitive_sider_searcher(
-            data_input=extended_data,
-            genome_path=genome_path,
+            data_input=initial_data,
+            genome_path=blast_db_path,
             extend_number=args.extend,
             word_size=args.word_size,
             identity=args.identity,
