@@ -24,8 +24,11 @@ elements in genomic data.
 Author: R. Pacheco
 """
 
+# noinspection PyPackageRequirements
 import pandas as pd
+# noinspection PyPackageRequirements
 import pyranges as pr
+from typing import Optional
 
 
 # Column mapping constants
@@ -303,7 +306,7 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand', 'len'])
 
 
-def _print_dataset_stats(description: str, data: pd.DataFrame, total: int, label: str) -> None:
+def _print_dataset_stats(_description: str, data: pd.DataFrame, total: int, label: str) -> None:
     """
     Print statistics about a dataset, including count and percentage.
 
@@ -314,8 +317,8 @@ def _print_dataset_stats(description: str, data: pd.DataFrame, total: int, label
 
     Parameters
     ----------
-    description : str
-        Description of the data category being reported (e.g., "Coincidence",
+    _description : str
+        _description of the data category being reported (e.g., "Coincidence",
         "Non-coincidence").
     data : pd.DataFrame
         The dataset to report statistics for. The function will count the
