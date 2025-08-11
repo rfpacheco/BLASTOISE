@@ -20,10 +20,12 @@ Author: R. Pacheco
 """
 
 import subprocess
+# noinspection PyPackageRequirements
 import pandas as pd
 import tempfile
 import os
 from typing import Dict, Any, Tuple
+# noinspection PyPackageRequirements
 from joblib import Parallel, delayed
 from .genomic_ranges import merge_intervals, get_interval_overlap
 from .strand_location import match_data_and_remove
@@ -33,7 +35,7 @@ def next_side_extension_checker(
         data_input: pd.DataFrame,
         query_data: pd.DataFrame,
         previous_extension: str = None
-) -> tuple[pd.DataFrame, str]:
+) -> tuple[pd.DataFrame, str|None]:
     """
     Check if query data satisfies the left and/or right sides of the original sequence coordinates.
 
@@ -235,6 +237,8 @@ def _process_single_row_extension(
     # -----------------------------------------------------------------------------
     # STEP 4: Extend the sequence based on the specified direction
     # -----------------------------------------------------------------------------
+    lower_coor_extended = int  # Initialize new variable
+    upper_coor_extended = int  # Initialize new variable
     if extension_direction == "both":
         # Extend equally on both sides
         lower_coor_extended = lower_coor - extend_number  # Extend at the 5' end
@@ -444,9 +448,6 @@ def _process_single_row_extension(
             'sseq': final_seq
         })
         return result
-
-    # Return either the modified data or the default "not modified" result
-    return result
 
 
 def sequence_extension(
