@@ -37,7 +37,7 @@ from blastoise.modules.blaster import blastn_dic, blastn_blaster, repetitive_bla
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
 from blastoise.modules.genomic_ranges import get_merge_stranded
 from blastoise.modules.filters import remove_masking_zone
-from blastoise.modules.seq_modifier import sequence_extension
+from blastoise.modules.seq_extension import sequence_extension
 
 
 def parse_arguments() -> argparse.Namespace:

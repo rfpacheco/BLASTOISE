@@ -24,7 +24,7 @@ from typing import Optional
 import pandas as pd
 
 from .files_manager import fasta_creator, get_data_sequence
-from .seq_modifier import sequence_extension
+from .seq_extension import sequence_extension
 from .filters import global_filters_main
 from .strand_location import set_strand_direction
 
