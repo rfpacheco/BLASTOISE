@@ -312,10 +312,6 @@ def _process_single_row_extension(
             # -----------------------------------------------------------------------------
             # STEP 9: Filter BLAST results by minimum length
             # -----------------------------------------------------------------------------
-            # Calculate sequence length for filtering (if not already present)
-            if 'len' not in blast_results.columns:  # TODO: check if this is needed --> REMOVE, already checked
-                blast_results['len'] = blast_results['send'] - blast_results['sstart'] + 1
-            
             # Filter results by minimum length
             blast_filtered = blast_results[blast_results['len'] >= min_length].copy()
             
