@@ -218,6 +218,7 @@ def repetitive_sider_searcher(
         identity: int,
         min_length: int,
         limit_len: int,
+        n_jobs: int
 ) -> pd.DataFrame:
 
     # Extend data using the recursive method
@@ -232,7 +233,7 @@ def repetitive_sider_searcher(
         identity=identity,
         word_size=word_size,
         min_length=min_length,
-        n_jobs=-1
+        n_jobs=n_jobs
     )
 
     # -------------------------------------------------------------------
@@ -328,7 +329,7 @@ def repetitive_sider_searcher(
                 identity=identity,
                 word_size=word_size,
                 min_length=min_length,
-                n_jobs=-1
+                n_jobs=n_jobs
             )
             # Check overlapping data inside `new_elems_extended`
             overlapping_info = get_overlapping_info(new_elems_extended)
@@ -433,7 +434,8 @@ def main() -> None:
             word_size=args.word_size,
             identity=args.identity,
             min_length=args.min_length,
-            limit_len=args.limit
+            limit_len=args.limit,
+            n_jobs=args.jobs,
         )
 
         # 5. Finalize and clean up
