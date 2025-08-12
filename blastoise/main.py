@@ -225,6 +225,7 @@ def repetitive_sider_searcher(
     # -------------------------------------------------------------------
     # STEP 1: Extend the input data using the recursive method
     # -------------------------------------------------------------------
+    print_message_box(f"Initial {len(data_input)} sequence extension")
     data_extended = sequence_extension(
         data_input=data_input,
         genome_fasta=genome_path,
@@ -254,7 +255,7 @@ def repetitive_sider_searcher(
     iteration = 1
     are_there_new_elems = True
     while are_there_new_elems:
-        print(f"Iteration {iteration}:")
+        print_message_box(f"Iteration {iteration}:")
         new_elems = pd.DataFrame()  # Will hold the newly discovered elements. Will be used to reject overlaps
         for i, row in data_extended.iterrows():
             print(f"\n-Analyzing row {i}/{len(data_extended) - 1}:")

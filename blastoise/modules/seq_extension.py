@@ -29,6 +29,7 @@ from typing import Dict, Any, Tuple
 from joblib import Parallel, delayed
 from .genomic_ranges import merge_intervals, get_interval_overlap
 from .strand_location import match_data_and_remove
+from .aesthetics import print_message_box
 
 
 def next_side_extension_checker(
@@ -193,27 +194,34 @@ def _process_single_row_extension(
     from .blaster import blastn_blaster
 
     # -----------------------------------------------------------------------------
-    # STEP 0: Check recursion depth limit
+    # STEP 0: Extract row index and initialize result structure
+    # -----------------------------------------------------------------------------
+    index, element = row_data
+
+    # -----------------------------------------------------------------------------
+    # STEP 1: Check recursion depth limit
     # -----------------------------------------------------------------------------
     if current_depth >= max_recursion_depth:
         # Maximum recursion depth reached, return current state
-        index, element = row_data
         result = {
             'index': index,
-            'modified': False
+            'modified': False,
+            'recursion_info': {
+                'max_depth': current_depth,
+                'status': 'max_depth_reached'
+            }
         }
         return result
 
     # -----------------------------------------------------------------------------
-    # STEP 1: Validate extension direction parameter
+    # STEP 2: Validate extension direction parameter
     # -----------------------------------------------------------------------------
     if extension_direction not in ["both", "left", "right"]:
         raise ValueError(f"Invalid extension_direction: {extension_direction}. Must be 'both', 'left', or 'right'.")
 
     # -----------------------------------------------------------------------------
-    # STEP 2: Extract data and calculate current sequence length
+    # STEP 3: Extract data and calculate current sequence length
     # -----------------------------------------------------------------------------
-    index, element = row_data
     lower_coor = element['sstart']
     upper_coor = element['send']
 
@@ -223,17 +231,21 @@ def _process_single_row_extension(
     # Initialize a result with default values (assuming no modification needed)
     result = {
         'index': index,
-        'modified': False
+        'modified': False,
+        'recursion_info': {
+            'max_depth': current_depth,
+            'status': 'no_extension_needed'
+        }
     }
 
     # -----------------------------------------------------------------------------
-    # STEP 3: Check if sequence already meets length requirement
+    # STEP 4: Check if sequence already meets length requirement
     # -----------------------------------------------------------------------------
     if subject_len >= limit_len:
         return result
 
     # -----------------------------------------------------------------------------
-    # STEP 4: Extend the sequence based on the specified direction
+    # STEP 5: Extend the sequence based on the specified direction
     # -----------------------------------------------------------------------------
     lower_coor_extended = int  # Initialize new variable
     upper_coor_extended = int  # Initialize new variable
@@ -251,7 +263,7 @@ def _process_single_row_extension(
         upper_coor_extended = upper_coor + extend_number
 
     # -----------------------------------------------------------------------------
-    # STEP 5: Ensure coordinates remain within valid genome boundaries
+    # STEP 6: Ensure coordinates remain within valid genome boundaries
     # -----------------------------------------------------------------------------
     # Ensure lower coordinate is not negative (BLAST coordinates start at 1)
     if lower_coor_extended <= 0:
@@ -271,11 +283,11 @@ def _process_single_row_extension(
     new_subject_len = upper_coor_extended - lower_coor_extended + 1
 
     # -----------------------------------------------------------------------------
-    # STEP 6: Check if the new length is still < limit_len
+    # STEP 7: Check if the new length is still < limit_len
     # -----------------------------------------------------------------------------
     if new_subject_len < limit_len:
         # -----------------------------------------------------------------------------
-        # STEP 7: Retrieve the extended sequence using BLAST command
+        # STEP 8: Retrieve the extended sequence using BLAST command
         # -----------------------------------------------------------------------------
         # Construct the BLAST command to extract the sequence
         cmd = (
@@ -290,7 +302,7 @@ def _process_single_row_extension(
         seq = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
 
         # -----------------------------------------------------------------------------
-        # STEP 8: Perform BLAST search with the extended sequence
+        # STEP 9: Perform BLAST search with the extended sequence
         # -----------------------------------------------------------------------------
         # Create a temporary FASTA file with the extended sequence
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_fasta:
@@ -308,7 +320,7 @@ def _process_single_row_extension(
             )
             
             # -----------------------------------------------------------------------------
-            # STEP 9: Filter BLAST results by minimum length
+            # STEP 10: Filter BLAST results by minimum length
             # -----------------------------------------------------------------------------
             # Filter results by minimum length
             blast_filtered = blast_results[blast_results['len'] >= min_length].copy()
@@ -317,7 +329,7 @@ def _process_single_row_extension(
             os.unlink(temp_fasta_path)
 
             # -----------------------------------------------------------------------------
-            # STEP 10: Filter elements from the blast data that overlap our row data
+            # STEP 11: Filter elements from the blast data that overlap our row data
             # -----------------------------------------------------------------------------
             # Create a DataFrame with the current element for checking
             current_element_df = pd.DataFrame([{
@@ -335,7 +347,7 @@ def _process_single_row_extension(
             final_blast_filtered.reset_index(drop=True, inplace=True)
 
             # -----------------------------------------------------------------------------
-            # STEP 10: Use next_side_extension_checker to determine further extension
+            # STEP 12: Use next_side_extension_checker to determine further extension
             # -----------------------------------------------------------------------------
             if not final_blast_filtered.empty:
                 # Check extension possibilities for the next recursive call:
@@ -350,7 +362,7 @@ def _process_single_row_extension(
                 )
                 
                 # -----------------------------------------------------------------------------
-                # STEP 11: Recursive extension based on extension_status
+                # STEP 13: Recursive extension based on extension_status
                 # -----------------------------------------------------------------------------
                 if extension_status in ["both", "left", "right"]:
                     # Further extension is possible, prepare for recursive call
@@ -375,7 +387,7 @@ def _process_single_row_extension(
                         current_depth=current_depth + 1
                     )
                     
-                    # Return the result from the recursive call
+                    # Return the result from the recursive call (it already has recursion info)
                     return recursive_result
 
                 else:
@@ -398,7 +410,11 @@ def _process_single_row_extension(
                         'len': final_seq_len,
                         'sstart': int(final_row_df['sstart'].iloc[0]),
                         'send': int(final_row_df['send'].iloc[0]),
-                        'sseq': final_seq
+                        'sseq': final_seq,
+                        'recursion_info': {
+                            'max_depth': current_depth,
+                            'status': 'extension_completed'
+                        }
                     })
                     return result
             else:
@@ -408,7 +424,11 @@ def _process_single_row_extension(
                     'len': new_subject_len,
                     'sstart': int(lower_coor_extended),
                     'send': int(upper_coor_extended),
-                    'sseq': seq
+                    'sseq': seq,
+                    'recursion_info': {
+                        'max_depth': current_depth,
+                        'status': 'no_blast_results'
+                    }
                 })
                 return result
                 
@@ -435,7 +455,11 @@ def _process_single_row_extension(
             'len': new_subject_len,
             'sstart': int(lower_coor),
             'send': int(upper_coor),
-            'sseq': final_seq
+            'sseq': final_seq,
+            'recursion_info': {
+                'max_depth': current_depth,
+                'status': 'length_requirement_met'
+            }
         })
         return result
 
@@ -515,7 +539,45 @@ def sequence_extension(
     )
 
     # -----------------------------------------------------------------------------
-    # STEP 2: Update the DataFrame with the results from parallel processing
+    # STEP 2: Print extension results summary
+    # -----------------------------------------------------------------------------
+    print("\n=== Extension Results ===")
+    extended_count = 0
+    recursion_stats = {}
+    
+    for result in results:
+        recursion_info = result.get('recursion_info', {})
+        depth = recursion_info.get('max_depth', 0)
+        status = recursion_info.get('status', 'unknown')
+        
+        if result['modified']:
+            extended_count += 1
+            if depth == 0:
+                print(f"Extending row {result['index']} (starting extension - completed)")
+            else:
+                print(f"Extending row {result['index']} ({depth} recursive calls)")
+            
+            # Track recursion statistics
+            if depth not in recursion_stats:
+                recursion_stats[depth] = 0
+            recursion_stats[depth] += 1
+
+    # Print summary statistics
+    print(f"\nExtension Summary:")
+    print(f"  - Total sequences processed: {len(results)}")
+    print(f"  - Sequences extended: {extended_count}")
+    print(f"  - Sequences not extended: {len(results) - extended_count}")
+    
+    if recursion_stats:
+        print(f"\nRecursion Depth Statistics:")
+        for depth in sorted(recursion_stats.keys()):
+            if depth == 0:
+                print(f"  - No recursion needed: {recursion_stats[depth]} sequences")
+            else:
+                print(f"  - {depth} recursive calls: {recursion_stats[depth]} sequences")
+
+    # -----------------------------------------------------------------------------
+    # STEP 3: Update the DataFrame with the results from parallel processing
     # -----------------------------------------------------------------------------
     # Iterate through the results and update only the rows that were modified
     for result in results:
