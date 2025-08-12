@@ -264,7 +264,8 @@ def repetitive_sider_searcher(
             # -------------------------------------------------------------------
             # Create a temporary FAST file with the sequence
             with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_fasta:
-                temp_fasta.write(f">{i}_{row.sseqid}_{row.sstart}_{row.send}\n{row.sseq}\n")
+                seq_stripped = row.sseq.replace('-', '')  # Remove hyphens
+                temp_fasta.write(f">{i}_{row.sseqid}_{row.sstart}_{row.send}\n{seq_stripped}\n")
                 temp_fasta_path = temp_fasta.name
 
             # Perform the BLAST search
