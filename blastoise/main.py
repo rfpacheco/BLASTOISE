@@ -201,6 +201,8 @@ def run_initial_blast(
     print('\t- Filtering and merging data:')
     tic = time.perf_counter()
     merged_results = get_merge_stranded(data_input=initial_blast_results)
+    merged_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
+    merged_results.reset_index(drop=True, inplace=True)
     toc = time.perf_counter()
     print(f"\t\t- Merged data row length: {len(merged_results)}\n"
           f"\t\t- Execution time: {toc - tic:0.2f} seconds")
