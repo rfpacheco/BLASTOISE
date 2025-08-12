@@ -146,6 +146,8 @@ def _process_single_row_extension(
         identity: int = 60,
         word_size: int = 15,
         min_length: int = 100,
+        max_recursion_depth: int = 10,
+        current_depth: int = 0,
 ) -> Dict[str, Any]:
     """
     Process a single row for sequence extension with recursive extension capability.
@@ -183,28 +185,24 @@ def _process_single_row_extension(
         Word size for BLAST search. Default is 15.
     min_length : int, optional
         Minimum sequence length for filtering BLAST results. Default is 100.
-
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the processed row data with keys:
-        - 'index': The original row index
-        - 'modified': Boolean flag indicating if the sequence was modified
-        - 'length': The final sequence length (only if modified)
-        - 'sstart': The final start coordinate (only if modified)
-        - 'send': The final end coordinate (only if modified)
-        - 'sseq': The final extended sequence string (only if modified)
-
-    Raises
-    ------
-    subprocess.CalledProcessError
-        If the BLAST command to retrieve sequence information fails.
-    KeyError
-        If the required columns are missing from the input row data.
-    ValueError
-        If extension_direction is not one of "both", "left", or "right".
+    max_recursion_depth : int, optional
+        Maximum allowed recursion depth to prevent infinite recursion. Default is 10.
+    current_depth : int, optional
+        Current recursion depth level. Used internally for tracking. Default is 0.
     """
     from .blaster import blastn_blaster
+
+    # -----------------------------------------------------------------------------
+    # STEP 0: Check recursion depth limit
+    # -----------------------------------------------------------------------------
+    if current_depth >= max_recursion_depth:
+        # Maximum recursion depth reached, return current state
+        index, element = row_data
+        result = {
+            'index': index,
+            'modified': False
+        }
+        return result
 
     # -----------------------------------------------------------------------------
     # STEP 1: Validate extension direction parameter
@@ -271,6 +269,24 @@ def _process_single_row_extension(
 
     # Calculate the new sequence length after boundary adjustments
     new_subject_len = upper_coor_extended - lower_coor_extended + 1
+
+    # -----------------------------------------------------------------------------
+    # STEP 5.5: Check if coordinates have changed significantly
+    # -----------------------------------------------------------------------------
+    coordinate_change_threshold = max(1, extend_number // 10)  # At least 1 or 10% of extend_number
+    left_change = abs(lower_coor_extended - lower_coor)
+    right_change = abs(upper_coor_extended - upper_coor)
+    
+    if current_depth > 0 and (left_change < coordinate_change_threshold and right_change < coordinate_change_threshold):
+        # Coordinates haven't changed significantly, stop recursion to prevent infinite loops
+        result.update({
+            'modified': True,
+            'len': new_subject_len,
+            'sstart': int(lower_coor_extended),
+            'send': int(upper_coor_extended),
+            'sseq': None  # Will be retrieved if needed
+        })
+        return result
 
     # -----------------------------------------------------------------------------
     # STEP 6: Check if the new length is still < limit_len
@@ -372,7 +388,9 @@ def _process_single_row_extension(
                         extension_direction=extension_status,
                         identity=identity,
                         word_size=word_size,
-                        min_length=min_length
+                        min_length=min_length,
+                        max_recursion_depth=max_recursion_depth,
+                        current_depth=current_depth + 1
                     )
                     
                     # Return the result from the recursive call
@@ -460,6 +478,7 @@ def sequence_extension(
         word_size: int = 15,
         min_length: int = 100,
         extension_direction: str = "both",
+        max_recursion_depth: int = 10,  # ADD: Maximum recursion depth parameter
         n_jobs: int = -1
 ) -> pd.DataFrame:
     """
@@ -506,38 +525,9 @@ def sequence_extension(
     n_jobs : int, optional
         The number of jobs to run in parallel. -1 means using all processors.
         Default is -1.
-
-    Returns
-    -------
-    pd.DataFrame
-        A modified data frame where sequences having lengths below the specified minimum
-        are extended. The following columns are updated for extended sequences:
-        - 'length': The new sequence length
-        - 'sstart': The new start coordinate
-        - 'send': The new end coordinate
-        - 'sseq': The extended sequence string
-        Additional information about BLAST results is stored but not directly added
-        to the returned DataFrame.
-
-    Raises
-    ------
-    subprocess.CalledProcessError
-        If an error occurs when running the system command to retrieve the genome sequence.
-    KeyError
-        If any required column is missing in the provided data frame.
-    ValueError
-        If extension_direction is not one of "both", "left", or "right".
-
-    Notes
-    -----
-    The function assumes that the input 'data_input' follows a specific structure with
-    the necessary columns to process coordinate adjustments and sequence extraction.
-    Coordinates are adjusted considering both strands ('plus' and 'minus') with careful 
-    attention to avoid exceeding genome boundaries.
     
-    BLAST results from the extension process are computed and filtered but are currently
-    stored in the processing results for potential future use rather than being directly
-    integrated into the returned DataFrame.
+    max_recursion_depth : int, optional
+        Maximum allowed recursion depth to prevent infinite recursion. Default is 10.
     """
 
     # -----------------------------------------------------------------------------
@@ -548,7 +538,7 @@ def sequence_extension(
     results = Parallel(n_jobs=n_jobs)(
         delayed(_process_single_row_extension)(
             row_data, genome_fasta, extend_number, limit_len, extension_direction,
-            identity, word_size, min_length
+            identity, word_size, min_length, max_recursion_depth  # ADD: Pass recursion limit
         )
         for row_data in data_input.iterrows()
     )
