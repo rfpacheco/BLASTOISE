@@ -271,24 +271,6 @@ def _process_single_row_extension(
     new_subject_len = upper_coor_extended - lower_coor_extended + 1
 
     # -----------------------------------------------------------------------------
-    # STEP 5.5: Check if coordinates have changed significantly
-    # -----------------------------------------------------------------------------
-    coordinate_change_threshold = max(1, extend_number // 10)  # At least 1 or 10% of extend_number
-    left_change = abs(lower_coor_extended - lower_coor)
-    right_change = abs(upper_coor_extended - upper_coor)
-    
-    if current_depth > 0 and (left_change < coordinate_change_threshold and right_change < coordinate_change_threshold):
-        # Coordinates haven't changed significantly, stop recursion to prevent infinite loops
-        result.update({
-            'modified': True,
-            'len': new_subject_len,
-            'sstart': int(lower_coor_extended),
-            'send': int(upper_coor_extended),
-            'sseq': None  # Will be retrieved if needed
-        })
-        return result
-
-    # -----------------------------------------------------------------------------
     # STEP 6: Check if the new length is still < limit_len
     # -----------------------------------------------------------------------------
     if new_subject_len < limit_len:
@@ -332,7 +314,7 @@ def _process_single_row_extension(
             blast_filtered = blast_results[blast_results['len'] >= min_length].copy()
             
             # Clean up temporary file
-            os.unlink(temp_fasta_path)  # TODO: does this remove the file?
+            os.unlink(temp_fasta_path)
 
             # -----------------------------------------------------------------------------
             # STEP 10: Filter elements from the blast data that overlap our row data
@@ -349,14 +331,14 @@ def _process_single_row_extension(
                 blast_filtered,
                 current_element_df
             )
-            final_blast_filtered = match_data_and_remove(blast_filtered, elems_to_remove)  # TODO: reset index in function?
+            final_blast_filtered = match_data_and_remove(blast_filtered, elems_to_remove)
             final_blast_filtered.reset_index(drop=True, inplace=True)
 
             # -----------------------------------------------------------------------------
             # STEP 10: Use next_side_extension_checker to determine further extension
             # -----------------------------------------------------------------------------
             if not final_blast_filtered.empty:
-                # Check extension possibilities for the next recursvie call:
+                # Check extension possibilities for the next recursive call:
                 ## both: both sides can be extended
                 ## left: only left side will be extended
                 ## right: only right side can be extended
@@ -394,19 +376,8 @@ def _process_single_row_extension(
                     )
                     
                     # Return the result from the recursive call
-                    if recursive_result['modified']:
-                        return recursive_result
-                    else:
-                        # TODO: will this ever reach? should I prepare for it?
-                        # If recursive call didn't modify (reached recursive limit), return current state
-                        result.update({
-                            'modified': True,
-                            'len': final_row_df['send'].iloc[0] - final_row_df['sstart'].iloc[0] + 1,
-                            'sstart': int(final_row_df['sstart'].iloc[0]),
-                            'send': int(final_row_df['send'].iloc[0]),
-                            'sseq': seq  # TODO: This might need to be updated to reflect final coordinates
-                        })
-                        return result
+                    return recursive_result
+
                 else:
                     # extension_status is None - no further extension possible
                     # Return the coordinates from next_side_extension_checker
@@ -449,11 +420,11 @@ def _process_single_row_extension(
             raise e
     else:
         # Sequence length after extension meets or exceeds limit_len
-        # Get the final sequence
+        # Get the final sequence with the normal coordinates (not the extended ones)
         final_cmd = (
             f"blastdbcmd -db {genome_fasta} "
             f"-entry {element['sseqid']} "
-            f"-range {lower_coor_extended}-{upper_coor_extended} "
+            f"-range {lower_coor}-{upper_coor} "
             f"-strand {element['sstrand']} "
             "-outfmt %s"
         )
@@ -462,8 +433,8 @@ def _process_single_row_extension(
         result.update({
             'modified': True,
             'len': new_subject_len,
-            'sstart': int(lower_coor_extended),
-            'send': int(upper_coor_extended),
+            'sstart': int(lower_coor),
+            'send': int(upper_coor),
             'sseq': final_seq
         })
         return result
