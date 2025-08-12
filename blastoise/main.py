@@ -291,7 +291,7 @@ def repetitive_sider_searcher(
             # Remove sequences that overlap with `accumulated_data` or `new_elems`
             ## With `data_extended`
             rm_from_accumulated_data = get_interval_overlap(blast_results, accumulated_data)
-            if not blast_results.empty:
+            if not blast_results.empty and not rm_from_accumulated_data.empty:
                 blast_results = match_data_and_remove(blast_results, rm_from_accumulated_data)
                 print(f"\t- Remove overlaps with accumulated_data: {len(rm_from_accumulated_data)}")
 
