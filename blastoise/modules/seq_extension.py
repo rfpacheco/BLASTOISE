@@ -109,24 +109,36 @@ def next_side_extension_checker(
             return result_data, "both"
 
     elif left_satisfied and not right_satisfied:
-        # Only left side is satisfied, modify coordinates to where satisfaction ends
-        # Check previous extension
+        # Only left side is satisfied:
+        ## Left side --> can be extended still
+        ## Right side --> Can't be extended, limit
         if previous_extension == 'right':
-            # Modify right coordinate
+            # Previously, was extended through the right only (left was banned). So there's no more extension for the right part
             result_data.loc[result_data.index[0], 'send'] = end_coordinate_with_query
             return result_data, None
+        elif previous_extension == 'left':
+            # If previously was extended on left, send coordinate should stay as it entered
+            result_data.loc[result_data.index[0], 'send'] = extended_end
+            return result_data, "left"
         else:
+            # In this case, "both" will be the previous one, so send coordinate needs to be limited here.
             result_data.loc[result_data.index[0], 'send'] = end_coordinate_with_query
             return result_data, "left"
 
     elif not left_satisfied and right_satisfied:
-        # Only right side is satisfied, modify coordinates to where satisfaction begins
-        # Check previous extensions
+        # Only right side is satisfied:
+        ## Right side --> can be extended still
+        ## Left side --> Can't be extended, limit
         if previous_extension == 'left':
-            # Modify left coordinate
+            # Previously, was extended through the left only (right was banned). So there's no more extension for the left part
             result_data.loc[result_data.index[0], 'sstart'] = start_coordinate_with_query
             return result_data, None
+        elif previous_extension == 'right':
+            # If previously was extended on right, sstart coordinate should stay as it entered
+            result_data.loc[result_data.index[0], 'sstart'] = extended_start
+            return result_data, "right"
         else:
+            # In this case, "both" will be the previous one, so start coordinate needs to be limited here.
             result_data.loc[result_data.index[0], 'sstart'] = start_coordinate_with_query
             return result_data, "right"
 
@@ -452,7 +464,7 @@ def _process_single_row_extension(
         
         result.update({
             'modified': True,
-            'len': new_subject_len,
+            'len': subject_len,
             'sstart': int(lower_coor),
             'send': int(upper_coor),
             'sseq': final_seq,

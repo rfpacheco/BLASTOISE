@@ -36,7 +36,7 @@ import pandas as pd
 
 from blastoise.modules.blaster import blastn_dic, blastn_blaster
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
-from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap
+from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap, merge_intervals, compare_genomic_datasets
 from blastoise.modules.seq_extension import sequence_extension
 from blastoise.modules.strand_location import match_data_and_remove
 
@@ -274,6 +274,8 @@ def repetitive_sider_searcher(
                 perc_identity=identity,
                 word_size=word_size
             )
+            if not blast_results.empty:
+                blast_results = blast_results[['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']]
             blast_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
 
             # Unlink tmp file
@@ -309,6 +311,8 @@ def repetitive_sider_searcher(
         # -------------------------------------------------------------------
         # STEP 4a: No new elements found
         # -------------------------------------------------------------------
+        accumulated_data.to_csv("~/Downloads/test/" + f"IT-{iteration}-accumulated_data.csv")
+        new_elems.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-NOT_EXT.csv")
         # If nothing was found, exit while loop
         if new_elems.empty:
             are_there_new_elems = False
@@ -332,11 +336,19 @@ def repetitive_sider_searcher(
                 min_length=min_length,
                 n_jobs=n_jobs
             )
-            # Check overlapping data inside `new_elems_extended`
-            overlapping_info = get_overlapping_info(new_elems_extended)
-            same_strand = len(overlapping_info.get("same_strand", []))
-            opposite_strand = len(overlapping_info.get("opposite_strand", []))
-            print(f"2) Overlapping elements found: same strand = {same_strand}, different strand = {opposite_strand}")
+            new_elems_extended.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-EXT.csv")
+            # Removing duplicates
+            duplicates = new_elems_extended.duplicated(subset=['sseqid', 'sstart', 'send', 'sstrand']).sum()
+            new_elems_extended = new_elems_extended.drop_duplicates(subset=['sseqid', 'sstart', 'send', 'sstrand'])
+            new_elems_extended.reset_index(drop=True, inplace=True)
+            print(f"\t- Removed {duplicates} duplicates")
+            
+            # Merge intervals on the same strand
+            # new_elems_extended = merge_intervals(new_elems_extended, strand=True)
+            # print(f"\t- Elements after merging in the same strand: {len(new_elems_extended)}")
+            # new_elems_extended.reset_index(drop=True, inplace=True)
+
+            new_elems_extended.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-EXT-FILTERED.csv")
 
             # Check overlapping data of `new_elems_extended` with `data_extended`
             overlapping_info = get_overlapping_info(new_elems_extended, accumulated_data)
