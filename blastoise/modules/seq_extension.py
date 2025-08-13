@@ -624,9 +624,10 @@ def sequence_extension(
     ordered_indices = sorted(results_by_index.keys())
 
     accepted_df = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
-    chosen_map: dict[int, dict] = {}
+    chosen_map: dict[int, dict | None] = {}
 
     adjustments = 0
+    removed = 0
     total = len(ordered_indices)
 
     for idx in ordered_indices:
@@ -647,8 +648,10 @@ def sequence_extension(
                 chosen_step = {'sstart': int(step['sstart']), 'send': int(step['send'])}
                 break
         if chosen_step is None:
-            # Fallback to original coordinates
-            chosen_step = {'sstart': int(steps[0]['sstart']), 'send': int(steps[0]['send'])}
+            # No non-overlapping step exists; remove this sequence entirely
+            chosen_map[idx] = None
+            removed += 1
+            continue
 
         # Count adjustments if not using the last (most-extended) step
         if steps and (chosen_step['sstart'] != int(steps[-1]['sstart']) or chosen_step['send'] != int(steps[-1]['send'])):
@@ -667,9 +670,13 @@ def sequence_extension(
     # -----------------------------------------------------------------------------
     # STEP 4: Update DataFrame with chosen coordinates and sequences
     # -----------------------------------------------------------------------------
+    removed_indices: list[int] = []
     for idx in ordered_indices:
-        row = data_input.loc[idx]
         chosen_step = chosen_map[idx]
+        if chosen_step is None:
+            removed_indices.append(idx)
+            continue
+        row = data_input.loc[idx]
         chosen_len = int(chosen_step['send']) - int(chosen_step['sstart']) + 1
         # Fetch sequence for chosen step
         final_cmd = (
@@ -686,10 +693,15 @@ def sequence_extension(
         data_input.loc[idx, 'send'] = int(chosen_step['send'])
         data_input.loc[idx, 'sseq'] = final_seq
 
+    # Drop removed sequences and reset index for cleanliness
+    if removed_indices:
+        data_input = data_input.drop(index=removed_indices).reset_index(drop=True)
+
     # Print conflict resolution summary
     print(f"\nConflict resolution summary:")
     print(f"  - Total sequences considered: {total}")
     print(f"  - Sequences adjusted due to conflicts: {adjustments}")
+    print(f"  - Sequences removed due to irresolvable conflicts: {removed}")
 
     # Return the updated DataFrame with resolved sequences
     return data_input

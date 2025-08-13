@@ -349,7 +349,6 @@ def repetitive_sider_searcher(
             # print(f"\t- Elements after merging in the same strand: {len(new_elems_extended)}")
             # new_elems_extended.reset_index(drop=True, inplace=True)
 
-            new_elems_extended.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-EXT-FILTERED.csv")
 
             # Check overlapping data of `new_elems_extended` with `data_extended`
             overlapping_info = get_overlapping_info(new_elems_extended, accumulated_data)
@@ -369,6 +368,7 @@ def repetitive_sider_searcher(
                     overlapping_info.get("opposite_strand", [])
                 )
 
+            new_elems_extended.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-EXT-FILTERED.csv")
             accumulated_data = pd.concat([accumulated_data, new_elems_extended], ignore_index=True)
             accumulated_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
             accumulated_data.reset_index(drop=True, inplace=True)
