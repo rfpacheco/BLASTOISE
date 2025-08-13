@@ -161,6 +161,7 @@ def _process_single_row_extension(
         min_length: int = 100,
         max_recursion_depth: int = 10,
         current_depth: int = 0,
+        history: list[dict] | None = None,
 ) -> Dict[str, Any]:
     """
     Process a single row for sequence extension with recursive extension capability.
@@ -221,7 +222,8 @@ def _process_single_row_extension(
             'recursion_info': {
                 'max_depth': current_depth,
                 'status': 'max_depth_reached'
-            }
+            },
+            'extension_steps': history if history is not None else [{'sstart': int(element['sstart']), 'send': int(element['send'])}]
         }
         return result
 
@@ -237,6 +239,15 @@ def _process_single_row_extension(
     lower_coor = element['sstart']
     upper_coor = element['send']
 
+    # Initialize and manage history of extension steps (store coordinates only)
+    if history is None:
+        history = [{'sstart': int(lower_coor), 'send': int(upper_coor)}]
+
+    def _add_step_to_history(sstart_val: int, send_val: int):
+        nonlocal history
+        if not history or history[-1]['sstart'] != int(sstart_val) or history[-1]['send'] != int(send_val):
+            history.append({'sstart': int(sstart_val), 'send': int(send_val)})
+
     # Calculate the current length of the sequence (inclusive of start and end positions)
     subject_len = upper_coor - lower_coor + 1
 
@@ -247,7 +258,8 @@ def _process_single_row_extension(
         'recursion_info': {
             'max_depth': current_depth,
             'status': 'no_extension_needed'
-        }
+        },
+        'extension_steps': history
     }
 
     # -----------------------------------------------------------------------------
@@ -386,6 +398,9 @@ def _process_single_row_extension(
                     })
 
                     # Recursive call with updated coordinates, direction, and previous extension tracking
+                    # Record this step before recursing
+                    _add_step_to_history(int(final_row_df['sstart'].iloc[0]), int(final_row_df['send'].iloc[0]))
+
                     recursive_result = _process_single_row_extension(
                         row_data=(index, updated_element),
                         genome_fasta=genome_fasta,
@@ -396,7 +411,8 @@ def _process_single_row_extension(
                         word_size=word_size,
                         min_length=min_length,
                         max_recursion_depth=max_recursion_depth,
-                        current_depth=current_depth + 1
+                        current_depth=current_depth + 1,
+                        history=history
                     )
                     
                     # Return the result from the recursive call (it already has recursion info)
@@ -405,13 +421,18 @@ def _process_single_row_extension(
                 else:
                     # extension_status is None - no further extension possible
                     # Return the coordinates from next_side_extension_checker
-                    final_seq_len = final_row_df['send'].iloc[0] - final_row_df['sstart'].iloc[0] + 1
+                    final_sstart = int(final_row_df['sstart'].iloc[0])
+                    final_send = int(final_row_df['send'].iloc[0])
+                    final_seq_len = final_send - final_sstart + 1
+
+                    # Record this final step
+                    _add_step_to_history(final_sstart, final_send)
                     
                     # Get the final sequence with updated coordinates
                     final_cmd = (
                         f"blastdbcmd -db {genome_fasta} "
                         f"-entry {element['sseqid']} "
-                        f"-range {int(final_row_df['sstart'].iloc[0])}-{int(final_row_df['send'].iloc[0])} "
+                        f"-range {final_sstart}-{final_send} "
                         f"-strand {element['sstrand']} "
                         "-outfmt %s"
                     )
@@ -420,17 +441,19 @@ def _process_single_row_extension(
                     result.update({
                         'modified': True,
                         'len': final_seq_len,
-                        'sstart': int(final_row_df['sstart'].iloc[0]),
-                        'send': int(final_row_df['send'].iloc[0]),
+                        'sstart': final_sstart,
+                        'send': final_send,
                         'sseq': final_seq,
                         'recursion_info': {
                             'max_depth': current_depth,
                             'status': 'extension_completed'
-                        }
+                        },
+                        'extension_steps': history
                     })
                     return result
             else:
                 # No BLAST results after filtering - return current extension
+                _add_step_to_history(int(lower_coor_extended), int(upper_coor_extended))
                 result.update({
                     'modified': True,
                     'len': new_subject_len,
@@ -440,7 +463,8 @@ def _process_single_row_extension(
                     'recursion_info': {
                         'max_depth': current_depth,
                         'status': 'no_blast_results'
-                    }
+                    },
+                    'extension_steps': history
                 })
                 return result
                 
@@ -461,6 +485,9 @@ def _process_single_row_extension(
             "-outfmt %s"
         )
         final_seq = subprocess.check_output(final_cmd, shell=True, universal_newlines=True).strip()
+
+        # Record this step as the final chosen coordinates
+        _add_step_to_history(int(lower_coor), int(upper_coor))
         
         result.update({
             'modified': True,
@@ -471,7 +498,8 @@ def _process_single_row_extension(
             'recursion_info': {
                 'max_depth': current_depth,
                 'status': 'length_requirement_met'
-            }
+            },
+            'extension_steps': history
         })
         return result
 
@@ -589,21 +617,79 @@ def sequence_extension(
                 print(f"  - {depth} recursive calls: {recursion_stats[depth]} sequences")
 
     # -----------------------------------------------------------------------------
-    # STEP 3: Update the DataFrame with the results from parallel processing
+    # STEP 3: Resolve conflicts across sequences using extension histories
     # -----------------------------------------------------------------------------
-    # Iterate through the results and update only the rows that were modified
-    for result in results:
-        if result['modified']:
-            index = result['index']
-            # Update the relevant columns with the new values
-            data_input.loc[index, 'len'] = result['len']
-            data_input.loc[index, 'sstart'] = result['sstart']
-            data_input.loc[index, 'send'] = result['send']
-            data_input.loc[index, 'sseq'] = result['sseq']
+    # Build accepted intervals progressively in priority order (by index)
+    results_by_index = {r['index']: r for r in results}
+    ordered_indices = sorted(results_by_index.keys())
 
-            # Note: BLAST results are available in result['blast_results'] 
-            # but are not currently integrated into the main DataFrame
-            # This could be implemented in future iterations if needed
+    accepted_df = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
+    chosen_map: dict[int, dict] = {}
 
-    # Return the updated DataFrame with extended sequences
+    adjustments = 0
+    total = len(ordered_indices)
+
+    for idx in ordered_indices:
+        row = data_input.loc[idx]
+        res = results_by_index[idx]
+        steps = res.get('extension_steps') or [{'sstart': int(row['sstart']), 'send': int(row['send'])}]
+
+        # Try from most-extended to least (reverse chronological history)
+        chosen_step = None
+        for step in reversed(steps):
+            candidate = pd.DataFrame([{
+                'sseqid': row['sseqid'],
+                'sstart': int(step['sstart']),
+                'send': int(step['send']),
+                'sstrand': row['sstrand']
+            }])
+            if accepted_df.empty or get_interval_overlap(candidate, accepted_df).empty:
+                chosen_step = {'sstart': int(step['sstart']), 'send': int(step['send'])}
+                break
+        if chosen_step is None:
+            # Fallback to original coordinates
+            chosen_step = {'sstart': int(steps[0]['sstart']), 'send': int(steps[0]['send'])}
+
+        # Count adjustments if not using the last (most-extended) step
+        if steps and (chosen_step['sstart'] != int(steps[-1]['sstart']) or chosen_step['send'] != int(steps[-1]['send'])):
+            adjustments += 1
+
+        # Append to accepted set
+        accepted_df = pd.concat([accepted_df, pd.DataFrame([{
+            'sseqid': row['sseqid'],
+            'sstart': chosen_step['sstart'],
+            'send': chosen_step['send'],
+            'sstrand': row['sstrand']
+        }])], ignore_index=True)
+
+        chosen_map[idx] = chosen_step
+
+    # -----------------------------------------------------------------------------
+    # STEP 4: Update DataFrame with chosen coordinates and sequences
+    # -----------------------------------------------------------------------------
+    for idx in ordered_indices:
+        row = data_input.loc[idx]
+        chosen_step = chosen_map[idx]
+        chosen_len = int(chosen_step['send']) - int(chosen_step['sstart']) + 1
+        # Fetch sequence for chosen step
+        final_cmd = (
+            f"blastdbcmd -db {genome_fasta} "
+            f"-entry {row['sseqid']} "
+            f"-range {int(chosen_step['sstart'])}-{int(chosen_step['send'])} "
+            f"-strand {row['sstrand']} "
+            "-outfmt %s"
+        )
+        final_seq = subprocess.check_output(final_cmd, shell=True, universal_newlines=True).strip()
+
+        data_input.loc[idx, 'len'] = chosen_len
+        data_input.loc[idx, 'sstart'] = int(chosen_step['sstart'])
+        data_input.loc[idx, 'send'] = int(chosen_step['send'])
+        data_input.loc[idx, 'sseq'] = final_seq
+
+    # Print conflict resolution summary
+    print(f"\nConflict resolution summary:")
+    print(f"  - Total sequences considered: {total}")
+    print(f"  - Sequences adjusted due to conflicts: {adjustments}")
+
+    # Return the updated DataFrame with resolved sequences
     return data_input

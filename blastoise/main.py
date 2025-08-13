@@ -312,12 +312,12 @@ def repetitive_sider_searcher(
         # -------------------------------------------------------------------
         # STEP 4a: No new elements found
         # -------------------------------------------------------------------
-        accumulated_data.to_csv("~/Downloads/test/" + f"IT-{iteration}-accumulated_data.csv")
-        new_elems.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-NOT_EXT.csv")
         # If nothing was found, exit while loop
         if new_elems.empty:
             are_there_new_elems = False
         else:
+            accumulated_data.to_csv("~/Downloads/test/" + f"IT-{iteration}-accumulated_data.csv")
+            new_elems.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-NOT_EXT.csv")
             # -------------------------------------------------------------------
             # STEP 4b: New elements found
             # -------------------------------------------------------------------
