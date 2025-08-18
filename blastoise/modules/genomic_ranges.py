@@ -23,13 +23,13 @@ elements in genomic data.
 
 Author: R. Pacheco
 """
+from idlelib.debugger_r import DictProxy
 
 # noinspection PyPackageRequirements
 import pandas as pd
 # noinspection PyPackageRequirements
 import pyranges as pr
-from typing import Optional
-
+from typing import Optional, List, Dict
 
 # Update the mapping dictionaries to include strand information
 BLAST_TO_PYRANGES = {
@@ -294,7 +294,7 @@ def _remove_self_matches(overlap_df: pd.DataFrame, original_df: pd.DataFrame) ->
     return overlap_df[~self_match_mask].copy()
 
 
-def merge_intervals(
+def merge_overlapping_intervals(
         df: pd.DataFrame,
         chr_col: str = 'sseqid',
         start_col: str = 'sstart',
@@ -303,72 +303,47 @@ def merge_intervals(
         strand: bool = False,
 ) -> pd.DataFrame:
     """
-    Merge overlapping or adjacent genomic intervals within a DataFrame.
+    Merges overlapping intervals represented in a DataFrame and optionally considers the strand of the intervals.
 
-    This function takes a DataFrame containing genomic interval information, maps the
-    provided columns to PyRanges format, merges overlapping or adjacent intervals, and
-    returns the processed intervals using the same column names provided.
+    This function takes a pandas DataFrame containing interval data and merges overlapping intervals.
+    The user can provide custom column names for chromosome, start, end, and strand. It also supports merging
+    intervals by strand when the `strand` parameter is set to True. The result is a new DataFrame with merged intervals,
+    sorted by chromosome and start positions.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        A DataFrame containing genomic intervals to be merged. Must contain columns
-        specified by `chr_col`, `start_col`, and `end_col`.
-    chr_col : str, default="sseqid"
-        Column name representing the chromosome/sequence identifier.
-    start_col : str, default="sstart"
-        Column name representing the start coordinate.
-    end_col : str, default="send"
-        Column name representing the end coordinate.
+    df : pandas.DataFrame
+        A DataFrame containing genomic interval data. It must include columns for chromosome, start, and end coordinates.
+    chr_col : str, optional
+        Column name in `df` representing the chromosome. Default is 'sseqid'.
+    start_col : str, optional
+        Column name in `df` representing the start coordinate of intervals. Default is 'sstart'.
+    end_col : str, optional
+        Column name in `df` representing the end coordinate of intervals. Default is 'send'.
     strand_col : str, optional
-        Column name representing the strand information. Expected values are 'plus'
-        and 'minus'. Required if `strand=True`.
-    strand : bool, default=False
-        Only merge intervals on the same strand. If True, `strand_col` must be provided.
+        Column name in `df` representing the strand information. Default is 'sstrand'.
+    strand : bool, optional
+        Boolean indicating whether to merge intervals while considering strand information. If True, the function will require
+        `strand_col` to be specified and consider strand-specific merging. Default is False.
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame with merged genomic intervals, formatted back to the original
-        column names given by `chr_col`, `start_col`, and `end_col`. If strand merging
-        is enabled, the strand column is also included with original 'plus'/'minus' values.
-        If the input DataFrame is empty or no intervals can be merged, an empty DataFrame
-        with these columns is returned.
-
-    Raises
-    ------
-    KeyError
-        If any of the required columns are missing from the input DataFrame.
-    ValueError
-        If the input DataFrame cannot be converted to a PyRanges object, or if
-        `strand=True` but `strand_col` is not provided or not found in the DataFrame.
-
-    See Also
-    --------
-    get_interval_overlap : Find overlapping intervals between two DataFrames.
-    get_merge_stranded : Merge intervals while respecting strand information.
+    pandas.DataFrame
+        A DataFrame with merged intervals. The columns in the returned DataFrame correspond to the ones specified in the
+        input (`chr_col`, `start_col`, `end_col`, and if applicable `strand_col`). The intervals are merged and sorted by
+        chromosome and start coordinate.
     """
-
-    required = {chr_col, start_col, end_col}  # Needed columns to be present
-
-    # Add strand column to require if strand merging is enabled
-    if strand:
-        if strand_col is None:
-            raise ValueError("strand_col must be provided when strand=True")
-        required.add(strand_col)
-
-    missing = required - set(df.columns)  # Check which necessary columns are not present in the data frame
-    if missing:
-        raise KeyError(f"Missing required columns: {', '.join(sorted(missing))}")
-
+    # Return empty DataFrame with appropriate columns if input is empty
     if df.empty:
-        columns = [chr_col, start_col, end_col]
+        columns: List[str] = [chr_col, start_col, end_col]
         if strand and strand_col:
             columns.append(strand_col)
         return pd.DataFrame(columns=columns)
 
     # Map to PyRanges format
-    if strand and strand_col:
+    pr_input: pd.DataFrame
+    if strand:
+        # Gets PyRanges format with strand-specific column
         # Convert strand format from 'plus'/'minus' to '+'/'−'
         pr_input = df[[chr_col, start_col, end_col, strand_col]].copy()
         pr_input[strand_col] = pr_input[strand_col].map({'plus': '+', 'minus': '-'})
@@ -376,44 +351,30 @@ def merge_intervals(
             columns={chr_col: "Chromosome", start_col: "Start", end_col: "End", strand_col: "Strand"}
         )
     else:
+        # Gets PyRanges format without strand-specific column
         pr_input = df[[chr_col, start_col, end_col]].rename(
             columns={chr_col: "Chromosome", start_col: "Start", end_col: "End"}
         )
 
-    pr_df = pr.PyRanges(pr_input)
-    merged = pr_df.merge(strand=strand)
+    pr_df: pr.PyRanges = pr.PyRanges(pr_input)
+    # If strand == True, will merge stranded
+    # If strand == False, will ignore strands
+    merged: pr.PyRanges = pr_df.merge(strand=strand)
 
     # Convert back to the original column names
-    if hasattr(merged, "df"):
-        rename_map = {"Chromosome": chr_col, "Start": start_col, "End": end_col}
-        output_columns = [chr_col, start_col, end_col]
+    rename_map: Dict[str, str] = {"Chromosome": chr_col, "Start": start_col, "End": end_col}
 
-        if strand and strand_col:
-            rename_map["Strand"] = strand_col
-            output_columns.append(strand_col)
+    if strand:
+        rename_map["Strand"] = strand_col
 
-        out = merged.df.rename(columns=rename_map)[output_columns]
+    out: pd.DataFrame = merged.df.rename(columns=rename_map)
 
-        # Convert strand format back from '+'/'−' to 'plus'/'minus'
-        if strand and strand_col:
-            out[strand_col] = out[strand_col].map({'+': 'plus', '-': 'minus'})
+    # Convert strand format back from '+'/'−' to 'plus'/'minus'
+    if strand and strand_col:
+        out[strand_col] = out[strand_col].map({'+': 'plus', '-': 'minus'})
 
-        # Ensure integer type for coordinates, if possible
-        for col in (start_col, end_col):
-            if pd.api.types.is_numeric_dtype(out[col]):
-                out[col] = out[col].astype(int)
-
-        # Optional: sort for consistency
-        sort_cols = [chr_col, start_col]
-        if strand and strand_col:
-            sort_cols.append(strand_col)
-        out = out.sort_values(by=sort_cols, kind="mergesort").reset_index(drop=True)
-        return out
-    else:
-        columns = [chr_col, start_col, end_col]
-        if strand and strand_col:
-            columns.append(strand_col)
-        return pd.DataFrame(columns=columns)
+    out = out.sort_values(by=[chr_col, start_col]).reset_index(drop=True)
+    return out
 
 
 def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
@@ -463,7 +424,7 @@ def get_merge_stranded(data_input: pd.DataFrame) -> pd.DataFrame:
         if not strand_df.empty:
             # Sort and merge intervals
             strand_df = strand_df.sort_values(by=['sseqid', 'sstart'])
-            merged_df = merge_intervals(strand_df)
+            merged_df = merge_overlapping_intervals(strand_df)
             merged_df['sstrand'] = strand
             result_dfs.append(merged_df)
 
@@ -614,7 +575,7 @@ def compare_genomic_datasets(
     overlapping_data = pd.concat([main_exists_in_contrast, contrast_exists_in_main], ignore_index=True)
 
     # Merge any overlapping intervals within the combined set
-    merged_data = merge_intervals(overlapping_data)
+    merged_data = merge_overlapping_intervals(overlapping_data)
     print(f"\t\t\t\t- Merged data: {merged_data.shape[0]}")
 
     # Create the final coincidence dataset with strand information

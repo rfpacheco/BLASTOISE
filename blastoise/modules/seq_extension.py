@@ -27,7 +27,7 @@ import os
 from typing import Dict, Any, Tuple, List
 # noinspection PyPackageRequirements
 from joblib import Parallel, delayed
-from .genomic_ranges import merge_intervals, get_interval_overlap
+from .genomic_ranges import merge_overlapping_intervals, get_interval_overlap
 from .strand_location import match_data_and_remove
 from .blaster import run_blastn_alignment
 
@@ -79,7 +79,7 @@ def next_side_extension_checker(
     extended_end: int = data_input.iloc[0].send
 
     # Merge overlapping intervals in query data
-    query_merge: pd.DataFrame = merge_intervals(query_data, start_col='qstart', end_col='qend')
+    query_merge: pd.DataFrame = merge_overlapping_intervals(query_data, start_col='qstart', end_col='qend')
 
     # Get the minimun and maximun values query data gives as information
     query_left_value: int = query_merge['qstart'].min()
@@ -593,76 +593,75 @@ def sequence_extension(
     ordered_indices: List[int] = sorted(results_by_index.keys())
 
     accepted_df: pd.DataFrame = pd.DataFrame(columns=['sseqid', 'sstart', 'send', 'sstrand'])
-    chosen_map: dict[int, dict | None] = {}
 
     removed: int = 0
+    removed_idx: List[int] = []
     total: int = len(ordered_indices)
 
     for idx in ordered_indices:
-        row = data_input.loc[idx]
-        res = results_by_index[idx]
+        row: pd.Series = data_input.loc[idx]
+        res: Dict[str, Any] = results_by_index[idx]
 
-        # Determine the single final coordinates for this row (ignore history)
-        if res.get('modified') and ('sstart' in res) and ('send' in res):
-            final_sstart = int(res['sstart'])
-            final_send = int(res['send'])
+        # Determine the single final coordinates for this row
+        final_sstart: int
+        final_send: int
+        final_seq_len: int
+        final_seq: str|None
+        if res.get('modified'):
+            final_sstart = res.get('sstart')
+            final_send = res.get('send')
+            final_seq_len = res.get('len')
+            final_seq = res.get('sseq')
         else:
             # Unmodified: keep original coordinates
-            final_sstart = int(row['sstart'])
-            final_send = int(row['send'])
+            final_sstart = row.sstart
+            final_send = row.send
+            final_seq_len = row.len
+            final_seq = None
 
-        candidate = pd.DataFrame([{
-            'sseqid': row['sseqid'],
-            'sstart': final_sstart,
-            'send': final_send,
-            'sstrand': row['sstrand']
+        candidate: pd.DataFrame = pd.DataFrame([{
+            'sseqid': row.sseqid,  # type: str
+            'sstart': final_sstart,  # type: int
+            'send': final_send,  # type: int
+            'sstrand': row.sstrand,  # type: str
+            'len': final_seq_len,  # type: int
+            'sseq': final_seq  # type: str|None
         }])
 
         # If conflicts with already accepted intervals, remove B entirely
         if not accepted_df.empty and not get_interval_overlap(candidate, accepted_df).empty:
-            chosen_map[idx] = None
             removed += 1
+            removed_idx.append(idx)
             continue
 
         # Accept this candidate
         accepted_df = pd.concat([accepted_df, candidate], ignore_index=True)
-        chosen_map[idx] = {'sstart': final_sstart, 'send': final_send}
-
-    # -----------------------------------------------------------------------------
-    # STEP 4: Update DataFrame with chosen coordinates and sequences
-    # -----------------------------------------------------------------------------
-    removed_indices: list[int] = []
-    for idx in ordered_indices:
-        chosen_step = chosen_map[idx]
-        if chosen_step is None:
-            removed_indices.append(idx)
-            continue
-        row = data_input.loc[idx]
-        chosen_len = int(chosen_step['send']) - int(chosen_step['sstart']) + 1
-        # Fetch sequence for chosen step (always fetch to cover unmodified rows)
-        final_cmd = (
-            f"blastdbcmd -db {genome_fasta} "
-            f"-entry {row['sseqid']} "
-            f"-range {int(chosen_step['sstart'])}-{int(chosen_step['send'])} "
-            f"-strand {row['sstrand']} "
-            "-outfmt %s"
-        )
-        final_seq = subprocess.check_output(final_cmd, shell=True, universal_newlines=True).strip()
-
-        data_input.loc[idx, 'len'] = chosen_len
-        data_input.loc[idx, 'sstart'] = int(chosen_step['sstart'])
-        data_input.loc[idx, 'send'] = int(chosen_step['send'])
-        data_input.loc[idx, 'sseq'] = final_seq
-
-    # Drop removed sequences and reset index for cleanliness
-    if removed_indices:
-        data_input = data_input.drop(index=removed_indices).reset_index(drop=True)
+        
+    # Now, get sequence for each element that has None in `accepted_df['sseq']`
+    none_mask: pd.Series[bool] = accepted_df['sseq'].isna()
+    
+    if none_mask.any():
+        print(f"\nRetrieving sequences for {none_mask.sum()} elements with missing sequences...")
+        
+        for idx in accepted_df[none_mask].index:
+            row: pd.Series = accepted_df.loc[idx]
+            
+            # Get the sequence using blastdbcmd
+            cmd: str = (
+                f"blastdbcmd -db {genome_fasta} "
+                f"-entry {row['sseqid']} "
+                f"-range {row['sstart']}-{row['send']} "
+                f"-strand {row['sstrand']} "
+                "-outfmt %s"
+            )
+            
+            seq: str = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+            accepted_df.loc[idx, 'sseq'] = seq
 
     # Print conflict resolution summary
     print(f"\nConflict resolution summary:")
     print(f"  - Total sequences considered: {total}")
-    print(f"  - Sequences adjusted due to conflicts: 0")
     print(f"  - Sequences removed due to conflicts: {removed}")
 
     # Return the updated DataFrame with resolved sequences
-    return data_input
+    return accepted_df

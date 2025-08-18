@@ -33,7 +33,7 @@ from joblib import Parallel, delayed
 from typing import Hashable
 
 from .genomic_ranges import get_merge_stranded
-from .genomic_ranges import get_interval_overlap, merge_intervals
+from .genomic_ranges import get_interval_overlap, merge_overlapping_intervals
 from blastoise.extra.utils.csv_to_gff import csv_to_gff
 
 
@@ -217,7 +217,7 @@ def process_overlapping_data(
             all_elems_inrange['sstrand'] == all_og_inrange.iloc[0]['sstrand']
         ]
         # Merge 'all_elems_inrange_same_strand'. 'row_df' should be there as well, since it is in range as well
-        merged_elem = merge_intervals(all_elems_inrange_same_strand)
+        merged_elem = merge_overlapping_intervals(all_elems_inrange_same_strand)
 
         # Let's set false all elems in `all_elems_inrange` in the original `new_df`
         match_data_and_set_false(new_df, all_elems_inrange)

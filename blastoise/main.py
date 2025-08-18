@@ -36,7 +36,7 @@ import pandas as pd
 
 from blastoise.modules.blaster import create_blast_database, run_blastn_alignment
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
-from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap, merge_intervals, compare_genomic_datasets
+from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap, merge_overlapping_intervals, compare_genomic_datasets
 from blastoise.modules.seq_extension import sequence_extension
 from blastoise.modules.strand_location import match_data_and_remove
 
@@ -340,12 +340,6 @@ def repetitive_sider_searcher(
             new_elems_extended = new_elems_extended.drop_duplicates(subset=['sseqid', 'sstart', 'send', 'sstrand'])
             new_elems_extended.reset_index(drop=True, inplace=True)
             print(f"\t- Removed {duplicates} duplicates")
-            
-            # Merge intervals on the same strand
-            # new_elems_extended = merge_intervals(new_elems_extended, strand=True)
-            # print(f"\t- Elements after merging in the same strand: {len(new_elems_extended)}")
-            # new_elems_extended.reset_index(drop=True, inplace=True)
-
 
             # Check overlapping data of `new_elems_extended` with `data_extended`
             overlapping_info = get_overlapping_info(new_elems_extended, accumulated_data)
