@@ -316,8 +316,6 @@ def repetitive_sider_searcher(
         if new_elems.empty:
             are_there_new_elems = False
         else:
-            accumulated_data.to_csv("~/Downloads/test/" + f"IT-{iteration}-accumulated_data.csv")
-            new_elems.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-NOT_EXT.csv")
             # -------------------------------------------------------------------
             # STEP 4b: New elements found
             # -------------------------------------------------------------------
@@ -337,7 +335,6 @@ def repetitive_sider_searcher(
                 min_length=min_length,
                 n_jobs=n_jobs
             )
-            new_elems_extended.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-EXT.csv")
             # Removing duplicates
             duplicates = new_elems_extended.duplicated(subset=['sseqid', 'sstart', 'send', 'sstrand']).sum()
             new_elems_extended = new_elems_extended.drop_duplicates(subset=['sseqid', 'sstart', 'send', 'sstrand'])
@@ -368,7 +365,6 @@ def repetitive_sider_searcher(
                     overlapping_info.get("opposite_strand", [])
                 )
 
-            new_elems_extended.to_csv("~/Downloads/test/" + f"IT-{iteration}-new_elems-EXT-FILTERED.csv")
             accumulated_data = pd.concat([accumulated_data, new_elems_extended], ignore_index=True)
             accumulated_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
             accumulated_data.reset_index(drop=True, inplace=True)
