@@ -4,7 +4,6 @@ __all__ = [
     'files_manager',
     'seq_extension',
     'filters',
-    'strand_location',
     'genomic_ranges'
 ]
 
@@ -14,5 +13,4 @@ from . import aesthetics
 from . import files_manager
 from . import seq_extension
 from . import filters
-from . import strand_location
 from . import genomic_ranges

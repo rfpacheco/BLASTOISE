@@ -36,9 +36,9 @@ import pandas as pd
 
 from blastoise.modules.blaster import create_blast_database, run_blastn_alignment
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
-from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap, merge_overlapping_intervals, compare_genomic_datasets
+from blastoise.modules.genomic_ranges import get_overlapping_info, fetch_overlapping_intervals, merge_overlapping_intervals
 from blastoise.modules.seq_extension import sequence_extension
-from blastoise.modules.strand_location import match_data_and_remove
+from blastoise.modules.filters import match_data_and_remove
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -200,7 +200,7 @@ def run_initial_blast(
     # Merge results using PyRanges
     print('\t- Filtering and merging data:')
     tic = time.perf_counter()
-    merged_results = get_merge_stranded(data_input=initial_blast_results)
+    merged_results = merge_overlapping_intervals(initial_blast_results, strand=True)
     merged_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
     merged_results.reset_index(drop=True, inplace=True)
     toc = time.perf_counter()
@@ -291,14 +291,14 @@ def repetitive_sider_searcher(
 
             # Remove sequences that overlap with `accumulated_data` or `new_elems`
             ## With `data_extended`
-            rm_from_accumulated_data = get_interval_overlap(blast_results, accumulated_data)
+            rm_from_accumulated_data = fetch_overlapping_intervals(blast_results, accumulated_data)
             if not blast_results.empty and not rm_from_accumulated_data.empty:
                 blast_results = match_data_and_remove(blast_results, rm_from_accumulated_data)
                 print(f"\t- Remove overlaps with accumulated_data: {len(rm_from_accumulated_data)}")
 
             ## With `new_elems`  # TODO: I am not so sure about this one
             if not new_elems.empty:
-                rm_from_new_elems = get_interval_overlap(blast_results, new_elems)
+                rm_from_new_elems = fetch_overlapping_intervals(blast_results, new_elems)
                 if not rm_from_new_elems.empty:
                     blast_results = match_data_and_remove(blast_results, rm_from_new_elems)
 

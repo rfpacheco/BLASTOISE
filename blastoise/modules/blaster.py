@@ -24,8 +24,6 @@ import pandas as pd
 import subprocess
 import logging
 
-from .files_manager import end_always_greater_than_start
-
 
 def create_blast_database(path_input: str, path_output: str) -> None:
     """
@@ -153,7 +151,8 @@ def run_blastn_alignment(
     data['evalue'] = data['evalue'].astype(float)
 
     # Make sure 'send' > 'sstart'
-    data = end_always_greater_than_start(data)
+    mask = data['sstart'] > data['send']
+    data.loc[mask, ['sstart', 'send']] = data.loc[mask, ['send', 'sstart']].values
 
     # Create 'len' column
     data['len'] = data['send'] - data['sstart'] + 1
