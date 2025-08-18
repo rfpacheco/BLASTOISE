@@ -1,9 +1,8 @@
 __all__ = [
     'blaster',
     'aesthetics',
-    'seq_identifier',
     'files_manager',
-    'seq_extension.py',
+    'seq_extension',
     'filters',
     'strand_location',
     'genomic_ranges'
@@ -12,7 +11,6 @@ __all__ = [
 # Import all modules using relative imports
 from . import blaster
 from . import aesthetics
-from . import seq_identifier
 from . import files_manager
 from . import seq_extension
 from . import filters
