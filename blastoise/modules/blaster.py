@@ -20,22 +20,14 @@ in the target genome.
 Author: R. Pacheco
 """
 
-import os
 import pandas as pd
 import subprocess
-import time
-import shutil
 import logging
-from datetime import datetime
 
-from .aesthetics import print_message_box
-from .seq_identifier import sequence_identifier
-from .files_manager import end_always_greater_than_start, get_data_sequence
-from .genomic_ranges import get_merge_stranded
-from blastoise.extra.utils.csv_to_gff import csv_to_gff
+from .files_manager import end_always_greater_than_start
 
 
-def blastn_dic(path_input: str, path_output: str) -> None:
+def create_blast_database(path_input: str, path_output: str) -> None:
     """
     Create a BLAST-compatible nucleotide database from a FASTA file.
 
@@ -70,7 +62,7 @@ def blastn_dic(path_input: str, path_output: str) -> None:
         logging.error(f"Error: Blast Dictionary couldn't be created: {e}", exc_info=True)
 
 
-def blastn_blaster(
+def run_blastn_alignment(
         query_path: str,
         dict_path: str,
         perc_identity: float,

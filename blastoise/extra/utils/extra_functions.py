@@ -13,7 +13,7 @@ from Bio.SeqRecord import SeqRecord
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from blastoise.modules.blaster import blastn_dic
+from blastoise.modules.blaster import create_blast_database
 
 # ======================================================================
 def csv_to_fasta_creator(csv_data: pd.DataFrame, fasta_output_path: str) -> None:
@@ -252,7 +252,7 @@ def setup_directories(base_dir: str, dict_path: str, temp_dir_name: str, logger_
     blastn_db_path = os.path.join(dict_folder_path, os.path.basename(dict_path))
 
     try:
-        blastn_dic(path_input=dict_path, path_output=blastn_db_path)
+        create_blast_database(path_input=dict_path, path_output=blastn_db_path)
         logger.info(f"BLASTN database created at {blastn_db_path}")
     except Exception as e:
         logger.error(f"Error creating BLASTN database: {str(e)}")

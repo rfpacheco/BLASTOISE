@@ -102,7 +102,7 @@ def sequence_identifier(
     """
 
     # Import blastn_blaster here to avoid circular import issues
-    from blastoise.modules.blaster import blastn_blaster  # Delayed import to break the circular import
+    from blastoise.modules.blaster import run_blastn_alignment  # Delayed import to break the circular import
 
     # -----------------------------------------------------------------------------
     # STEP 1: Setup output directory for this run phase
@@ -182,7 +182,7 @@ def sequence_identifier(
 
     # Execute BLAST search using the extended sequences against the reference genome
     # This identifies all regions in the genome that match our extended sequences
-    second_blaster = blastn_blaster(
+    second_blaster = run_blastn_alignment(
         sequences_extended_fasta_path,
         genome_fasta,
         identity_1,

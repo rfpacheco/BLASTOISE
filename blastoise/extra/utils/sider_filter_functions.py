@@ -28,7 +28,7 @@ from Bio.SeqRecord import SeqRecord
 # Add the parent directory of 'blastoise' to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from blastoise.modules.blaster import blastn_dic
+from blastoise.modules.blaster import create_blast_database
 from .extra_functions import general_blastn_blaster
 
 
@@ -239,7 +239,7 @@ def process_recaught_data(
         SeqIO.write(records, fasta_file_path, "fasta")
 
         # Create BLASTN database
-        blastn_dic(path_input=fasta_file_path, path_output=blastn_db_path)
+        create_blast_database(path_input=fasta_file_path, path_output=blastn_db_path)
 
         # Run BLASTN on a recaught file
         caught_data = general_blastn_blaster(

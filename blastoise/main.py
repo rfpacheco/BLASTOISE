@@ -34,7 +34,7 @@ from typing import Tuple
 # noinspection PyPackageRequirements
 import pandas as pd
 
-from blastoise.modules.blaster import blastn_dic, blastn_blaster
+from blastoise.modules.blaster import create_blast_database, run_blastn_alignment
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
 from blastoise.modules.genomic_ranges import get_merge_stranded, get_overlapping_info, get_interval_overlap, merge_intervals, compare_genomic_datasets
 from blastoise.modules.seq_extension import sequence_extension
@@ -179,12 +179,12 @@ def run_initial_blast(
     blast_db_dir = os.path.join(output_dir, 'blast_database')
     os.makedirs(blast_db_dir, exist_ok=True)
     blast_db_path = os.path.join(blast_db_dir, os.path.basename(genome_path))
-    blastn_dic(path_input=genome_path, path_output=blast_db_path)
+    create_blast_database(path_input=genome_path, path_output=blast_db_path)
 
     # Run first BLASTn
     print_message_box(message='First BLASTn step initiated')
     tic = time.perf_counter()
-    initial_blast_results = blastn_blaster(
+    initial_blast_results = run_blastn_alignment(
         query_path=data_path,
         dict_path=blast_db_path,
         perc_identity=identity,
@@ -269,7 +269,7 @@ def repetitive_sider_searcher(
                 temp_fasta_path = temp_fasta.name
 
             # Perform the BLAST search
-            blast_results = blastn_blaster(
+            blast_results = run_blastn_alignment(
                 query_path=temp_fasta_path,
                 dict_path=genome_path,
                 perc_identity=identity,

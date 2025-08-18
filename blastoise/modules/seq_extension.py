@@ -204,7 +204,7 @@ def _process_single_row_extension(
     current_depth : int, optional
         Current recursion depth level. Used internally for tracking. Default is 0.
     """
-    from .blaster import blastn_blaster
+    from .blaster import run_blastn_alignment
 
     # -----------------------------------------------------------------------------
     # STEP 0: Extract row index and initialize result structure
@@ -335,7 +335,7 @@ def _process_single_row_extension(
 
         try:
             # Perform BLAST search with the extended sequence
-            blast_results = blastn_blaster(
+            blast_results = run_blastn_alignment(
                 query_path=temp_fasta_path,
                 dict_path=genome_fasta,
                 perc_identity=identity,
