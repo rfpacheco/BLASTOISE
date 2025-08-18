@@ -316,7 +316,9 @@ def repetitive_sider_searcher(
                 identity=identity,
                 word_size=word_size,
                 min_length=min_length,
-                n_jobs=n_jobs
+                n_jobs=n_jobs,
+                prune_enabled=True,
+                prune_against_df=accumulated_data
             )
 
             # Check overlapping data of `new_elems_extended` with `accumulated_data`

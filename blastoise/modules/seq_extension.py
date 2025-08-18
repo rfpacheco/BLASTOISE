@@ -24,7 +24,7 @@ import subprocess
 import pandas as pd
 import tempfile
 import os
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional
 # noinspection PyPackageRequirements
 from joblib import Parallel, delayed
 from .genomic_ranges import merge_overlapping_intervals, fetch_overlapping_intervals
@@ -164,6 +164,8 @@ def _process_single_row_extension(
         min_length: int = 100,
         max_recursion_depth: int = 10,
         current_depth: int = 0,
+        prune_enabled: bool = False,
+        prune_against_df: Optional[pd.DataFrame] = None,
 ) -> Dict[str, Any]:
     """
     Process a single row for sequence extension with recursive extension capability.
@@ -303,6 +305,25 @@ def _process_single_row_extension(
     # -----------------------------------------------------------------------------
     if new_subject_len < limit_len:
         # -----------------------------------------------------------------------------
+        # PRUNING: Early exit if extension overlaps accumulated data (when enabled)
+        # -----------------------------------------------------------------------------
+        if prune_enabled and prune_against_df is not None and not prune_against_df.empty:
+            candidate = pd.DataFrame([{
+                'sseqid': element.sseqid,
+                'sstart': int(lower_coor_extended),
+                'send': int(upper_coor_extended),
+                'sstrand': element.sstrand
+            }])
+            if not fetch_overlapping_intervals(candidate, prune_against_df).empty:
+                result.update({
+                    'discarded': True,
+                    'recursion_info': {
+                        'max_depth': current_depth,
+                        'status': 'pruned_due_to_overlap'
+                    }
+                })
+                return result
+        # -----------------------------------------------------------------------------
         # STEP 8: Retrieve the extended sequence using BLAST command
         # -----------------------------------------------------------------------------
         # Construct the BLAST command to extract the sequence
@@ -402,7 +423,9 @@ def _process_single_row_extension(
                         word_size=word_size,
                         min_length=min_length,
                         max_recursion_depth=max_recursion_depth,
-                        current_depth=current_depth + 1
+                        current_depth=current_depth + 1,
+                        prune_enabled=prune_enabled,
+                        prune_against_df=prune_against_df
                     )
                     
                     # Return the result from the recursive call (it already has recursion info)
@@ -494,7 +517,9 @@ def sequence_extension(
         min_length: int = 100,
         extension_direction: str = "both",
         max_recursion_depth: int = 10,  # ADD: Maximum recursion depth parameter
-        n_jobs: int = -1
+        n_jobs: int = -1,
+        prune_enabled: bool = False,
+        prune_against_df: Optional[pd.DataFrame] = None
 ) -> pd.DataFrame:
     """
     Extends sequences within a genome based on given conditions and resolves potential
@@ -541,8 +566,18 @@ def sequence_extension(
     # Each row is processed independently by the _process_single_row_extension function
     results: List[Dict] = Parallel(n_jobs=n_jobs)(
         delayed(_process_single_row_extension)(
-            row_data, genome_fasta, extend_number, limit_len, extension_direction,
-            identity, word_size, min_length, max_recursion_depth  # ADD: Pass recursion limit
+            row_data,
+            genome_fasta,
+            extend_number,
+            limit_len,
+            extension_direction,
+            identity,
+            word_size,
+            min_length,
+            max_recursion_depth,  # ADD: Pass recursion limit
+            0,
+            prune_enabled,
+            prune_against_df
         )
         for row_data in data_input.iterrows()
     )
@@ -552,6 +587,7 @@ def sequence_extension(
     # -----------------------------------------------------------------------------
     print("\n=== Extension Results ===")
     extended_count: int = 0
+    pruned_count: int = 0
     recursion_stats: Dict[int, int] = {}
     
     for result in results:
@@ -559,12 +595,17 @@ def sequence_extension(
         depth: int = recursion_info.get('max_depth', 0)
         status: str = recursion_info.get('status', 'unknown')
         
-        if result['modified']:
+        if result.get('discarded', False):
+            pruned_count += 1
+            print(f"Pruned row {result.get('index')} early ({status})")
+            continue
+        
+        if result.get('modified', False):
             extended_count += 1
             if depth == 0:
-                print(f"Extending row {result['index']} (Extension completed - no recursion made)")
+                print(f"Extending row {result.get('index')} (Extension completed - no recursion made)")
             else:
-                print(f"Extending row {result['index']} ({depth} recursive calls - {status})")
+                print(f"Extending row {result.get('index')} ({depth} recursive calls - {status})")
             
             # Track recursion statistics
             if depth not in recursion_stats:
@@ -575,7 +616,8 @@ def sequence_extension(
     print(f"\nExtension Summary:")
     print(f"  - Total sequences processed: {len(results)}")
     print(f"  - Sequences extended: {extended_count}")
-    print(f"  - Sequences not extended: {len(results) - extended_count}")
+    print(f"  - Sequences pruned early: {pruned_count}")
+    print(f"  - Sequences not extended: {len(results) - extended_count - pruned_count}")
     
     if recursion_stats:
         print(f"\nRecursion Depth Statistics:")
@@ -601,6 +643,12 @@ def sequence_extension(
     for idx in ordered_indices:
         row: pd.Series = data_input.loc[idx]
         res: Dict[str, Any] = results_by_index[idx]
+
+        # Skip pruned/discarded rows entirely
+        if res.get('discarded', False):
+            removed += 1
+            removed_idx.append(idx)
+            continue
 
         # Determine the single final coordinates for this row
         final_sstart: int
