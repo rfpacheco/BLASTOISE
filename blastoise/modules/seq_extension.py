@@ -507,6 +507,39 @@ def _process_single_row_extension(
         return result
 
 
+def _get_sequence_for_row(row_data: Tuple[int, pd.Series], genome_fasta: str) -> Tuple[int, str]:
+    """
+    Helper function to get sequence for a single row using blastdbcmd.
+
+    Parameters
+    ----------
+    row_data : Tuple[int, pd.Series]
+        Tuple containing the index and row data from the DataFrame
+    genome_fasta : str
+        Path to the genome FASTA file (BLAST database)
+
+    Returns
+    -------
+    Tuple[int, str]
+        Tuple containing the index and the retrieved sequence
+    """
+    idx: int
+    row: pd.Series
+    idx, row = row_data
+
+    # Get the sequence using blastdbcmd
+    cmd: str = (
+        f"blastdbcmd -db {genome_fasta} "
+        f"-entry {row['sseqid']} "
+        f"-range {row['sstart']}-{row['send']} "
+        f"-strand {row['sstrand']} "
+        "-outfmt %s"
+    )
+
+    seq: str = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+    return idx, seq
+
+
 def sequence_extension(
         data_input: pd.DataFrame,
         genome_fasta: str,
@@ -686,24 +719,25 @@ def sequence_extension(
         accepted_df = pd.concat([accepted_df, candidate], ignore_index=True)
         
     # Now, get sequence for each element that has None in `accepted_df['sseq']`
-    none_mask: pd.Series[bool] = accepted_df['sseq'].isna()
-    
-    if none_mask.any():
-        print(f"\nRetrieving sequences for {none_mask.sum()} elements with missing sequences using multi-processing...")
-        
-        # Get rows that need sequence retrieval
-        rows_needing_sequences: List[Tuple[int, pd.Series]]
-        rows_needing_sequences = [(idx, accepted_df.loc[idx]) for idx in accepted_df[none_mask].index]
-        
-        # Use parallel processing to retrieve sequences
-        sequence_results: List[Tuple[int, str]] = Parallel(n_jobs=n_jobs)(
-            delayed(_get_sequence_for_row)(row_data, genome_fasta)
-            for row_data in rows_needing_sequences
-        )
-        
-        # Update the DataFrame with retrieved sequences
-        for idx, seq in sequence_results:
-            accepted_df.loc[idx, 'sseq'] = seq
+    if not accepted_df.empty:
+        none_mask: pd.Series[bool] = accepted_df['sseq'].isna()
+
+        if none_mask.any():
+            print(f"\nRetrieving sequences for {none_mask.sum()} elements with missing sequences using multi-processing...")
+
+            # Get rows that need sequence retrieval
+            rows_needing_sequences: List[Tuple[int, pd.Series]]
+            rows_needing_sequences = [(idx, accepted_df.loc[idx]) for idx in accepted_df[none_mask].index]
+
+            # Use parallel processing to retrieve sequences
+            sequence_results: List[Tuple[int, str]] = Parallel(n_jobs=n_jobs)(
+                delayed(_get_sequence_for_row)(row_data, genome_fasta)
+                for row_data in rows_needing_sequences
+            )
+
+            # Update the DataFrame with retrieved sequences
+            for idx, seq in sequence_results:
+                accepted_df.loc[idx, 'sseq'] = seq
 
     # Print conflict resolution summary
     print(f"\nConflict resolution summary:")
@@ -712,36 +746,3 @@ def sequence_extension(
 
     # Return the updated DataFrame with resolved sequences
     return accepted_df
-
-
-def _get_sequence_for_row(row_data: Tuple[int, pd.Series], genome_fasta: str) -> Tuple[int, str]:
-    """
-    Helper function to get sequence for a single row using blastdbcmd.
-    
-    Parameters
-    ----------
-    row_data : Tuple[int, pd.Series]
-        Tuple containing the index and row data from the DataFrame
-    genome_fasta : str
-        Path to the genome FASTA file (BLAST database)
-    
-    Returns
-    -------
-    Tuple[int, str]
-        Tuple containing the index and the retrieved sequence
-    """
-    idx: int
-    row: pd.Series
-    idx, row = row_data
-    
-    # Get the sequence using blastdbcmd
-    cmd: str = (
-        f"blastdbcmd -db {genome_fasta} "
-        f"-entry {row['sseqid']} "
-        f"-range {row['sstart']}-{row['send']} "
-        f"-strand {row['sstrand']} "
-        "-outfmt %s"
-    )
-    
-    seq: str = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
-    return idx, seq
