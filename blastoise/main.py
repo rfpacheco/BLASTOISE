@@ -416,23 +416,110 @@ def repetitive_sider_searcher(
     # -------------------------------------------------------------------
     # STEP 4: Outside while-loop
     # -------------------------------------------------------------------
-    print("Repetitive SIDE-eR search completed.")
     return accumulated_data
 
 
-def finalize_results(output_dir: str, df: pd.DataFrame) -> None:
+def _format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Saves a DataFrame as a CSV file in the specified output directory.
+    Formats the given DataFrame to ensure it has the required columns with standardized names.
+
+    The method renames the columns of the given DataFrame to adhere to a predefined mapping, and
+    it retains only the required columns specified in the mapping. The resulting DataFrame will
+    contain the columns `chromosome`, `start`, `end`, `strand`, `len`, and `seq`. For empty or
+    `None` input DataFrame, a new empty DataFrame with the appropriate column names is returned.
 
     Parameters
     ----------
-    output_dir : str
-        The directory where the CSV file will be saved.
     df : pd.DataFrame
-        The DataFrame to be saved.
+        Input DataFrame containing sequence data. It is expected to have columns such as
+        'sseqid', 'sstart', 'send', 'sstrand', 'len', and 'sseq'.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with standardized column names and only the required columns. If the input
+        DataFrame is empty or None, an empty DataFrame with the expected column names is returned.
     """
-    output_file = os.path.join(output_dir, "blastoise_df.csv")
-    df.to_csv(output_file, index=False)
+    if df is None or df.empty:
+        return pd.DataFrame(columns=['chromosome', 'start', 'end', 'strand', 'len', 'seq'])
+
+    cols_map = {
+        'sseqid': 'chromosome',
+        'sstart': 'start',
+        'send': 'end',
+        'sstrand': 'strand',
+        'len': 'len',
+        'sseq': 'seq',
+    }
+    # Select only available required columns and rename
+    available = ['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']
+    formatted = df[available].rename(columns=cols_map).copy()
+
+    return formatted
+
+
+def _write_gff_from_formatted(df_formatted: pd.DataFrame, gff_path: str) -> None:
+    """
+    Write a GFF (9-column) file using chromosome/start/end/strand from the formatted DataFrame.
+
+    - source = 'BLASTOISE', feature = 'repeat_region', score = '.', frame = '.', attribute = 'ID=BLASTOISE_<n>'
+    - start/end are written as-is (assumed 1-based inclusive).
+    - strand is mapped from 'plus'/'minus' to '+'/'-' when applicable. Missing -> '.'
+    """
+    # Handle empty
+    if df_formatted is None or df_formatted.empty:
+        open(gff_path, "w").close()
+        return
+
+    strand_series = df_formatted.get('strand')
+    if strand_series is not None:
+        strand = strand_series.map({'plus': '+', 'minus': '-'}).fillna('.')
+    else:
+        strand = pd.Series(['.'] * len(df_formatted))
+
+    ids = [f'BLASTOISE_{i + 1}' for i in range(len(df_formatted))]
+
+    gff_df = pd.DataFrame({
+        'seqname': df_formatted['chromosome'].astype(str),
+        'source': 'BLASTOISE',
+        'feature': '.',
+        'start': pd.to_numeric(df_formatted['start'], errors='coerce').astype(int),
+        'end': pd.to_numeric(df_formatted['end'], errors='coerce').astype(int),
+        'score': '.',
+        'strand': strand,
+        'frame': '.',
+        'attribute': [f'ID={x}' for x in ids],
+    })
+
+    gff_df.to_csv(gff_path, sep='\t', index=False, header=False)
+
+
+def finalize_results(output_dir: str, df: pd.DataFrame, input_file: str, genome_file: str) -> Tuple[str, str]:
+    """
+    Save results to CSV (renamed columns) and GFF with specified filenames.
+
+    - CSV columns: chromosome, start, end, strand, len, seq.
+    - GFF derived from chromosome, start, end, strand.
+    - Filenames: BLASTOISE--{input_file}--{genome_file}.csv/.gff in output_dir.
+
+    Returns a tuple (csv_path, gff_path).
+    """
+    # Build output filenames using basenames
+    input_base = os.path.basename(input_file)
+    genome_base = os.path.basename(genome_file)
+    csv_path = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.csv")
+    gff_path = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.gff")
+
+    # Format DataFrame for CSV
+    formatted = _format_output_dataframe(df)
+
+    # Write CSV (with header)
+    formatted.to_csv(csv_path, index=False)
+
+    # Write GFF from formatted
+    _write_gff_from_formatted(formatted, gff_path)
+
+    return csv_path, gff_path
 
 
 def main() -> None:
@@ -488,7 +575,7 @@ def main() -> None:
         # Early exit if nothing to process
         if initial_data.empty:
             print_message_box("No data to process after initial BLAST/masking. Writing empty results.")
-            finalize_results(output_dir, initial_data)
+            csv_path, gff_path = finalize_results(output_dir, initial_data, args.data, args.genome)
         else:
             # 4. Run the iterative part
             final_data = repetitive_sider_searcher(
@@ -511,7 +598,7 @@ def main() -> None:
                 print(f"\t- Mask removed {pre_rows - post_rows} rows (remaining: {post_rows})")
 
             # 6. Finalize and clean up
-            finalize_results(output_dir, final_data)
+            csv_path, gff_path = finalize_results(output_dir, final_data, args.data, args.genome)
 
     except Exception as e:
         print_message_box(f"An unexpected error occurred: {e}")
@@ -521,13 +608,13 @@ def main() -> None:
     toc_main = time.perf_counter()
     end_time = datetime.now()
     formatted_end_time = end_time.strftime("%Y %B %d at %H:%M")
-    final_data_path = os.path.join(output_dir, "blastoise_df.csv")
 
     print_message_box(message="END OF THE PROGRAM")
     print(f"\t- Total execution time: {toc_main - tic_main:0.2f} seconds\n"
           f"\t- Program started: {formatted_start_time}\n"
           f"\t- Program ended: {formatted_end_time}\n"
-          f"\t- Blastoise final file saved at: {final_data_path}")
+          f"\t- CSV saved at: {csv_path if 'csv_path' in locals() else 'N/A'}\n"
+          f"\t- GFF saved at: {gff_path if 'gff_path' in locals() else 'N/A'}")
 
     # Set file permissions for the output directory
     try:
