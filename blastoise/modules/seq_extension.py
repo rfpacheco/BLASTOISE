@@ -507,6 +507,39 @@ def _process_single_row_extension(
         return result
 
 
+def _get_sequence_for_row(row_data: Tuple[int, pd.Series], genome_fasta: str) -> Tuple[int, str]:
+    """
+    Helper function to get sequence for a single row using blastdbcmd.
+
+    Parameters
+    ----------
+    row_data : Tuple[int, pd.Series]
+        Tuple containing the index and row data from the DataFrame
+    genome_fasta : str
+        Path to the genome FASTA file (BLAST database)
+
+    Returns
+    -------
+    Tuple[int, str]
+        Tuple containing the index and the retrieved sequence
+    """
+    idx: int
+    row: pd.Series
+    idx, row = row_data
+
+    # Get the sequence using blastdbcmd
+    cmd: str = (
+        f"blastdbcmd -db {genome_fasta} "
+        f"-entry {row['sseqid']} "
+        f"-range {row['sstart']}-{row['send']} "
+        f"-strand {row['sstrand']} "
+        "-outfmt %s"
+    )
+
+    seq: str = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+    return idx, seq
+
+
 def sequence_extension(
         data_input: pd.DataFrame,
         genome_fasta: str,
@@ -522,41 +555,53 @@ def sequence_extension(
         prune_against_df: Optional[pd.DataFrame] = None
 ) -> pd.DataFrame:
     """
-    Extends sequences within a genome based on given conditions and resolves potential
-    conflicts or overlaps between them.
+    Extend sequences from a DataFrame based on the genome information and various
+    parameters while managing recursion, pruning, and conflict resolution.
 
-    Processes input data by extending sequences in the specified genome, calculating
-    recursion-based extensions if applicable. It then resolves conflicts among the
-    processed sequences by maintaining priority and ensuring no overlaps, finally
-    returning an updated dataset with adjusted sequences.
+    The function applies sequence extension logic to each entry in the input DataFrame,
+    handles parallel processing for efficiency, manages sequence pruning options,
+    and resolves conflicts among overlapping sequences in the processed data.
 
     Parameters
     ----------
-    data_input : pandas.DataFrame
-        Input DataFrame having data about sequences and their coordinates.
+    data_input : pd.DataFrame
+        The input DataFrame containing sequence information for processing. Each row
+        represents a single sequence with attributes like 'sstart', 'send', 'sstrand', etc.
     genome_fasta : str
-        Path to the FASTA file of the genome against which the sequences will be extended.
+        The path to the genome FASTA file which provides the reference sequences.
     extend_number : int
-        Number of bases by which sequences should be extended.
+        Number of bases to extend on the designated direction(s) of the sequence.
     limit_len : int
-        Maximum allowed length for the extended sequences.
+        The maximum allowed length of the extended sequence.
     identity : int, optional
-        Minimum percentage identity for successfully extending a sequence, by default 60.
+        Percentage of identity required for sequence matching during extension,
+        defaults to 60.
     word_size : int, optional
-        Size of the word/block used in the sequence analysis, by default 15.
+        The size of the seed word used during sequence search or extension, defaults
+        to 15.
     min_length : int, optional
-        Minimum length a sequence must reach after extension, by default 100.
+        The minimum allowed length for filtered or extended sequences, defaults to 100.
     extension_direction : str, optional
-        Direction of extension, either 'both', 'upstream', or 'downstream', by default "both".
+        Direction of extension. Acceptable values include 'both', '5prime', or
+        '3prime', defaults to "both".
     max_recursion_depth : int, optional
-        Maximum depth of recursion for extending sequences, by default 10.
+        Maximum recursion depth allowed for sequence extension, defaults to 10.
     n_jobs : int, optional
-        Number of parallel jobs for processing inputs, by default -1.
+        Number of parallel jobs to run. Setting this to -1 uses all available
+        processors, defaults to -1.
+    prune_enabled : bool, optional
+        Flag to enable pruning, defaults to False. If True, pruning logic will be
+        applied to prevent invalid sequences from further propagation.
+    prune_against_df : pd.DataFrame, optional
+        Optional DataFrame against which the pruning logic will be performed to
+        prevent redundancies or overlaps, defaults to None.
 
     Returns
     -------
-    pandas.DataFrame
-        Updated DataFrame where sequences are extended and conflicts resolved.
+    pd.DataFrame
+        The modified DataFrame containing the extended and resolved sequences with
+        additional attributes such as 'sseq' for the sequence content. Rows may
+        be removed as part of pruning or conflict resolution.
     """
 
     # -----------------------------------------------------------------------------
@@ -686,24 +731,25 @@ def sequence_extension(
         accepted_df = pd.concat([accepted_df, candidate], ignore_index=True)
         
     # Now, get sequence for each element that has None in `accepted_df['sseq']`
-    none_mask: pd.Series[bool] = accepted_df['sseq'].isna()
-    
-    if none_mask.any():
-        print(f"\nRetrieving sequences for {none_mask.sum()} elements with missing sequences using multi-processing...")
-        
-        # Get rows that need sequence retrieval
-        rows_needing_sequences: List[Tuple[int, pd.Series]]
-        rows_needing_sequences = [(idx, accepted_df.loc[idx]) for idx in accepted_df[none_mask].index]
-        
-        # Use parallel processing to retrieve sequences
-        sequence_results: List[Tuple[int, str]] = Parallel(n_jobs=n_jobs)(
-            delayed(_get_sequence_for_row)(row_data, genome_fasta)
-            for row_data in rows_needing_sequences
-        )
-        
-        # Update the DataFrame with retrieved sequences
-        for idx, seq in sequence_results:
-            accepted_df.loc[idx, 'sseq'] = seq
+    if not accepted_df.empty:
+        none_mask: pd.Series[bool] = accepted_df['sseq'].isna()
+
+        if none_mask.any():
+            print(f"\nRetrieving sequences for {none_mask.sum()} elements with missing sequences using multi-processing...")
+
+            # Get rows that need sequence retrieval
+            rows_needing_sequences: List[Tuple[int, pd.Series]]
+            rows_needing_sequences = [(idx, accepted_df.loc[idx]) for idx in accepted_df[none_mask].index]
+
+            # Use parallel processing to retrieve sequences
+            sequence_results: List[Tuple[int, str]] = Parallel(n_jobs=n_jobs)(
+                delayed(_get_sequence_for_row)(row_data, genome_fasta)
+                for row_data in rows_needing_sequences
+            )
+
+            # Update the DataFrame with retrieved sequences
+            for idx, seq in sequence_results:
+                accepted_df.loc[idx, 'sseq'] = seq
 
     # Print conflict resolution summary
     print(f"\nConflict resolution summary:")
@@ -712,36 +758,3 @@ def sequence_extension(
 
     # Return the updated DataFrame with resolved sequences
     return accepted_df
-
-
-def _get_sequence_for_row(row_data: Tuple[int, pd.Series], genome_fasta: str) -> Tuple[int, str]:
-    """
-    Helper function to get sequence for a single row using blastdbcmd.
-    
-    Parameters
-    ----------
-    row_data : Tuple[int, pd.Series]
-        Tuple containing the index and row data from the DataFrame
-    genome_fasta : str
-        Path to the genome FASTA file (BLAST database)
-    
-    Returns
-    -------
-    Tuple[int, str]
-        Tuple containing the index and the retrieved sequence
-    """
-    idx: int
-    row: pd.Series
-    idx, row = row_data
-    
-    # Get the sequence using blastdbcmd
-    cmd: str = (
-        f"blastdbcmd -db {genome_fasta} "
-        f"-entry {row['sseqid']} "
-        f"-range {row['sstart']}-{row['send']} "
-        f"-strand {row['sstrand']} "
-        "-outfmt %s"
-    )
-    
-    seq: str = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
-    return idx, seq
