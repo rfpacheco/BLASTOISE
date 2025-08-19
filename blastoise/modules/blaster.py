@@ -3,19 +3,12 @@ BLASTOISE Module: BLAST Operations and Sequence Processing
 =========================================================
 
 This module provides core functionality for the BLASTOISE pipeline, handling BLAST database
-creation, sequence alignment, and iterative sequence discovery. It serves as the engine
-for identifying repetitive genomic elements through a series of BLAST operations and
-data processing steps.
+creation and sequence alignment. It serves as the engine for identifying repetitive genomic
+elements through a series of BLAST operations and data processing steps.
 
-The module contains three main functions:
-1. `blastn_dic`: Creates a BLAST database from genome FASTA file
-2. `blastn_blaster`: Performs BLASTn alignment and returns results as a DataFrame
-3. `repetitive_blaster`: Executes the iterative process of sequence extension, 
-   re-alignment, and comparison to discover all instances of repetitive elements
-
-These functions work together to implement the core sequence discovery algorithm
-of BLASTOISE, progressively identifying and refining the set of repetitive sequences
-in the target genome.
+Main functions:
+1. create_blast_database: Creates a BLAST database from a genome FASTA file
+2. run_blastn_alignment: Performs BLASTn alignment and returns results as a DataFrame
 
 Author: R. Pacheco
 """
@@ -29,8 +22,8 @@ def create_blast_database(path_input: str, path_output: str) -> None:
     """
     Create a BLAST-compatible nucleotide database from a FASTA file.
 
-    This function executes the NCBI 'makeblastdb' command-line utility to create a 
-    nucleotide database that can be used for subsequent BLAST searches. The database 
+    This function executes the NCBI 'makeblastdb' command-line utility to create a
+    nucleotide database that can be used for subsequent BLAST searches. The database
     is configured to preserve sequence IDs for proper reference in search results.
 
     Parameters
@@ -38,26 +31,33 @@ def create_blast_database(path_input: str, path_output: str) -> None:
     path_input : str
         Path to the input FASTA file to be used for building the BLAST database.
     path_output : str
-        Path where the database files will be stored.
+        Path where the database files will be stored (prefix for BLAST DB files).
 
     Raises
     ------
-    Exception
-        If the BLAST database creation fails, the error is logged but not raised.
+    RuntimeError
+        If the BLAST database creation fails.
 
     Notes
     -----
-    The function suppresses standard output and error streams from the makeblastdb
-    command to avoid cluttering the console. Errors are captured and logged using
-    the logging module.
+    - Standard output and error from makeblastdb are suppressed to keep the console clean.
+    - This function uses a non-shell invocation to avoid shell quoting issues and sets
+      check=True to surface failures.
     """
-    
+
+    # "-parse_seqids" preserves the original sequence IDs in the database.
+    cmd = [
+        "makeblastdb",
+        "-in", path_input,
+        "-dbtype", "nucl",
+        "-parse_seqids",
+        "-out", path_output,
+    ]
     try:
-        # "parse_seqids" is used to keep the sequence ID in the output.
-        cmd = f"makeblastdb -in {path_input} -dbtype nucl -parse_seqids -out {path_output}"
-        subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception as e:
-        logging.error(f"Error: Blast Dictionary couldn't be created: {e}", exc_info=True)
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError as e:
+        logging.error("makeblastdb failed to create BLAST database.")
+        raise RuntimeError(f"Failed to create BLAST database for '{path_input}' at '{path_output}'.") from e
 
 
 def run_blastn_alignment(
@@ -86,7 +86,7 @@ def run_blastn_alignment(
     query_path : str
         Path to the FASTA file containing query nucleotide sequences.
     dict_path : str
-        Path to the pre-built BLAST database (created with blastn_dic).
+        Path to the pre-built BLAST database (created with create_blast_database).
     perc_identity : float
         a Minimum percentage identity threshold for reporting matches (0-100).
     word_size : int, optional
@@ -94,7 +94,7 @@ def run_blastn_alignment(
         Default is 15.
     query_coor : bool, optional
         Whether to include query coordinates (qstart and qend) in the output.
-        Default is True.
+        Default is False.
 
     Returns
     -------

@@ -1,5 +1,23 @@
-import pandas as pd
+"""
+BLASTOISE Module: Data Filtering and Matching Operations
+======================================================
 
+This module provides functions for performing operations on genomic data stored
+in pandas DataFrames. The primary focus is on matching and filtering rows based
+on shared genomic coordinate information across DataFrames.
+
+The module contains two main functions:
+1. `match_data`: Finds matching rows between DataFrames based on genomic coordinates
+2. `match_data_and_remove`: Removes rows from a DataFrame that match coordinates in another
+
+These functions enable efficient handling of genomic data by comparing coordinates 
+(sseqid, sstart, send, sstrand) between DataFrames to either identify matching 
+regions or filter out unwanted entries based on coordinate matches.
+
+Author: R. Pacheco
+"""
+
+import pandas as pd
 
 def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFrame:
     """

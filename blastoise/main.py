@@ -30,7 +30,7 @@ import time
 import subprocess
 import tempfile
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Optional
 # noinspection PyPackageRequirements
 import pandas as pd
 
@@ -210,6 +210,50 @@ def run_initial_blast(
     return merged_results, blast_db_path
 
 
+def load_mask(mask_path: str) -> pd.DataFrame:
+    """
+    Load and normalize a mask CSV so it has columns: 'sseqid', 'sstart', 'send'.
+
+    The CSV may provide either BLAST-like columns (sseqid,sstart,send[,sstrand]) or
+    PyRanges-like columns (Chromosome,Start,End[,Strand]). Strand is optional and ignored
+    for masking purposes.
+    """
+    mask_df = pd.read_csv(os.path.expanduser(mask_path))
+    if mask_df.empty:
+        return mask_df
+
+    cols = set(mask_df.columns)
+    if {'sseqid', 'sstart', 'send'}.issubset(cols):
+        normalized = mask_df.copy()
+    elif {'Chromosome', 'Start', 'End'}.issubset(cols):
+        normalized = mask_df.rename(columns={
+            'Chromosome': 'sseqid',
+            'Start': 'sstart',
+            'End': 'send'
+        }).copy()
+    else:
+        required = "{sseqid,sstart,send} or {Chromosome,Start,End}"
+        raise ValueError(f"Mask file missing required columns. Expected {required}, got {sorted(cols)}")
+
+    # Keep only the necessary columns and enforce integer coordinate types
+    normalized = normalized[['sseqid', 'sstart', 'send']].copy()
+    for col in ('sstart', 'send'):
+        normalized[col] = normalized[col].astype(int)
+    return normalized
+
+
+def apply_mask(df: pd.DataFrame, mask_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove rows from df that overlap any interval in mask_df.
+    """
+    if df.empty or mask_df.empty:
+        return df
+    overlaps = fetch_overlapping_intervals(df, mask_df)
+    if overlaps.empty:
+        return df
+    return match_data_and_remove(df, overlaps)
+
+
 def repetitive_sider_searcher(
         data_input: pd.DataFrame,
         genome_path: str,
@@ -220,6 +264,33 @@ def repetitive_sider_searcher(
         limit_len: int,
         n_jobs: int
 ) -> pd.DataFrame:
+    """
+    Iteratively discover repetitive elements by extending sequences and re-BLASTing.
+
+    Parameters
+    ----------
+    data_input : pd.DataFrame
+        Seed intervals to start the search. Requires columns: 'sseqid', 'sstart', 'send', 'sstrand'.
+    genome_path : str
+        Path to the BLAST database (created from the reference genome).
+    extend_number : int
+        Number of nucleotides to extend at each step.
+    word_size : int
+        BLASTn word size.
+    identity : int
+        BLASTn identity filter (0-100).
+    min_length : int
+        Minimum length to retain alignments.
+    limit_len : int
+        Length threshold to stop extending.
+    n_jobs : int
+        Parallelism level for sequence extension.
+
+    Returns
+    -------
+    pd.DataFrame
+        All discovered elements after iterative extension and de-duplication.
+    """
 
     # Extend data using the recursive method
     # -------------------------------------------------------------------
@@ -251,25 +322,27 @@ def repetitive_sider_searcher(
             # -------------------------------------------------------------------
             # STEP 2.1: Perform the BLASTn to find new elements
             # -------------------------------------------------------------------
-            # Create a temporary FAST file with the sequence
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_fasta:
-                seq_stripped = row.sseq.replace('-', '')  # Remove hyphens
-                temp_fasta.write(f">{i}_{row.sseqid}_{row.sstart}_{row.send}\n{seq_stripped}\n")
-                temp_fasta_path = temp_fasta.name
+            # Create a temporary FASTA file with the sequence and ensure cleanup
+            temp_fasta_path = None
+            try:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_fasta:
+                    seq_stripped = row.sseq.replace('-', '')  # Remove hyphens
+                    temp_fasta.write(f">{i}_{row.sseqid}_{row.sstart}_{row.send}\n{seq_stripped}\n")
+                    temp_fasta_path = temp_fasta.name
 
-            # Perform the BLAST search
-            blast_results = run_blastn_alignment(
-                query_path=temp_fasta_path,
-                dict_path=genome_path,
-                perc_identity=identity,
-                word_size=word_size
-            )
-            if not blast_results.empty:
-                blast_results = blast_results[['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']]
-            blast_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
-
-            # Unlink tmp file
-            os.unlink(temp_fasta_path)
+                # Perform the BLAST search
+                blast_results = run_blastn_alignment(
+                    query_path=temp_fasta_path,
+                    dict_path=genome_path,
+                    perc_identity=identity,
+                    word_size=word_size
+                )
+                if not blast_results.empty:
+                    blast_results = blast_results[['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']]
+                blast_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
+            finally:
+                if temp_fasta_path and os.path.exists(temp_fasta_path):
+                    os.unlink(temp_fasta_path)
 
             # -------------------------------------------------------------------
             # STEP 2.2: Filter the data
@@ -400,20 +473,45 @@ def main() -> None:
             word_size=args.word_size
         )
 
-        # 4. Run the iterative part
-        final_data = repetitive_sider_searcher(
-            data_input=initial_data,
-            genome_path=blast_db_path,
-            extend_number=args.extend,
-            word_size=args.word_size,
-            identity=args.identity,
-            min_length=args.min_length,
-            limit_len=args.limit,
-            n_jobs=args.jobs,
-        )
+        # 3. Optionally apply mask to initial results
+        if args.mask:
+            print_message_box("Applying mask to initial results")
+            try:
+                mask_df = load_mask(args.mask)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load mask file '{args.mask}': {e}")
+            pre_rows = len(initial_data)
+            initial_data = apply_mask(initial_data, mask_df)
+            post_rows = len(initial_data)
+            print(f"\t- Mask removed {pre_rows - post_rows} rows (remaining: {post_rows})")
 
-        # 5. Finalize and clean up
-        finalize_results(output_dir, final_data)
+        # Early exit if nothing to process
+        if initial_data.empty:
+            print_message_box("No data to process after initial BLAST/masking. Writing empty results.")
+            finalize_results(output_dir, initial_data)
+        else:
+            # 4. Run the iterative part
+            final_data = repetitive_sider_searcher(
+                data_input=initial_data,
+                genome_path=blast_db_path,
+                extend_number=args.extend,
+                word_size=args.word_size,
+                identity=args.identity,
+                min_length=args.min_length,
+                limit_len=args.limit,
+                n_jobs=args.jobs,
+            )
+
+            # 5. Optionally apply mask to final results
+            if args.mask:
+                print_message_box("Applying mask to final results")
+                pre_rows = len(final_data)
+                final_data = apply_mask(final_data, mask_df)
+                post_rows = len(final_data)
+                print(f"\t- Mask removed {pre_rows - post_rows} rows (remaining: {post_rows})")
+
+            # 6. Finalize and clean up
+            finalize_results(output_dir, final_data)
 
     except Exception as e:
         print_message_box(f"An unexpected error occurred: {e}")

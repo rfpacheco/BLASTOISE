@@ -9,20 +9,21 @@ datasets.
 
 The module contains several key functions:
 1. Format conversion functions (`to_pyranges_format`, `from_pyranges_format`) for
-   translating between BLAST and PyRanges coordinate systems
-2. Interval operation functions (`get_interval_overlap`, `merge_intervals`) for
-   finding overlapping regions and merging adjacent intervals
-3. Strand-specific processing functions (`get_merge_stranded`) for handling genomic
-   data with strand orientation
-4. Dataset comparison functions (`compare_genomic_datasets`) for identifying shared
-   and unique regions between genomic datasets
+   translating between BLAST and PyRanges coordinate systems 
+2. Interval operation functions (`fetch_overlapping_intervals`, `merge_overlapping_intervals`) 
+   for finding overlapping regions and merging adjacent intervals
+3. Support for strand-specific and strand-agnostic interval operations
+4. Automatic handling of strand notation conversion between BLAST (+/-) and PyRanges 
+   (plus/minus) formats
 
-These functions work together to provide a comprehensive toolkit for genomic interval
-manipulation, which is essential for the identification and analysis of repetitive
-elements in genomic data.
+These functions work together to provide robust genomic interval manipulation capabilities
+that are essential for identifying and analyzing repetitive elements and other genomic 
+features in sequence data.
 
 Author: R. Pacheco
 """
+
+
 import pandas as pd
 import pyranges as pr
 from typing import Optional, List, Dict
