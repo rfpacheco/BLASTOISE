@@ -24,12 +24,15 @@ import subprocess
 import pandas as pd
 import tempfile
 import os
+import logging
 from typing import Dict, Any, Tuple, List, Optional
 # noinspection PyPackageRequirements
 from joblib import Parallel, delayed
 from .genomic_ranges import merge_overlapping_intervals, fetch_overlapping_intervals
 from .filters import match_data_and_remove
 from .blaster import run_blastn_alignment
+
+logger = logging.getLogger(__name__)
 
 
 def next_side_extension_checker(
@@ -604,6 +607,12 @@ def sequence_extension(
         be removed as part of pruning or conflict resolution.
     """
 
+    logger.info(
+        f"sequence_extension start: rows={len(data_input)}, extend={extend_number}, "
+        f"limit={limit_len}, identity={identity}, word_size={word_size}, "
+        f"min_len={min_length}, n_jobs={n_jobs}, prune={prune_enabled}"
+    )
+
     # -----------------------------------------------------------------------------
     # STEP 1: Process all rows in parallel using joblib
     # -----------------------------------------------------------------------------
@@ -663,6 +672,7 @@ def sequence_extension(
     print(f"  - Sequences extended: {extended_count}")
     print(f"  - Sequences pruned early: {pruned_count}")
     print(f"  - Sequences not extended: {len(results) - extended_count - pruned_count}")
+    logger.info("Extension summary: total=%d, extended=%d, pruned=%d, not_extended=%d", len(results), extended_count, pruned_count, len(results) - extended_count - pruned_count)
     
     if recursion_stats:
         print(f"\nRecursion Depth Statistics:")
@@ -736,6 +746,7 @@ def sequence_extension(
 
         if none_mask.any():
             print(f"\nRetrieving sequences for {none_mask.sum()} elements with missing sequences using multi-processing...")
+            logger.info("Retrieving sequences for %d elements with missing sequences", int(none_mask.sum()))
 
             # Get rows that need sequence retrieval
             rows_needing_sequences: List[Tuple[int, pd.Series]]
@@ -755,6 +766,7 @@ def sequence_extension(
     print(f"\nConflict resolution summary:")
     print(f"  - Total sequences considered: {total}")
     print(f"  - Sequences removed due to conflicts: {removed}")
+    logger.info("Conflict resolution: total=%d, removed=%d, accepted=%d", total, removed, total - removed)
 
     # Return the updated DataFrame with resolved sequences
     return accepted_df

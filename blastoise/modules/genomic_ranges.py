@@ -25,7 +25,10 @@ Author: R. Pacheco
 
 import pandas as pd
 import pyranges as pr
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 # Update the mapping dictionaries to include strand information
@@ -162,6 +165,7 @@ def fetch_overlapping_intervals(df: pd.DataFrame, interval_df: pd.DataFrame, inv
     """
 
     # Convert dataframes to PyRanges format
+    logger.debug("fetch_overlapping_intervals: df_rows=%d, interval_rows=%d, invert=%s", len(df), len(interval_df), invert)
     pr_df: pr.PyRanges = pr.PyRanges(to_pyranges_format(df))
     pr_intervals: pr.PyRanges = pr.PyRanges(to_pyranges_format(interval_df))
 
@@ -171,6 +175,7 @@ def fetch_overlapping_intervals(df: pd.DataFrame, interval_df: pd.DataFrame, inv
     # Get returning data frame
     out: pd.DataFrame = result_pr.df
     out = from_pyranges_format(out)
+    logger.debug("fetch_overlapping_intervals: result_rows=%d", len(out))
     return out
 
 
@@ -218,6 +223,7 @@ def merge_overlapping_intervals(
         columns: List[str] = [chr_col, start_col, end_col]
         if strand and strand_col:
             columns.append(strand_col)
+        logger.debug("merge_overlapping_intervals: empty input, strand=%s", strand)
         return pd.DataFrame(columns=columns)
 
     # Map to PyRanges format
@@ -254,4 +260,5 @@ def merge_overlapping_intervals(
         out[strand_col] = out[strand_col].map({'+': 'plus', '-': 'minus'})
 
     out = out.sort_values(by=[chr_col, start_col]).reset_index(drop=True)
+    logger.debug("merge_overlapping_intervals: input_rows=%d, result_rows=%d, strand=%s", len(df), len(out), strand)
     return out

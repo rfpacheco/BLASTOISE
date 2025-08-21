@@ -31,8 +31,10 @@ import subprocess
 import tempfile
 from datetime import datetime
 from typing import Tuple
-# noinspection PyPackageRequirements
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)  # Create logger instance for the current file
 
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
 from blastoise.modules.blaster import create_blast_database, run_blastn_alignment
@@ -120,7 +122,7 @@ def setup_workspace(
     """
     # Create the main output directory
     os.makedirs(output_dir, exist_ok=True)
-    print(f"{'.'*20} Output folder created at: {output_dir}")
+    print(f"- Output folder created at: {output_dir}")
 
     # Create a subdirectory for original data and copy files
     original_data_dir: str = os.path.join(output_dir, 'original_data')
@@ -450,11 +452,20 @@ def main() -> None:
     results paths for CSV and GFF files. Proper file permissions are attempted for the output directory at
     the end of the program.
     """
+    # Configure root logger to avoid console output; only attach file handler later
+    root_logger: logging.Logger = logging.getLogger()
+    # Remove any pre-existing handlers (e.g., from environments that pre-configure logging)
+    root_logger.handlers.clear()
+    root_logger.setLevel(logging.INFO)
+    # Add a NullHandler to suppress lastResort console output until file handler is attached
+    if not any(isinstance(h, logging.NullHandler) for h in root_logger.handlers):
+        root_logger.addHandler(logging.NullHandler())
+
     args: argparse.Namespace = parse_arguments()
     start_time: datetime = datetime.now()
     tic_main: float = time.perf_counter()
     formatted_start_time: str = start_time.strftime('%Y %B %d at %H:%M')
-    print(f"{'.'*20} Program started: {formatted_start_time}")
+    print(f"- Program started: {formatted_start_time}")
 
     try:
         # 1. Setup workspace and copy input files
@@ -463,6 +474,34 @@ def main() -> None:
             output_dir=os.path.expanduser(args.output),
             data_file=os.path.expanduser(args.data),
             genome_file=os.path.expanduser(args.genome)
+        )
+        # Add a file handler to log to the output directory
+        try:
+            log_file_path: str = os.path.join(output_dir, 'blastoise.log')
+            file_handler: logging.FileHandler = logging.FileHandler(log_file_path)
+            file_handler.setLevel(logging.INFO)
+            file_handler.setFormatter(
+                logging.Formatter('%(asctime)s [%(levelname)s] %(name)s:%(funcName)s:%(lineno)d: %(message)s')
+            )
+            root_logger: logging.Logger = logging.getLogger()
+            # Check for existing FileHandler with same base filename
+            has_file_handler: bool = any(
+                isinstance(h, logging.FileHandler) and
+                getattr(h, 'baseFilename', None) == file_handler.baseFilename
+                for h in root_logger.handlers
+            )
+
+            # Add handler if not already present
+            if not has_file_handler:
+                root_logger.addHandler(file_handler)
+            logger.info("Logging to file: %s", log_file_path)
+            # Now that the file handler is attached, record the start message to the log file
+            logger.info("Program started: %s", formatted_start_time)
+        except Exception as log_e:
+            logger.warning("Failed to attach file handler for logging: %s", log_e)
+
+        logger.info(
+            "Workspace ready:\n\tData: %s\n\tGenome: %s\n\tOutput Path: %s", data_path, genome_path, output_dir
         )
 
         # 2. Run initial BLAST and process results
@@ -474,11 +513,13 @@ def main() -> None:
             identity=args.identity,
             word_size=args.word_size
         )
+        logger.info(f"Initial BLAST completed. \n\tRows: {len(initial_data)} \n\tDB: {blast_db_path}")
 
         # Early exit if nothing to process
         csv_path: str; gff_path: str
         if initial_data.empty:
-            print_message_box("No data to process after initial BLAST/masking. Writing empty results.")
+            print_message_box("No data to process after initial BLAST. Writing empty results.")
+            logger.info("No data after initial BLAST. Writing empty results.")
             csv_path, gff_path = finalize_results(output_dir, initial_data, args.data, args.genome)
         else:
             # 3. Run the iterative part
@@ -495,8 +536,10 @@ def main() -> None:
 
             # 4. Finalize and clean up
             csv_path, gff_path = finalize_results(output_dir, final_data, args.data, args.genome)
+            logger.info(f"Final results written. \n\tCSV: {csv_path} \n\tGFF: {gff_path}")
 
     except Exception as e:
+        logger.exception("Unhandled exception during execution")
         print_message_box(f"An unexpected error occurred: {e}")
         exit(1)
 
@@ -512,10 +555,13 @@ def main() -> None:
           f"\t- CSV saved at: {csv_path if 'csv_path' in locals() else 'N/A'}\n"
           f"\t- GFF saved at: {gff_path if 'gff_path' in locals() else 'N/A'}")
 
+    logger.info(f"Program finished. \n\tDuration: {toc_main - tic_main:.2f} seconds | \n\tEnd: {formatted_end_time}")
+
     # Set file permissions for the output directory
     try:
         subprocess.run(["chmod", "-R", "a+w", output_dir], check=True)
     except subprocess.CalledProcessError as e:
+        logger.warning(f"Could not set final permissions on {output_dir}: {e}")
         print(f"Warning: Could not set final permissions on {output_dir}. Error: {e}")
 
 

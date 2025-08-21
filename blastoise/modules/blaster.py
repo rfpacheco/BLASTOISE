@@ -18,6 +18,8 @@ import subprocess
 import logging
 from typing import List
 
+logger = logging.getLogger(__name__)
+
 
 def create_blast_database(path_input: str, path_output: str) -> None:
     """
@@ -55,9 +57,11 @@ def create_blast_database(path_input: str, path_output: str) -> None:
         "-out", path_output,
     ]
     try:
+        logger.info(f"Creating BLAST database: \n\tinput: {path_input} \n\toutput: {path_output}")
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logger.info(f"BLAST database created successfully: {path_output}")
     except subprocess.CalledProcessError as e:
-        logging.error("makeblastdb failed to create BLAST database.")
+        logger.exception(f"makeblastdb failed to create BLAST database: \n\tinput={path_input} \n\toutput={path_output}")
         raise RuntimeError(f"Failed to create BLAST database for '{path_input}' at '{path_output}'.") from e
 
 
@@ -141,11 +145,18 @@ def run_blastn_alignment(
         f"-outfmt {outfmt}"
     )
 
-    data: str = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    logger.debug(f"Running BLASTn: {cmd}")
+    try:
+        data: str = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    except subprocess.CalledProcessError as e:
+        logger.exception(f"blastn failed for query={query_path} db={dict_path}")
+        raise
     if not data:
+        logger.info("BLASTn returned no hits for query=%s", query_path)
         return pd.DataFrame(columns=columns)
     data_df: pd.DataFrame = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
     data_df.columns = columns
+    logger.info(f"BLASTn hits: {len(data_df)} for query={query_path}")
 
     # Convert coordinate columns to int type 
     data_df[numeric_columns] = data_df[numeric_columns].astype(int)

@@ -18,6 +18,9 @@ Author: R. Pacheco
 """
 
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFrame:
@@ -57,6 +60,7 @@ def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFra
         how='inner'
     )
 
+    logger.debug("match_data: input_rows=%d, to_discard_rows=%d, matches=%d", len(data_input), len(to_discard), len(matches))
     return matches
 
 
@@ -98,6 +102,7 @@ def match_data_and_remove(data_input: pd.DataFrame, to_discard: pd.DataFrame) ->
         )
     ].copy()
 
+    logger.debug("match_data_and_remove: input_rows=%d, removed=%d, remaining=%d", len(matches) + len(data_input), len(matches), len(data_input))
     return data_input
 
 

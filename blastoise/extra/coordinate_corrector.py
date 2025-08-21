@@ -27,11 +27,12 @@ from .utils.coordinate_corrector_functions import (
 )
 
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configure logging without console output
+root_logger = logging.getLogger()
+root_logger.handlers.clear()
+root_logger.setLevel(logging.INFO)
+if not any(isinstance(h, logging.NullHandler) for h in root_logger.handlers):
+    root_logger.addHandler(logging.NullHandler())
 logger = logging.getLogger('coordinate_corrector')
 
 

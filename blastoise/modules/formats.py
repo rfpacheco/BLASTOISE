@@ -14,7 +14,10 @@ Author: R. Pacheco
 """
 
 import pandas as pd
+import logging
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 def format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -37,6 +40,7 @@ def format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     """
     if df is None or df.empty:
+        logger.info("format_output_dataframe: empty input, returning predefined columns")
         return pd.DataFrame(columns=['chromosome', 'start', 'end', 'strand', 'len', 'seq'])
 
     cols_map: Dict[str, str] = {
@@ -50,6 +54,7 @@ def format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Select only available required columns and rename
     available: List[str] = ['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']
     formatted: pd.DataFrame = df[available].rename(columns=cols_map).copy()
+    logger.info("format_output_dataframe: formatted %d records", len(formatted))
 
     return formatted
 
@@ -102,3 +107,4 @@ def write_gff_from_formatted(df_formatted: pd.DataFrame, gff_path: str) -> None:
     })
 
     gff_df.to_csv(gff_path, sep='\t', index=False, header=False)
+    logger.info("write_gff_from_formatted: wrote %d features to %s", len(gff_df), gff_path)
