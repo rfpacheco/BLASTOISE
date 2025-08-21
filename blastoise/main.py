@@ -30,15 +30,16 @@ import time
 import subprocess
 import tempfile
 from datetime import datetime
-from typing import Tuple, Optional
+from typing import Tuple
 # noinspection PyPackageRequirements
 import pandas as pd
 
-from blastoise.modules.blaster import create_blast_database, run_blastn_alignment
 from blastoise.modules.aesthetics import print_message_box, blastoise_art
+from blastoise.modules.blaster import create_blast_database, run_blastn_alignment
+from blastoise.modules.filters import match_data_and_remove
+from blastoise.modules.formats import format_output_dataframe, write_gff_from_formatted
 from blastoise.modules.genomic_ranges import fetch_overlapping_intervals, merge_overlapping_intervals
 from blastoise.modules.seq_extension import sequence_extension
-from blastoise.modules.filters import match_data_and_remove
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -77,8 +78,6 @@ def parse_arguments() -> argparse.Namespace:
                         help='Number of nucleotides for sequence extension.')
     parser.add_argument('-lim', '--limit', type=int, default=1000, 
                         help='Length limit to trigger sequence extension.')
-    parser.add_argument('-m', '--mask', type=str, required=False, 
-                        help='Path to an optional mask file (CSV format).')
     parser.add_argument('-j', '--jobs', type=int, default=-1, 
                         help='Number of jobs for parallel processing. -1 means using all processors.')
 
@@ -210,50 +209,6 @@ def run_initial_blast(
     return merged_results, blast_db_path
 
 
-def load_mask(mask_path: str) -> pd.DataFrame:
-    """
-    Load and normalize a mask CSV so it has columns: 'sseqid', 'sstart', 'send'.
-
-    The CSV may provide either BLAST-like columns (sseqid,sstart,send[,sstrand]) or
-    PyRanges-like columns (Chromosome,Start,End[,Strand]). Strand is optional and ignored
-    for masking purposes.
-    """
-    mask_df = pd.read_csv(os.path.expanduser(mask_path))
-    if mask_df.empty:
-        return mask_df
-
-    cols = set(mask_df.columns)
-    if {'sseqid', 'sstart', 'send'}.issubset(cols):
-        normalized = mask_df.copy()
-    elif {'Chromosome', 'Start', 'End'}.issubset(cols):
-        normalized = mask_df.rename(columns={
-            'Chromosome': 'sseqid',
-            'Start': 'sstart',
-            'End': 'send'
-        }).copy()
-    else:
-        required = "{sseqid,sstart,send} or {Chromosome,Start,End}"
-        raise ValueError(f"Mask file missing required columns. Expected {required}, got {sorted(cols)}")
-
-    # Keep only the necessary columns and enforce integer coordinate types
-    normalized = normalized[['sseqid', 'sstart', 'send']].copy()
-    for col in ('sstart', 'send'):
-        normalized[col] = normalized[col].astype(int)
-    return normalized
-
-
-def apply_mask(df: pd.DataFrame, mask_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Remove rows from df that overlap any interval in mask_df.
-    """
-    if df.empty or mask_df.empty:
-        return df
-    overlaps = fetch_overlapping_intervals(df, mask_df)
-    if overlaps.empty:
-        return df
-    return match_data_and_remove(df, overlaps)
-
-
 def repetitive_sider_searcher(
         data_input: pd.DataFrame,
         genome_path: str,
@@ -265,31 +220,37 @@ def repetitive_sider_searcher(
         n_jobs: int
 ) -> pd.DataFrame:
     """
-    Iteratively discover repetitive elements by extending sequences and re-BLASTing.
+    Finds and extends repetitive sider regions from a genomic dataset iteratively.
+
+    This function leverages BLAST alignment and recursive extension to identify and iteratively extend repetitive sider
+    regions within a given genomic dataset. The process involves extending sequences, performing BLASTn-based searches
+    to find new regions of interest, and filtering overlapping sequences to accumulate a final set of unique, extended
+    repetitive sider regions.
 
     Parameters
     ----------
     data_input : pd.DataFrame
-        Seed intervals to start the search. Requires columns: 'sseqid', 'sstart', 'send', 'sstrand'.
+        Initial DataFrame containing sequences to start the extension and search process.
     genome_path : str
-        Path to the BLAST database (created from the reference genome).
+        Path to the reference genome in FASTA format used for sequence extension and BLASTn alignment.
     extend_number : int
-        Number of nucleotides to extend at each step.
+        The number of base pairs to extend during each recursive step.
     word_size : int
-        BLASTn word size.
+        The BLASTn parameter indicating seed word size for alignment.
     identity : int
-        BLASTn identity filter (0-100).
+        Minimum percentage identity required for BLAST alignment matches.
     min_length : int
-        Minimum length to retain alignments.
+        Minimum length of sequence matches to retain after filtering.
     limit_len : int
-        Length threshold to stop extending.
+        Maximum allowable length for extended sequences during processing.
     n_jobs : int
-        Parallelism level for sequence extension.
+        Number of parallel jobs/threads to use for computational steps such as BLAST alignment.
 
     Returns
     -------
     pd.DataFrame
-        All discovered elements after iterative extension and de-duplication.
+        DataFrame containing the final, accumulated set of extended repetitive sider regions, with overlaps resolved
+        and filtered sequences meeting the defined criteria.
     """
 
     # Extend data using the recursive method
@@ -419,90 +380,35 @@ def repetitive_sider_searcher(
     return accumulated_data
 
 
-def _format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def finalize_results(output_dir: str, df: pd.DataFrame, input_file: str, genome_file: str) -> Tuple[str, str]:
     """
-    Formats the given DataFrame to ensure it has the required columns with standardized names.
+    Finalize and save the analysis results to specific file formats.
 
-    The method renames the columns of the given DataFrame to adhere to a predefined mapping, and
-    it retains only the required columns specified in the mapping. The resulting DataFrame will
-    contain the columns `chromosome`, `start`, `end`, `strand`, `len`, and `seq`. For empty or
-    `None` input DataFrame, a new empty DataFrame with the appropriate column names is returned.
+    This function finalizes the analysis results by formatting the supplied
+    DataFrame and writing it to both CSV and GFF file formats. The output
+    filenames are determined using the given input and genome filenames, with
+    the target directory specified as `output_dir`. The formatted results are
+    written to these files, and their file paths are returned for further
+    processing or validation.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Input DataFrame containing sequence data. It is expected to have columns such as
-        'sseqid', 'sstart', 'send', 'sstrand', 'len', and 'sseq'.
+    output_dir : str
+        The directory where the results will be saved.
+    df : pandas.DataFrame
+        The DataFrame containing the analysis results to be formatted and saved.
+    input_file : str
+        The file path of the input dataset used in the analysis.
+    genome_file : str
+        The file path of the genome data used in the analysis.
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame with standardized column names and only the required columns. If the input
-        DataFrame is empty or None, an empty DataFrame with the expected column names is returned.
-    """
-    if df is None or df.empty:
-        return pd.DataFrame(columns=['chromosome', 'start', 'end', 'strand', 'len', 'seq'])
+    Tuple[str, str]
+        A tuple containing the file paths of the saved CSV and GFF files. The
+        first element is the path to the CSV file, and the second element is the
+        path to the GFF file.
 
-    cols_map = {
-        'sseqid': 'chromosome',
-        'sstart': 'start',
-        'send': 'end',
-        'sstrand': 'strand',
-        'len': 'len',
-        'sseq': 'seq',
-    }
-    # Select only available required columns and rename
-    available = ['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']
-    formatted = df[available].rename(columns=cols_map).copy()
-
-    return formatted
-
-
-def _write_gff_from_formatted(df_formatted: pd.DataFrame, gff_path: str) -> None:
-    """
-    Write a GFF (9-column) file using chromosome/start/end/strand from the formatted DataFrame.
-
-    - source = 'BLASTOISE', feature = 'repeat_region', score = '.', frame = '.', attribute = 'ID=BLASTOISE_<n>'
-    - start/end are written as-is (assumed 1-based inclusive).
-    - strand is mapped from 'plus'/'minus' to '+'/'-' when applicable. Missing -> '.'
-    """
-    # Handle empty
-    if df_formatted is None or df_formatted.empty:
-        open(gff_path, "w").close()
-        return
-
-    strand_series = df_formatted.get('strand')
-    if strand_series is not None:
-        strand = strand_series.map({'plus': '+', 'minus': '-'}).fillna('.')
-    else:
-        strand = pd.Series(['.'] * len(df_formatted))
-
-    ids = [f'BLASTOISE_{i + 1}' for i in range(len(df_formatted))]
-
-    gff_df = pd.DataFrame({
-        'seqname': df_formatted['chromosome'].astype(str),
-        'source': 'BLASTOISE',
-        'feature': '.',
-        'start': pd.to_numeric(df_formatted['start'], errors='coerce').astype(int),
-        'end': pd.to_numeric(df_formatted['end'], errors='coerce').astype(int),
-        'score': '.',
-        'strand': strand,
-        'frame': '.',
-        'attribute': [f'ID={x}' for x in ids],
-    })
-
-    gff_df.to_csv(gff_path, sep='\t', index=False, header=False)
-
-
-def finalize_results(output_dir: str, df: pd.DataFrame, input_file: str, genome_file: str) -> Tuple[str, str]:
-    """
-    Save results to CSV (renamed columns) and GFF with specified filenames.
-
-    - CSV columns: chromosome, start, end, strand, len, seq.
-    - GFF derived from chromosome, start, end, strand.
-    - Filenames: BLASTOISE--{input_file}--{genome_file}.csv/.gff in output_dir.
-
-    Returns a tuple (csv_path, gff_path).
     """
     # Build output filenames using basenames
     input_base = os.path.basename(input_file)
@@ -511,31 +417,33 @@ def finalize_results(output_dir: str, df: pd.DataFrame, input_file: str, genome_
     gff_path = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.gff")
 
     # Format DataFrame for CSV
-    formatted = _format_output_dataframe(df)
+    formatted = format_output_dataframe(df)
 
     # Write CSV (with header)
     formatted.to_csv(csv_path, index=False)
 
     # Write GFF from formatted
-    _write_gff_from_formatted(formatted, gff_path)
+    write_gff_from_formatted(formatted, gff_path)
 
     return csv_path, gff_path
 
 
 def main() -> None:
     """
-    Main function to orchestrate the BLASTOISE pipeline.
+    Main entry point of the program that orchestrates multiple steps for processing genomic and data files.
+    The workflow includes parsing arguments, setting up the workspace, running initial and iterative BLAST searches,
+    processing results, and performing final cleanup and output. It also handles timing, error reporting, and logging.
 
-    This function coordinates the entire BLASTOISE workflow by:
-    1. Parsing command-line arguments
-    2. Setting up the workspace
-    3. Running the initial BLAST search
-    4. Applying optional masking
-    5. Executing the iterative repetitive sequence discovery process
-    6. Finalizing and organizing results
-    7. Reporting execution statistics
+    Raises
+    ------
+    SystemExit
+        Raised when there is an unhandled exception during the program execution, causing an exit with error message.
 
-    The function handles exceptions and ensures proper cleanup of resources.
+    Notes
+    -----
+    The program measures the total execution time, logs the program start and end times, and summarizes the
+    results paths for CSV and GFF files. Proper file permissions are attempted for the output directory at
+    the end of the program.
     """
     args = parse_arguments()
     start_time = datetime.now()
@@ -560,24 +468,12 @@ def main() -> None:
             word_size=args.word_size
         )
 
-        # 3. Optionally apply mask to initial results
-        if args.mask:
-            print_message_box("Applying mask to initial results")
-            try:
-                mask_df = load_mask(args.mask)
-            except Exception as e:
-                raise RuntimeError(f"Failed to load mask file '{args.mask}': {e}")
-            pre_rows = len(initial_data)
-            initial_data = apply_mask(initial_data, mask_df)
-            post_rows = len(initial_data)
-            print(f"\t- Mask removed {pre_rows - post_rows} rows (remaining: {post_rows})")
-
         # Early exit if nothing to process
         if initial_data.empty:
             print_message_box("No data to process after initial BLAST/masking. Writing empty results.")
             csv_path, gff_path = finalize_results(output_dir, initial_data, args.data, args.genome)
         else:
-            # 4. Run the iterative part
+            # 3. Run the iterative part
             final_data = repetitive_sider_searcher(
                 data_input=initial_data,
                 genome_path=blast_db_path,
@@ -589,22 +485,14 @@ def main() -> None:
                 n_jobs=args.jobs,
             )
 
-            # 5. Optionally apply mask to final results
-            if args.mask:
-                print_message_box("Applying mask to final results")
-                pre_rows = len(final_data)
-                final_data = apply_mask(final_data, mask_df)
-                post_rows = len(final_data)
-                print(f"\t- Mask removed {pre_rows - post_rows} rows (remaining: {post_rows})")
-
-            # 6. Finalize and clean up
+            # 4. Finalize and clean up
             csv_path, gff_path = finalize_results(output_dir, final_data, args.data, args.genome)
 
     except Exception as e:
         print_message_box(f"An unexpected error occurred: {e}")
         exit(1)
 
-    # 6. Print final summary
+    # 5. Print final summary
     toc_main = time.perf_counter()
     end_time = datetime.now()
     formatted_end_time = end_time.strftime("%Y %B %d at %H:%M")
