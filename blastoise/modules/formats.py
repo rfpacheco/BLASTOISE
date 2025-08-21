@@ -1,33 +1,45 @@
+"""
+BLASTOISE Module: Data Formatting and Export Operations
+======================================================
 
+This module provides core functionality for the BLASTOISE pipeline, handling data formatting
+and export operations. It serves as the output processor for genomic alignment results,
+converting BLAST output into standardized formats and exporting data for downstream analysis.
 
+Main functions:
+1. format_output_dataframe: Formats DataFrame by mapping columns to standardized names
+2. write_gff_from_formatted: Exports formatted data to General Feature Format (GFF) files
+
+Author: R. Pacheco
+"""
 
 import pandas as pd
+from typing import Dict, List
+
 
 def format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Formats the given DataFrame to ensure it has the required columns with standardized names.
-
-    The method renames the columns of the given DataFrame to adhere to a predefined mapping, and
-    it retains only the required columns specified in the mapping. The resulting DataFrame will
-    contain the columns `chromosome`, `start`, `end`, `strand`, `len`, and `seq`. For empty or
-    `None` input DataFrame, a new empty DataFrame with the appropriate column names is returned.
+    Formats the input DataFrame by mapping specific column names to a standardized set of column names
+    and returns the formatted DataFrame. If the input DataFrame is empty or None, a new DataFrame
+    with predefined column names is returned.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Input DataFrame containing sequence data. It is expected to have columns such as
-        'sseqid', 'sstart', 'send', 'sstrand', 'len', and 'sseq'.
+    df : pandas.DataFrame
+        The input DataFrame to be formatted. Should contain specific column names that are required
+        for mapping to standardized column names.
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame with standardized column names and only the required columns. If the input
-        DataFrame is empty or None, an empty DataFrame with the expected column names is returned.
+    pandas.DataFrame
+        A formatted DataFrame with columns renamed according to the specified mapping. If the input
+        DataFrame is empty or None, it returns a new DataFrame with predefined column names but no data.
+
     """
     if df is None or df.empty:
         return pd.DataFrame(columns=['chromosome', 'start', 'end', 'strand', 'len', 'seq'])
 
-    cols_map = {
+    cols_map: Dict[str, str] = {
         'sseqid': 'chromosome',
         'sstart': 'start',
         'send': 'end',
@@ -36,54 +48,57 @@ def format_output_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         'sseq': 'seq',
     }
     # Select only available required columns and rename
-    available = ['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']
-    formatted = df[available].rename(columns=cols_map).copy()
+    available: List[str] = ['sseqid', 'sstart', 'send', 'sstrand', 'len', 'sseq']
+    formatted: pd.DataFrame = df[available].rename(columns=cols_map).copy()
 
     return formatted
 
 
 def write_gff_from_formatted(df_formatted: pd.DataFrame, gff_path: str) -> None:
     """
-    Write a GFF file from a formatted DataFrame.
+    Writes a GFF (General Feature Format) file from a formatted DataFrame.
 
-    This function takes a formatted DataFrame and writes its contents to a file
-    in GFF (General Feature Format) format. The function ensures that required
-    GFF fields are populated, and missing fields such as strand are handled
-    appropriately. The DataFrame is expected to contain specific columns, and
-    errors in numeric parsing of the 'start' and 'end' columns will coerce invalid
-    entries to NaN, which may raise conversion errors.
+    This function converts a given formatted pandas DataFrame containing genomic features 
+    into a GFF output file. The function allows translation of strand data and assigns 
+    unique identifiers to each feature. If the input DataFrame is empty or None, an 
+    empty GFF file is created.
 
     Parameters
     ----------
     df_formatted : pd.DataFrame
-        A pandas DataFrame containing data to be converted to GFF format.
-        Assumes mandatory columns such as 'chromosome', 'start', and 'end'.
+        A formatted DataFrame containing genomic feature data, including columns such 
+        as 'chromosome', 'start', 'end', and optionally 'strand'.
     gff_path : str
-        The file path where the GFF output will be written.
+        The path where the output GFF file will be written.
+
+    Returns
+    -------
+    None
     """
     # Handle empty
     if df_formatted is None or df_formatted.empty:
         open(gff_path, "w").close()
         return
 
-    strand_series = df_formatted.get('strand')
+    strand_series: pd.Series = df_formatted.get('strand')
+    strand: pd.Series
     if strand_series is not None:
         strand = strand_series.map({'plus': '+', 'minus': '-'}).fillna('.')
     else:
         strand = pd.Series(['.'] * len(df_formatted))
 
-    ids = [f'BLASTOISE_{i + 1}' for i in range(len(df_formatted))]
+    ids: List[str] = [f'BLASTOISE_{i + 1}' for i in range(len(df_formatted))]
 
-    gff_df = pd.DataFrame({
-        'seqname': df_formatted['chromosome'].astype(str),
-        'source': 'BLASTOISE',
-        'feature': '.',
-        'start': pd.to_numeric(df_formatted['start'], errors='coerce').astype(int),
-        'end': pd.to_numeric(df_formatted['end'], errors='coerce').astype(int),
-        'score': '.',
-        'strand': strand,
-        'frame': '.',
-        'attribute': [f'ID={x}' for x in ids],
+    gff_df: pd.DataFrame = pd.DataFrame({
+        'seqname': df_formatted['chromosome'],  # type: str
+        'source': 'BLASTOISE',  # type: str
+        'feature': '.',  # type: str
+        'start': df_formatted['start'],  # type: int
+        'end': df_formatted['end'],  # type: int
+        'score': '.',  # type: str
+        'strand': strand,  # type: str
+        'frame': '.',  # type: str
+        'attribute': [f'ID={x}' for x in ids],  # type: str
     })
 
     gff_df.to_csv(gff_path, sep='\t', index=False, header=False)

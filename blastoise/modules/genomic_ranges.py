@@ -23,20 +23,20 @@ features in sequence data.
 Author: R. Pacheco
 """
 
-
 import pandas as pd
 import pyranges as pr
-from typing import Optional, List, Dict
+from typing import List, Dict
+
 
 # Update the mapping dictionaries to include strand information
-BLAST_TO_PYRANGES = {
+BLAST_TO_PYRANGES: Dict[str, str] = {
     'sseqid': 'Chromosome',
     'sstart': 'Start',
     'send': 'End',
     'sstrand': 'Strand'
 }
 
-PYRANGES_TO_BLAST = {
+PYRANGES_TO_BLAST: Dict[str, str] = {
     'Chromosome': 'sseqid',
     'Start': 'sstart',
     'End': 'send',

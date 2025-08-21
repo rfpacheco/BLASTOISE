@@ -19,6 +19,7 @@ Author: R. Pacheco
 
 import pandas as pd
 
+
 def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFrame:
     """
     Match data from two DataFrames based on specific genomic coordinate columns.
@@ -50,7 +51,7 @@ def match_data(data_input: pd.DataFrame, to_discard: pd.DataFrame) -> pd.DataFra
         If any of the required columns are missing from either DataFrame.
     """
 
-    matches = data_input.merge(
+    matches: pd.DataFrame = data_input.merge(
         to_discard[['sseqid', 'sstart', 'send', 'sstrand']],
         on=['sseqid', 'sstart', 'send', 'sstrand'],
         how='inner'
@@ -88,10 +89,10 @@ def match_data_and_remove(data_input: pd.DataFrame, to_discard: pd.DataFrame) ->
         If any of the required columns are missing from either DataFrame.
     """
 
-    matches = match_data(data_input, to_discard)
+    matches: pd.DataFrame = match_data(data_input, to_discard)
 
     # Remove only the matching data
-    data_input = data_input.loc[
+    data_input: pd.DataFrame = data_input.loc[
         ~data_input.set_index(['sseqid', 'sstart', 'send', 'sstrand']).index.isin(
             matches.set_index(['sseqid', 'sstart', 'send', 'sstrand']).index
         )

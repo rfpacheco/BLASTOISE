@@ -123,12 +123,12 @@ def setup_workspace(
     print(f"{'.'*20} Output folder created at: {output_dir}")
 
     # Create a subdirectory for original data and copy files
-    original_data_dir = os.path.join(output_dir, 'original_data')
+    original_data_dir: str = os.path.join(output_dir, 'original_data')
     os.makedirs(original_data_dir, exist_ok=True)
 
     # Define destination paths
-    dest_data_path = os.path.join(original_data_dir, os.path.basename(data_file))
-    dest_genome_path = os.path.join(original_data_dir, os.path.basename(genome_file))
+    dest_data_path: str = os.path.join(original_data_dir, os.path.basename(data_file))
+    dest_genome_path: str = os.path.join(original_data_dir, os.path.basename(genome_file))
 
     # Copy files, exiting if a source file doesn't exist
     try:
@@ -175,15 +175,15 @@ def run_initial_blast(
         the path to the created BLAST database.
     """
     # Create BLASTn database
-    blast_db_dir = os.path.join(output_dir, 'blast_database')
+    blast_db_dir: str = os.path.join(output_dir, 'blast_database')
     os.makedirs(blast_db_dir, exist_ok=True)
-    blast_db_path = os.path.join(blast_db_dir, os.path.basename(genome_path))
+    blast_db_path: str = os.path.join(blast_db_dir, os.path.basename(genome_path))
     create_blast_database(path_input=genome_path, path_output=blast_db_path)
 
     # Run first BLASTn
     print_message_box(message='First BLASTn step initiated')
-    tic = time.perf_counter()
-    initial_blast_results = run_blastn_alignment(
+    tic: float = time.perf_counter()
+    initial_blast_results: pd.DataFrame = run_blastn_alignment(
         query_path=data_path,
         dict_path=blast_db_path,
         perc_identity=identity,
@@ -191,7 +191,7 @@ def run_initial_blast(
     )
     # Keep only essential columns
     initial_blast_results = initial_blast_results[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand']]
-    toc = time.perf_counter()
+    toc: float = time.perf_counter()
     print(f"1. Initial data:\n"
           f"\t- Data row length: {len(initial_blast_results)}\n"
           f"\t- Execution time: {toc - tic:0.2f} seconds")
@@ -199,7 +199,7 @@ def run_initial_blast(
     # Merge results using PyRanges
     print('\t- Filtering and merging data:')
     tic = time.perf_counter()
-    merged_results = merge_overlapping_intervals(initial_blast_results, strand=True)
+    merged_results: pd.DataFrame = merge_overlapping_intervals(initial_blast_results, strand=True)
     merged_results.sort_values(by=['sseqid', 'sstart'], inplace=True)
     merged_results.reset_index(drop=True, inplace=True)
     toc = time.perf_counter()
@@ -380,7 +380,12 @@ def repetitive_sider_searcher(
     return accumulated_data
 
 
-def finalize_results(output_dir: str, df: pd.DataFrame, input_file: str, genome_file: str) -> Tuple[str, str]:
+def finalize_results(
+        output_dir: str,
+        df: pd.DataFrame,
+        input_file: str,
+        genome_file: str
+) -> Tuple[str, str]:
     """
     Finalize and save the analysis results to specific file formats.
 
@@ -411,13 +416,13 @@ def finalize_results(output_dir: str, df: pd.DataFrame, input_file: str, genome_
 
     """
     # Build output filenames using basenames
-    input_base = os.path.basename(input_file)
-    genome_base = os.path.basename(genome_file)
-    csv_path = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.csv")
-    gff_path = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.gff")
+    input_base: str = os.path.basename(input_file)
+    genome_base: str = os.path.basename(genome_file)
+    csv_path: str = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.csv")
+    gff_path: str = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.gff")
 
     # Format DataFrame for CSV
-    formatted = format_output_dataframe(df)
+    formatted: pd.DataFrame = format_output_dataframe(df)
 
     # Write CSV (with header)
     formatted.to_csv(csv_path, index=False)
@@ -445,14 +450,15 @@ def main() -> None:
     results paths for CSV and GFF files. Proper file permissions are attempted for the output directory at
     the end of the program.
     """
-    args = parse_arguments()
-    start_time = datetime.now()
-    tic_main = time.perf_counter()
-    formatted_start_time = start_time.strftime('%Y %B %d at %H:%M')
+    args: argparse.Namespace = parse_arguments()
+    start_time: datetime = datetime.now()
+    tic_main: float = time.perf_counter()
+    formatted_start_time: str = start_time.strftime('%Y %B %d at %H:%M')
     print(f"{'.'*20} Program started: {formatted_start_time}")
 
     try:
         # 1. Setup workspace and copy input files
+        output_dir: str; data_path: str; genome_path: str
         output_dir, data_path, genome_path = setup_workspace(
             output_dir=os.path.expanduser(args.output),
             data_file=os.path.expanduser(args.data),
@@ -460,6 +466,7 @@ def main() -> None:
         )
 
         # 2. Run initial BLAST and process results
+        initial_data: pd.DataFrame; blast_db_path: str
         initial_data, blast_db_path = run_initial_blast(
             data_path=data_path,
             genome_path=genome_path,
@@ -469,6 +476,7 @@ def main() -> None:
         )
 
         # Early exit if nothing to process
+        csv_path: str; gff_path: str
         if initial_data.empty:
             print_message_box("No data to process after initial BLAST/masking. Writing empty results.")
             csv_path, gff_path = finalize_results(output_dir, initial_data, args.data, args.genome)
@@ -493,9 +501,9 @@ def main() -> None:
         exit(1)
 
     # 5. Print final summary
-    toc_main = time.perf_counter()
-    end_time = datetime.now()
-    formatted_end_time = end_time.strftime("%Y %B %d at %H:%M")
+    toc_main: float = time.perf_counter()
+    end_time: datetime = datetime.now()
+    formatted_end_time: str = end_time.strftime("%Y %B %d at %H:%M")
 
     print_message_box(message="END OF THE PROGRAM")
     print(f"\t- Total execution time: {toc_main - tic_main:0.2f} seconds\n"

@@ -582,8 +582,8 @@ def sequence_extension(
     min_length : int, optional
         The minimum allowed length for filtered or extended sequences, defaults to 100.
     extension_direction : str, optional
-        Direction of extension. Acceptable values include 'both', '5prime', or
-        '3prime', defaults to "both".
+        Direction of extension. Acceptable values include 'both', '5-prime', or
+        '3-prime', defaults to "both".
     max_recursion_depth : int, optional
         Maximum recursion depth allowed for sequence extension, defaults to 10.
     n_jobs : int, optional

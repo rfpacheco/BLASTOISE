@@ -16,6 +16,7 @@ Author: R. Pacheco
 import pandas as pd
 import subprocess
 import logging
+from typing import List
 
 
 def create_blast_database(path_input: str, path_output: str) -> None:
@@ -46,7 +47,7 @@ def create_blast_database(path_input: str, path_output: str) -> None:
     """
 
     # "-parse_seqids" preserves the original sequence IDs in the database.
-    cmd = [
+    cmd: List[str] = [
         "makeblastdb",
         "-in", path_input,
         "-dbtype", "nucl",
@@ -118,6 +119,8 @@ def run_blastn_alignment(
     """
 
     # Build the command with conditional query coordinates
+    outfmt: str
+    columns: List[str]; numeric_columns: List[str]; final_column_order: List[str]
     if query_coor:
         outfmt = "'10 qseqid sseqid qstart qend sstart send sstrand evalue sseq'"
         columns = ['qseqid', 'sseqid', 'qstart', 'qend', 'sstart', 'send', 'sstrand', 'evalue', 'sseq']
@@ -130,7 +133,7 @@ def run_blastn_alignment(
         numeric_columns = ['sstart', 'send']
         final_column_order = ['qseqid', 'sseqid', 'sstart', 'send', 'sstrand', 'evalue', 'sseq', 'len']
 
-    cmd = (
+    cmd: str = (
         f"blastn -word_size {word_size} "
         f"-query {query_path} "
         f"-db {dict_path} "
@@ -138,26 +141,26 @@ def run_blastn_alignment(
         f"-outfmt {outfmt}"
     )
 
-    data = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    data: str = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     if not data:
         return pd.DataFrame(columns=columns)
-    data = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
-    data.columns = columns
+    data_df: pd.DataFrame = pd.DataFrame([x.split(",") for x in data.split("\n") if x])
+    data_df.columns = columns
 
     # Convert coordinate columns to int type 
-    data[numeric_columns] = data[numeric_columns].astype(int)
+    data_df[numeric_columns] = data_df[numeric_columns].astype(int)
 
     # get 'evalue' as a 'float' type
-    data['evalue'] = data['evalue'].astype(float)
+    data_df['evalue'] = data_df['evalue'].astype(float)
 
     # Make sure 'send' > 'sstart'
-    mask = data['sstart'] > data['send']
-    data.loc[mask, ['sstart', 'send']] = data.loc[mask, ['send', 'sstart']].values
+    mask: pd.Series = data_df['sstart'] > data_df['send']
+    data_df.loc[mask, ['sstart', 'send']] = data_df.loc[mask, ['send', 'sstart']].values
 
     # Create 'len' column
-    data['len'] = data['send'] - data['sstart'] + 1
+    data_df['len'] = data_df['send'] - data_df['sstart'] + 1
 
     # Reorder columns for better readability
-    data = data[final_column_order]
+    data_df = data_df[final_column_order]
 
-    return data
+    return data_df

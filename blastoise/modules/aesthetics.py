@@ -19,7 +19,7 @@ readable and user-friendly.
 Author: R. Pacheco
 """
 
-BOX_WIDTH_DEFAULT = 80
+BOX_WIDTH_DEFAULT: int = 80
 
 
 def print_message_box(message: str, width: int = BOX_WIDTH_DEFAULT) -> None:
@@ -47,23 +47,23 @@ def print_message_box(message: str, width: int = BOX_WIDTH_DEFAULT) -> None:
 
     Examples
     --------
-    >>> print_message_box("Hello World")
+    `>>> print_message_box("Hello World")`
 
     |================================================================================|
     |                                  Hello World                                   |
     |================================================================================|
 
-    >>> print_message_box("Short message", width=20)
+    `>>> print_message_box("Short message", width=20)`
 
     |====================|
     |   Short message    |
     |====================|
     """
     # Ensure the box is wide enough to fit the message
-    width = max(width, len(message))  # ensure the message fits
+    width: int = max(width, len(message))  # ensure the message fits
 
     # Create the horizontal border using '=' characters
-    border = "=" * width
+    border: str = "=" * width
 
     # Print the box with the message centered inside
     print()  # leading blank line
