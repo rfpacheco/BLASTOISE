@@ -64,11 +64,11 @@ def process_sequence(
         ``{"name_id": <str>, "status": "Accepted" | "Rejected"}``.
     """
     # Use the sequence directly from the CSV
-    if 'sseq' not in row:
+    if 'seq' not in row:
         logging.getLogger('sider_filter').warning(f"No sequence found for {row['name_id']}")
         return {'name_id': row['name_id'], 'status': 'Rejected'}
 
-    sequence = row['sseq']
+    sequence = row['seq']
     name_id = row['name_id']
 
     # Create a temporary query file for BLASTN
@@ -84,7 +84,7 @@ def process_sequence(
         )
 
         # Check BLASTN results - a sequence is accepted if it has hits to at least min_subjects different subjects
-        if not blastn_df.empty and blastn_df["sseqid"].nunique() >= min_subjects:
+        if not blastn_df.empty and blastn_df['sseqid'].nunique() >= min_subjects:
             return {'name_id': name_id, 'status': 'Accepted'}
         else:
             return {'name_id': name_id, 'status': 'Rejected'}
@@ -141,7 +141,7 @@ def filter_sequences(
 
     # Create a unique identifier for each sequence
     data['name_id'] = data.apply(
-        lambda row: f"{row['sseqid']}_{row['sstrand']}_{row['sstart']}-{row['send']}", 
+        lambda row: f"{row['chromosome']}_{row['strand']}_{row['start']}-{row['end']}",
         axis=1
     )
 
@@ -224,11 +224,11 @@ def process_recaught_data(
         # Create a list of SeqRecord objects
         records = []
         for idx, row in rejected_data_reset.iterrows():
-            if 'sseq' in row:
+            if 'seq' in row:
                 # Create a SeqRecord with the sequence and an ID
                 record = SeqRecord(
-                    Seq(row['sseq']),
-                    id=f"Seq_{idx}_{row['sseqid']}",
+                    Seq(row['seq']),
+                    id=f"Seq_{idx}_{row['chromosome']}",
                     description=""
                 )
                 records.append(record)
