@@ -13,10 +13,8 @@ These functions support the main SIDER filtering pipeline by providing functiona
 This module is designed to be imported by the main sider_filter.py script.
 """
 
-import argparse
 import os
 import sys
-import logging
 import pandas as pd
 import subprocess
 from typing import Dict, Tuple
@@ -30,8 +28,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from blastoise.modules.blaster import create_blast_database
 from .extra_functions import general_blastn_blaster
-
-
 
 
 def process_sequence(
@@ -65,18 +61,18 @@ def process_sequence(
     """
     # Use the sequence directly from the CSV
     if 'seq' not in row:
-        logging.getLogger('sider_filter').warning(f"No sequence found for {row['name_id']}")
+        print(f"No sequence found for {row['name_id']}")
         return {'name_id': row['name_id'], 'status': 'Rejected'}
 
-    sequence = row['seq']
-    name_id = row['name_id']
+    sequence: str = row.seq
+    name_id: str = row.name_id
 
     # Create a temporary query file for BLASTN
-    query = f"<(echo -e '>{name_id}\\n{sequence}')"
+    query: str = f"<(echo -e '>{name_id}\\n{sequence}')"
 
     try:
         # Run BLASTN
-        blastn_df = general_blastn_blaster(
+        blastn_df: pd.DataFrame = general_blastn_blaster(
             query_path=query,
             dict_path=blastn_db_path,
             word_size=word_size,
@@ -89,7 +85,7 @@ def process_sequence(
         else:
             return {'name_id': name_id, 'status': 'Rejected'}
     except Exception as e:
-        logging.getLogger('sider_filter').error(f"Error processing sequence {name_id}: {str(e)}")
+        print(f"Error processing sequence {name_id}: {str(e)}")
         return {'name_id': name_id, 'status': 'Rejected'}
 
 
@@ -100,7 +96,8 @@ def filter_sequences(
         blastn_db_path: str,
         word_size: int,
         evalue: float,
-        min_subjects: int = 5
+        min_subjects: int = 5,
+        n_jobs: int = -1,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Filter sequences using SIDER criteria by applying BLASTN-based filtering.
@@ -136,21 +133,14 @@ def filter_sequences(
         - First DataFrame with accepted sequences that meet the SIDER criteria
         - Second DataFrame with rejected sequences that don't meet the criteria
     """
-    logger = logging.getLogger('sider_filter')
-    logger.info("Preparing data for analysis")
-
     # Create a unique identifier for each sequence
     data['name_id'] = data.apply(
         lambda row: f"{row['chromosome']}_{row['strand']}_{row['start']}-{row['end']}",
         axis=1
     )
-
-    logger.info("Applying SIDER filter")
-    logger.info(f"Analyzing {len(data)} sequences...")
-
     # Process sequences in parallel
     try:
-        results = Parallel(n_jobs=-1)(
+        results = Parallel(n_jobs=n_jobs)(
             delayed(process_sequence)(row, blastn_db_path, word_size, evalue, min_subjects) 
             for _, row in data.iterrows()
         )
@@ -163,13 +153,13 @@ def filter_sequences(
         accepted_data = data[data['status'] == 'Accepted'].copy()
         rejected_data = data[data['status'] == 'Rejected'].copy()
 
-        logger.info(f"Accepted sequences: {len(accepted_data)}")
-        logger.info(f"Rejected sequences: {len(rejected_data)}")
+        print(f"Accepted sequences: {len(accepted_data)}")
+        print(f"Rejected sequences: {len(rejected_data)}")
 
         return accepted_data, rejected_data
 
     except Exception as e:
-        logger.error(f"Error during sequence filtering: {str(e)}")
+        print(f"Error during sequence filtering: {str(e)}")
         raise
 
 
@@ -206,12 +196,9 @@ def process_recaught_data(
     Tuple[pd.DataFrame, pd.DataFrame]
         Updated DataFrames with accepted and rejected sequences
     """
-    logger = logging.getLogger('sider_filter')
-    logger.info("Processing recaught data")
-
     # If there are no rejected sequences, return empty DataFrames
     if rejected_data.empty:
-        logger.info("No rejected sequences to process")
+        print("No rejected sequences to process")
         return pd.DataFrame(), rejected_data
 
     try:
@@ -227,13 +214,13 @@ def process_recaught_data(
             if 'seq' in row:
                 # Create a SeqRecord with the sequence and an ID
                 record = SeqRecord(
-                    Seq(row['seq']),
+                    Seq(row.seq),
                     id=f"Seq_{idx}_{row['chromosome']}",
                     description=""
                 )
                 records.append(record)
             else:
-                logger.warning(f"No sequence found for rejected row {idx}")
+                print(f"No sequence found for rejected row {idx}")
 
         # Write the records to a FASTA file
         SeqIO.write(records, fasta_file_path, "fasta")
@@ -254,7 +241,7 @@ def process_recaught_data(
         if not caught_data.empty:
             # Filter by e-value
             caught_data = caught_data.sort_values(by=["evalue"])
-            logger.info(f"Recaught data: {caught_data.shape[0]} elements")
+            print(f"Recaught data: {caught_data.shape[0]} elements")
 
             # Extract sequence indices from sseqid
             caught_data["index"] = caught_data["sseqid"].str.extract(r"Seq_(\d+)_").astype(int)
@@ -266,7 +253,7 @@ def process_recaught_data(
             valid_indices = [idx for idx in recaught_indices if idx < len(rejected_data_reset)]
 
             if len(valid_indices) != len(recaught_indices):
-                logger.warning(
+               print(
                     f"Some recaught indices were out of bounds. Using {len(valid_indices)} out of {len(recaught_indices)} indices.")
 
             # Move recaught sequences from rejected to accept
@@ -278,59 +265,66 @@ def process_recaught_data(
                 # Remove recaught sequences from rejected data
                 remaining_rejected = rejected_data_reset.drop(rejected_data_reset.index[valid_indices])
 
-                logger.info(f"Recaught sequences: {len(recaught_rows)}")
-                logger.info(f"Updated rejected sequences: {len(remaining_rejected)}")
+                print(f"Recaught sequences: {len(recaught_rows)}")
+                print(f"Updated rejected sequences: {len(remaining_rejected)}")
 
                 return accepted_data, remaining_rejected
 
-        logger.info("No sequences were recaptured")
+        print("No sequences were recaptured")
         return pd.DataFrame(), rejected_data
 
     except Exception as e:
-        logger.error(f"Error during recaught data processing: {str(e)}")
+        print(f"Error during recaught data processing: {str(e)}")
         return pd.DataFrame(), rejected_data
 
 
 def save_results(
-    accepted_data: pd.DataFrame, 
-    rejected_data: pd.DataFrame, 
-    output_dir: str, 
-    temp_dir: str
+    accepted_data: pd.DataFrame,
+    rejected_data: pd.DataFrame,
+    output_dir: str,
+    temp_dir: str,
+    input_csv_path: str,
 ) -> Tuple[str, str]:
     """
-    Persist accepted/rejected sequences to disk and return the resulting file paths.
+    Saves provided DataFrames to designated CSV files. Generates filenames based on
+    the name of the input CSV file and writes the DataFrames to the corresponding
+    positive and negative output paths. Additionally, sets appropriate file and
+    directory permissions after saving.
 
     Parameters
     ----------
     accepted_data : pd.DataFrame
-        Sequences that passed filtering.
+        DataFrame containing the rows that were accepted.
     rejected_data : pd.DataFrame
-        Sequences that failed filtering.
+        DataFrame containing the rows that were rejected.
     output_dir : str
-        Destination directory for the final files.
+        Directory path where the output files will be saved.
     temp_dir : str
-        Working directory for intermediate artifacts.
+        Directory path that may require write permissions to be granted recursively.
+    input_csv_path : str
+        Path of the input CSV file whose basename is used for constructing output
+        filenames.
 
     Returns
     -------
-    Tuple[str, str]
-        (positive_file_path, negative_file_path)
-
+    tuple of str
+        A tuple containing the paths to the saved positive (accepted) and
+        negative (rejected) CSV files.
     """
-    logger = logging.getLogger('sider_filter')
-    logger.info("Saving results")
+    print("Saving results")
 
-    # Define output paths
-    positive_path = os.path.join(output_dir, "siders_df.csv")
-    negative_path = os.path.join(output_dir, "non_siders_df.csv")
+    # Choose output filenames based on the input CSV name when available
+    base = os.path.splitext(os.path.basename(input_csv_path))[0]
+    positive_path = os.path.join(output_dir, f"{base}--sider.csv")
+    negative_path = os.path.join(output_dir, f"{base}--non_sider.csv")
 
     try:
         # Save DataFrames to CSV
         accepted_data.to_csv(positive_path, index=False)
         rejected_data.to_csv(negative_path, index=False)
 
-        logger.info(f"Positive results saved to: {positive_path}")
-        logger.info(f"Negative results saved to: {negative_path}")
+        print(f"Positive results saved to: {positive_path}")
+        print(f"Negative results saved to: {negative_path}")
 
         # Set file permissions
         subprocess.run(["chmod", "-R", "a+w", temp_dir], check=True)
@@ -340,5 +334,5 @@ def save_results(
         return positive_path, negative_path
 
     except Exception as e:
-        logger.error(f"Error saving results: {str(e)}")
+        print(f"Error saving results: {str(e)}")
         raise
