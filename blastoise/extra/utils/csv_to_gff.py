@@ -27,9 +27,9 @@ def csv_to_gff(csv_file, source=".", feature=".", attribute="."):
     data = pd.read_csv(csv_file, sep=",", header=0)
 
     # Strand input
-    if "sstrand" in data.columns:
-        data.loc[data["sstrand"] == "minus", "sstrand"] = "-"
-        data.loc[data["sstrand"] == "plus", "sstrand"] = "+"
+    if "strand" in data.columns:
+        data.loc[data["strand"] == "minus", "strand"] = "-"
+        data.loc[data["strand"] == "plus", "strand"] = "+"
 
     # Prepare GFF data
     pre_gff = []
@@ -37,13 +37,13 @@ def csv_to_gff(csv_file, source=".", feature=".", attribute="."):
     for index, row in data.iterrows():
         pre_gff.append(
             {
-                "seqname": row["sseqid"],
+                "seqname": row["chromosome"],
                 "source": source,
                 "feature": feature,
-                "start": row["sstart"],
-                "end": row["send"],
+                "start": row["start"],
+                "end": row["end"],
                 "score": ".",
-                "strand": row["sstrand"] if "sstrand" in row and pd.notna(row["sstrand"]) else ".",
+                "strand": row["strand"] if "strand" in row and pd.notna(row["strand"]) else ".",
                 "frame": '.',
                 "attribute": f"ID={row['qseqid'] if 'qseqid' in row else index}_{hash(index) + 1}_{data.shape[0]}"
             }
