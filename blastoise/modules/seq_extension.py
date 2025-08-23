@@ -20,13 +20,11 @@ Author: R. Pacheco
 """
 
 import subprocess
-# noinspection PyPackageRequirements
 import pandas as pd
 import tempfile
 import os
 import logging
 from typing import Dict, Any, Tuple, List, Optional
-# noinspection PyPackageRequirements
 from joblib import Parallel, delayed
 from .genomic_ranges import merge_overlapping_intervals, fetch_overlapping_intervals
 from .filters import match_data_and_remove
@@ -211,14 +209,13 @@ def _process_single_row_extension(
     current_depth : int, optional
         Current recursion depth level. Used internally for tracking. Default is 0.
     """
-    # from .blaster import run_blastn_alignment  # TODO: is it needed?
-
     # -----------------------------------------------------------------------------
     # STEP 0: Extract row index and initialize result structure
     # -----------------------------------------------------------------------------
     index: int
     element: pd.Series
     index, element = row_data
+    logger.info(f"Processing row {index}")
 
     # -----------------------------------------------------------------------------
     # STEP 1: Check recursion depth limit
@@ -608,7 +605,7 @@ def sequence_extension(
     """
 
     logger.info(
-        f"sequence_extension start: rows={len(data_input)}, extend={extend_number}, "
+        f"sequence_extension commands: \n\trows={len(data_input)}, extend={extend_number}, "
         f"limit={limit_len}, identity={identity}, word_size={word_size}, "
         f"min_len={min_length}, n_jobs={n_jobs}, prune={prune_enabled}"
     )
@@ -657,9 +654,9 @@ def sequence_extension(
         if result.get('modified', False):
             extended_count += 1
             if depth == 0:
-                print(f"Extending row {result.get('index')} (Extension completed - no recursion made)")
+                logger.info(f"Extending row {result.get('index')} (Extension completed - no recursion made)")
             else:
-                print(f"Extending row {result.get('index')} ({depth} recursive calls - {status})")
+                logger.info(f"Extending row {result.get('index')} ({depth} recursive calls - {status})")
             
             # Track recursion statistics
             if depth not in recursion_stats:
