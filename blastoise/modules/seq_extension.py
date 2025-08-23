@@ -648,7 +648,7 @@ def sequence_extension(
         
         if result.get('discarded', False):
             pruned_count += 1
-            print(f"Pruned row {result.get('index')} early ({status})")
+            logger.info(f"Pruned row {result.get('index')} early ({status})")
             continue
         
         if result.get('modified', False):

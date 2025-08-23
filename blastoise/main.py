@@ -422,8 +422,8 @@ def finalize_results(
 
     """
     # Build output filenames using basenames
-    input_base: str = os.path.basename(input_file)
-    genome_base: str = os.path.basename(genome_file)
+    input_base: str = os.path.splitext(os.path.basename(input_file))[0]
+    genome_base: str = os.path.splitext(os.path.basename(genome_file))[0]
     csv_path: str = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.csv")
     gff_path: str = os.path.join(output_dir, f"BLASTOISE--{input_base}--{genome_base}.gff")
 
