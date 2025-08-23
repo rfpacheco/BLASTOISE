@@ -321,13 +321,14 @@ def repetitive_sider_searcher(
             ## With `data_extended`
             rm_from_accumulated_data: pd.DataFrame = fetch_overlapping_intervals(blast_results, accumulated_data)
             if not blast_results.empty and not rm_from_accumulated_data.empty:
+                print(f"\t- Overlaps with accumulated_data removed: {len(rm_from_accumulated_data)}/{len(blast_results)}")
                 blast_results = match_data_and_remove(blast_results, rm_from_accumulated_data)
-                print(f"\t- Overlaps with accumulated_data removed: {len(rm_from_accumulated_data)}")
 
             ## With `new_elems`
             if not new_elems.empty:
                 rm_from_new_elems: pd.DataFrame = fetch_overlapping_intervals(blast_results, new_elems)
                 if not rm_from_new_elems.empty:
+                    print(f"\t- Overlaps with new_elems removed: {len(rm_from_new_elems)}/{len(blast_results)}")
                     blast_results = match_data_and_remove(blast_results, rm_from_new_elems)
 
             # -------------------------------------------------------------------
@@ -347,6 +348,8 @@ def repetitive_sider_searcher(
             # -------------------------------------------------------------------
             # STEP 3b: New elements found
             # -------------------------------------------------------------------
+            print('='*40)
+            print(f"\n- Extending {len(new_elems)} new sequences")
             new_elems_extended: pd.DataFrame = sequence_extension(
                 data_input=new_elems,
                 genome_fasta=genome_path,
