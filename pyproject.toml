@@ -1,10 +1,35 @@
 # =============================================================================
+# BLASTOISE Python Project Configuration (pyproject.toml)
+# =============================================================================
+#
+# This file is a modern Python project configuration file that defines how to
+# build, package, and distribute the BLASTOISE software. It follows PEP 518
+# and PEP 621 standards for Python project metadata and build system configuration.
+#
+# BLASTOISE (BLAST Oriented to the Identification of SIDER Elements) is a 
+# bioinformatics tool for identifying SIDER repetitive elements in Leishmania 
+# genomic data using BLAST-based approaches.
+#
+# This file contains:
+# - Build system requirements and backend configuration
+# - Project metadata (name, version, authors, description, etc.)
+# - Dependencies specification (though BLASTOISE uses conda for dependencies)
+# - Console scripts/entry points for command-line tools
+# - Project URLs and development information
+#
+# For more information about pyproject.toml, see:
+# - PEP 518: https://peps.python.org/pep-0518/
+# - PEP 621: https://peps.python.org/pep-0621/
+# - Packaging User Guide: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# =============================================================================
+
+# =============================================================================
 # BUILD SYSTEM CONFIGURATION
 # =============================================================================
 [build-system]
 # setuptools>=64 is needed for modern pyproject.toml support
 # wheel is needed to create wheel distributions (.whl files)
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"  # Backend to build your package
 
 # =============================================================================
@@ -12,14 +37,14 @@ build-backend = "setuptools.build_meta"  # Backend to build your package
 # =============================================================================
 [project]
 name = "blastoise"
-version = "0.4.2"
+version = "0.4.3"
 authors = [
     {name = "R. Pacheco", email = "ronnyfph@gmail.com"}
 ]
 description = "A Tool for SIDER Repetitive Sequence Discovery in Genomic Data"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 keywords = [
     "bioinformatics",
     "genomics",
@@ -50,8 +75,6 @@ classifiers = [
 
     # Programming language versions
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 
     # Topic categories
@@ -63,8 +86,12 @@ classifiers = [
 # DEPENDENCIES
 # =============================================================================
 # Runtime dependencies (packages needed to run the code)
-# Empty since conda is needed for dependencies outpise python
+# Empty since conda is needed for dependencies outside python
 dependencies = [
+    "biopython>=1.85",
+    "joblib>=1.5.1",
+    "pandas>=2.3.1",
+    "pyranges>=0.1.4"
 ]
 
 # =============================================================================
@@ -85,5 +112,4 @@ Documentation = "https://github.com/rfpacheco/BLASTOISE#readme"
 blastoise = "blastoise.main:main"
 
 # Additional tools to use as separate commands
-blastoise-coordinate-corrector = "blastoise.extra.coordinate_corrector:main"
 blastoise-sider-filter = "blastoise.extra.sider_filter:main"

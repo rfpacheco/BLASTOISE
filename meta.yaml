@@ -1,50 +1,69 @@
+# =============================================================================
+# BLASTOISE Conda Package Recipe (meta.yaml)
+# =============================================================================
+# 
+# This file is a conda recipe specification that defines how to build and 
+# package the BLASTOISE software for distribution via conda/mamba package 
+# managers. It contains metadata about the package, build instructions, 
+# dependencies, tests, and project information.
+#
+# BLASTOISE is a bioinformatics tool for identifying SIDER repetitive 
+# elements in Leishmania genomic data using BLAST-based approaches.
+#
+# For more information about conda recipes, see:
+# https://docs.conda.io/projects/conda-build/en/latest/resources/define-metadata.html
+# =============================================================================
+
+# Package identification and versioning
 package:
-  name: blastoise
-  version: "0.4.2"
+  name: blastoise                    # Package name as it appears in conda
+  version: "0.4.3"                  # Current version number
 
+# Source code location for building the package
 source:
-  path: .
+  path: .                           # Build from current directory (local source)
 
+# Build configuration and instructions
 build:
-  noarch: python
-  script: "{{ PYTHON }} -m pip install . --no-deps -vv"
-  entry_points:
+  noarch: python                    # Platform-independent Python package
+  script: "{{ PYTHON }} -m pip install . --no-deps -vv"  # Installation command
+  entry_points:                     # Command-line executables created
     - blastoise = blastoise.main:main
-    - blastoise-coordinate-corrector = blastoise.extra.coordinate_corrector:main
     - blastoise-sider-filter = blastoise.extra.sider_filter:main
 
+# Package dependencies specification
 requirements:
-  host:
-    - python >=3.10
-    - pip
-    - setuptools
-  run:
-    - python >=3.10
-    - biopython >=1.84
-    - blast >=2.16.0
-    - joblib >=1.5.1
-    - natsort >=8.4.0
-    - numpy >=2.1.2
-    - pandas >=2.2.3
-    - pyranges >=0.1.4
-    - tabulate >=0.9.0
-    - biopython >=1.84
+  host:                            # Build-time dependencies (needed during package creation)
+    - python >=3.12               # Minimum Python version required
+    - pip                          # Package installer
+    - setuptools                   # Build system requirements
+  run:                             # Runtime dependencies (needed when using the package)
+    - python >=3.12               # Python runtime requirement
+    - biopython >=1.85            # Biological computation library
+    - blast >=2.12                # NCBI BLAST+ suite for sequence alignment
+    - joblib >=1.5.1              # Parallel computing library
+    - pandas >=2.3.1              # Data manipulation and analysis
+    - pyranges >=0.1.4            # Genomic interval operations
 
+# Package testing configuration
 test:
-  imports:
+  imports:                         # Test that these modules can be imported
     - blastoise
     - blastoise.modules
     - blastoise.extra
-  commands:
+  commands:                        # Test that command-line tools work
     - blastoise --help
-    - blastoise-coordinate-corrector --help
     - blastoise-sider-filter --help
 
+# Project metadata and documentation links
 about:
-  home: "https://github.com/rfpacheco/BLASTOISE"
-  license: MIT
+  home: "https://github.com/rfpacheco/BLASTOISE"           # Project homepage
+  license: MIT                                             # Software license
   summary: "A Tool for SIDER Repetitive Sequence Discovery in Genomic Data"
-  description: |
-    BLASTOISE (BLAST Oriented to the Identification of SIDER Elements) is a Python-based Linux software designed to automate the identification of SIDER elements within Leishmania spp. species. These retroposons, known for their heterogeneity and degeneration, pose significant challenges in their identification, which BLASTOISE effectively addresses.
-  doc_url: "https://github.com/rfpacheco/BLASTOISE#readme"
-  dev_url: "https://github.com/rfpacheco/BLASTOISE"
+  description: |                                           # Detailed description
+    BLASTOISE (BLAST Oriented to the Identification of SIDER Elements) is a Python-based Linux software 
+    designed to automate the identification of SIDER elements within Leishmania spp. species. These 
+    retroposons, known for their heterogeneity and degeneration, pose significant challenges in their 
+    identification, which BLASTOISE effectively addresses.
+  doc_url: "https://github.com/rfpacheco/BLASTOISE#readme" # Documentation URL
+  dev_url: "https://github.com/rfpacheco/BLASTOISE"        # Development/source URL

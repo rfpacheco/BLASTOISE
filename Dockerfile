@@ -11,7 +11,7 @@ FROM continuumio/miniconda3
 # =============================================================================
 LABEL maintainer="R. Pacheco <ronnyfph@gmail.com>"
 LABEL description="BLASTOISE: A Tool for SIDER Repetitive Sequence Discovery"
-LABEL version="0.4.2"
+LABEL version="0.4.3"
 
 # =============================================================================
 # SYSTEM SETUP
@@ -37,7 +37,7 @@ RUN apt-get update && \
 COPY environment.yaml .
 
 # Create the conda environment from the environment.yml file
-RUN conda env create --name blastoise --file environment.yml
+RUN conda env create --name blastoise --file environment.yaml
 
 # Clean conda cache to reduce image size
 RUN conda clean -all
@@ -99,14 +99,14 @@ CMD ["/bin/bash"]
 # USAGE INFORMATION (as comments)
 # =============================================================================
 # To build this image:
-#   docker build -t blastoise:0.4.2 .
+#   docker build -t blastoise:0.4.3 .
 #
 # To run interactively with data mounting:
 #   docker run -it -v /path/to/your/data:/app/data
 #
 # To run a specific BLASTOISE command:
-#   docker run --rm -v /path/to/data:/app/data -v /path/to/output:/app/output blastoise:0.4.2 \
+#   docker run --rm -v /path/to/data:/app/data -v /path/to/output:/app/output blastoise:0.4.3 \
 #   conda run -n blastoise blastoise -d /app/data/input.fasta -g /app/data/genome.fasta -o /app/output
 #
 # To check available commands:
-#   docker run --rm blastoise:0.4.2 conda run -n blastoise blastoise --help
+#   docker run --rm blastoise:0.4.3 conda run -n blastoise blastoise --help

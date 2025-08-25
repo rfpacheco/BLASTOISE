@@ -1,102 +1,39 @@
+# =============================================================================
+# BLASTOISE Development Environment (environment.yaml)
+# =============================================================================
+# 
+# This file defines a conda/mamba environment specification for the BLASTOISE
+# project. It specifies the exact dependencies and versions needed to create
+# a reproducible development and runtime environment.
+#
+# BLASTOISE is a bioinformatics tool for identifying SIDER repetitive 
+# elements in Leishmania genomic data using BLAST-based approaches.
+#
+# Usage:
+#   conda env create -f environment.yaml
+#   conda activate blastoise
+#
+# Or with mamba (faster):
+#   mamba env create -f environment.yaml
+#   mamba activate blastoise
+#
+# For more information about conda environments, see:
+# https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+# =============================================================================
+
+# Environment name (will be used when activating: conda activate blastoise)
 name: blastoise
+
+# Conda channels to search for packages (order matters - higher priority first)
 channels:
-  - conda-forge
-  - bioconda
+  - conda-forge          # Community-driven collection of conda recipes
+  - bioconda             # Bioinformatics-focused conda channel
+
+# Package dependencies - core requirements for BLASTOISE functionality
 dependencies:
-  - _libgcc_mutex=0.1=conda_forge
-  - _openmp_mutex=4.5=2_gnu
-  - biopython=1.84=py310hc51659f_0
-  - blast=2.16.0=hc155240_2
-  - bzip2=1.0.8=h4bc722e_7
-  - c-ares=1.34.2=heb4867d_0
-  - ca-certificates=2025.6.15=hbd8a1cb_0
-  - curl=8.10.1=hbbe4b11_0
-  - entrez-direct=22.4=he881be0_0
-  - gettext=0.22.5=he02047a_3
-  - gettext-tools=0.22.5=he02047a_3
-  - htslib=1.21=h5efdd21_0
-  - importlib-metadata=8.7.0=pyhe01879c_1
-  - joblib=1.5.1=pyhd8ed1ab_0
-  - keyutils=1.6.1=h166bdaf_0
-  - krb5=1.21.3=h659f571_0
-  - ld_impl_linux-64=2.43=h712a8e2_2
-  - libasprintf=0.22.5=he8f35ee_3
-  - libasprintf-devel=0.22.5=he8f35ee_3
-  - libblas=3.9.0=25_linux64_openblas
-  - libcblas=3.9.0=25_linux64_openblas
-  - libcurl=8.10.1=hbbe4b11_0
-  - libdeflate=1.21=h4bc722e_0
-  - libedit=3.1.20191231=he28a2e2_2
-  - libev=4.33=hd590300_2
-  - libffi=3.4.2=h7f98852_5
-  - libgcc=14.2.0=h77fa898_1
-  - libgcc-ng=14.2.0=h69a702a_1
-  - libgettextpo=0.22.5=he02047a_3
-  - libgettextpo-devel=0.22.5=he02047a_3
-  - libgfortran=14.2.0=h69a702a_1
-  - libgfortran-ng=14.2.0=h69a702a_1
-  - libgfortran5=14.2.0=hd5240d6_1
-  - libgomp=14.2.0=h77fa898_1
-  - libidn2=2.3.7=hd590300_0
-  - liblapack=3.9.0=25_linux64_openblas
-  - libnghttp2=1.64.0=h161d5f1_0
-  - libnsl=2.0.1=hd590300_0
-  - libopenblas=0.3.28=pthreads_h94d23a6_0
-  - libsqlite=3.47.0=hadc24fc_1
-  - libssh2=1.11.0=h0841786_0
-  - libstdcxx=14.2.0=hc0a3c3a_1
-  - libstdcxx-ng=14.2.0=h4852527_1
-  - libunistring=0.9.10=h7f98852_0
-  - libuuid=2.38.1=h0b41bf4_0
-  - libxcrypt=4.4.36=hd590300_1
-  - libzlib=1.3.1=hb9d3cd8_2
-  - natsort=8.4.0=pyh29332c3_1
-  - ncbi-vdb=3.1.1=h4ac6f70_2
-  - ncls=0.0.68=py310h1fe012e_5
-  - ncurses=6.5=he02047a_1
-  - numpy=2.1.2=py310hd6e36ab_0
-  - openssl=3.5.0=h7b32b05_1
-  - pandas=2.2.3=py310h5eaa309_1
-  - perl=5.32.1=7_hd590300_perl5
-  - perl-archive-tar=2.40=pl5321hdfd78af_0
-  - perl-carp=1.50=pl5321hd8ed1ab_0
-  - perl-common-sense=3.75=pl5321hd8ed1ab_0
-  - perl-compress-raw-bzip2=2.201=pl5321h166bdaf_0
-  - perl-compress-raw-zlib=2.202=pl5321h166bdaf_0
-  - perl-encode=3.21=pl5321hb9d3cd8_1
-  - perl-exporter=5.74=pl5321hd8ed1ab_0
-  - perl-exporter-tiny=1.002002=pl5321hd8ed1ab_0
-  - perl-extutils-makemaker=7.70=pl5321hd8ed1ab_0
-  - perl-io-compress=2.201=pl5321hdbdd923_2
-  - perl-io-zlib=1.14=pl5321hdfd78af_0
-  - perl-json=4.10=pl5321hdfd78af_1
-  - perl-json-xs=4.03=pl5321h4ac6f70_3
-  - perl-list-moreutils=0.430=pl5321hdfd78af_0
-  - perl-list-moreutils-xs=0.430=pl5321h031d066_2
-  - perl-parent=0.242=pl5321hd8ed1ab_0
-  - perl-pathtools=3.75=pl5321h166bdaf_0
-  - perl-scalar-list-utils=1.63=pl5321h166bdaf_0
-  - perl-storable=3.15=pl5321hb9d3cd8_0
-  - perl-types-serialiser=1.01=pl5321hdfd78af_0
-  - pip=24.3.1=pyh8b19718_0
-  - pyranges=0.1.4=pyhdfd78af_0
-  - python=3.10.15=h4a871b0_2_cpython
-  - python-dateutil=2.9.0=pyhd8ed1ab_0
-  - python-tzdata=2024.2=pyhd8ed1ab_0
-  - python_abi=3.10=5_cp310
-  - pytz=2024.1=pyhd8ed1ab_0
-  - readline=8.2=h8228510_1
-  - rpsbproc=0.5.0=h6a68c12_0
-  - samtools=1.21=h50ea8bc_0
-  - setuptools=75.1.0=pyhd8ed1ab_0
-  - six=1.16.0=pyh6c4a22f_0
-  - sorted_nearest=0.0.39=py310h1fe012e_5
-  - tabulate=0.9.0=pyhd8ed1ab_2
-  - tk=8.6.13=noxft_h4845f30_101
-  - tzdata=2024b=hc8b5060_0
-  - wget=1.21.4=hda4d442_0
-  - wheel=0.44.0=pyhd8ed1ab_0
-  - xz=5.2.6=h166bdaf_0
-  - zipp=3.23.0=pyhd8ed1ab_0
-  - zlib=1.3.1=hb9d3cd8_2
-  - zstd=1.5.6=ha6fb4c9_0
+  - python >=3.12               # Python runtime requirement
+  - biopython >=1.85            # Biological computation library
+  - blast >=2.12                # NCBI BLAST+ suite for sequence alignment
+  - joblib >=1.5.1              # Parallel computing library
+  - pandas >=2.3.1              # Data manipulation and analysis
+  - pyranges >=0.1.4            # Genomic interval operations
