@@ -65,8 +65,11 @@ RUN mkdir -p /app/data
 # Create an output directory for results
 RUN mkdir -p /app/output
 
+# Create an uploads directory for web app file uploads
+RUN mkdir -p /app/uploads
+
 # Set appropriate permissions (optional, but good for security)
-RUN chmod 755 /app/data /app/output
+RUN chmod 755 /app/data /app/output /app/uploads
 
 # =============================================================================
 # ENVIRONMENT CONFIGURATION
@@ -87,12 +90,14 @@ ENV PATH=/opt/conda/envs/blastoise/bin:$PATH
 # =============================================================================
 # CONTAINER CONFIGURATION
 # =============================================================================
+# Expose the FastAPI port
+EXPOSE 8000
+
 # Set the entrypoint to our activation script
 ENTRYPOINT ["/start.sh"]
 
-# Set the default command when the container starts
-# This starts an interactive bash shell with the conda environment activated
-CMD ["/bin/bash"]
+# Start the FastAPI app with uvicorn inside the blastoise conda environment
+CMD ["uvicorn", "webapp.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
 # =============================================================================
@@ -101,10 +106,14 @@ CMD ["/bin/bash"]
 # To build this image:
 #   docker build -t blastoise:0.4.3 .
 #
-# To run interactively with data mounting:
-#   docker run -it -v /path/to/your/data:/app/data
+# To run the web app:
+#   docker run --rm -p 8000:8000 blastoise:0.4.3
+#   # Then open http://localhost:8000 in your browser
 #
-# To run a specific BLASTOISE command:
+# To run interactively with data mounting:
+#   docker run -it -v /path/to/your/data:/app/data blastoise:0.4.3 /bin/bash
+#
+# To run a specific BLASTOISE command (CLI):
 #   docker run --rm -v /path/to/data:/app/data -v /path/to/output:/app/output blastoise:0.4.3 \
 #   conda run -n blastoise blastoise -d /app/data/input.fasta -g /app/data/genome.fasta -o /app/output
 #

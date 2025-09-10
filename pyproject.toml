@@ -111,3 +111,15 @@ blastoise = "blastoise.main:main"
 
 # Additional tools to use as separate commands
 blastoise-sider-filter = "blastoise.extra.sider_filter:main"
+
+# =============================================================================
+# SETUPTOOLS CONFIGURATION
+# =============================================================================
+[tool.setuptools]
+# Explicitly specify which packages to include
+packages = ["blastoise", "blastoise.modules", "blastoise.extra"]
+
+# Alternative: use find directive to auto-discover blastoise package only
+# [tool.setuptools.packages.find]
+# include = ["blastoise*"]
+# exclude = ["webapp*", "tests*"]
