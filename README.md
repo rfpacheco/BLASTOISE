@@ -153,3 +153,80 @@ GitHub repository: https://github.com/rfpacheco/BLASTOISE
 For questions, issues, or contributions, please contact:
 - R. Pacheco (ronnyfph@gmail.com)
 - [GitHub Issues](https://github.com/rfpacheco/BLASTOISE/issues)
+
+
+## BLASTOISE Graphical User Interface (Tkinter)
+
+BLASTOISE now includes a simple Tkinter-based GUI so you can run the pipeline without using the command line.
+It reuses the same core pipeline as the CLI and writes the same outputs (CSV and GFF).
+
+### How to launch the GUI
+
+You can install the project in two ways. Pick one and then launch the GUI.
+
+1) Conda build/install
+
+    # Build the package
+    conda build -c conda-forge -c bioconda .
+
+    # Install from local cache
+    conda install --use-local -c bioconda -c conda-forge blastoise
+
+    # Launch the GUI
+    blastoise-gui
+
+2) Conda environment + pip editable
+
+    # Create environment with conda dependencies
+    conda create -n blastoise python=3.12 blast -c bioconda -c conda-forge
+    conda activate blastoise
+
+    # Install your package with pip (editable mode)
+    pip install -e .
+
+    # Launch the GUI
+    blastoise-gui
+    # or
+    python -m blastoise.gui
+
+Notes:
+- BLAST+ tools must be available in PATH (provided by the conda package `blast`).
+- Tkinter is part of Python, but on conda it’s provided by the `tk` package (included in the conda recipe). If you are
+  outside conda and get errors about tkinter, install your OS’s python3-tk package.
+
+### Using the GUI
+
+1. Paths section
+   - Input Data (FASTA): The input query sequences file (e.g., FASTA). Equivalent to CLI `--data`.
+   - Reference Genome (FASTA): The genome FASTA to search against. Equivalent to CLI `--genome`.
+   - Output Directory: Folder where BLASTOISE will create a workspace and write results. Equivalent to CLI `--output`.
+
+2. Parameters
+   - Identity (%): Identity threshold for BLASTn in the first step. Default 60. CLI: `--identity`.
+   - Word Size: BLASTn word size. Default 11. CLI: `--word_size`.
+   - Min Length: Minimum length to keep alignments/elements. Default 100. CLI: `--min_length`.
+   - Extend (nt): Number of nucleotides used in extension steps. Default 100. CLI: `--extend`.
+   - Length Limit (nt): Maximum length that triggers/limits extension. Default 1000. CLI: `--limit`.
+   - Jobs (-1=all): Parallel jobs. -1 uses all processors. CLI: `--jobs`.
+
+3. Run/Cancel
+   - Click Run to start. The process can take minutes to hours depending on genome size and parameters.
+   - A live Log panel shows status messages from the pipeline and will also be saved to `blastoise.log` in the
+     selected output directory.
+   - When finished, you will get a popup dialog with the paths to the generated CSV and GFF files.
+   - Cancel will request cancellation, but long-running external tasks (e.g., BLAST) may need to finish their current
+     step before the app can close.
+
+### Outputs
+
+- CSV: BLASTOISE--<input_basename>--<genome_basename>.csv
+- GFF: BLASTOISE--<input_basename>--<genome_basename>.gff
+- Log: blastoise.log in the selected output directory.
+
+### Troubleshooting
+
+- If the GUI does not start and you see errors about display or Tk, ensure you are running in a desktop session and
+  that the `tk` package is installed in your environment.
+- If BLAST commands are not found, verify that the `blast` package is installed in the current conda env and
+  `blastn` is on your PATH.
+- For very large genomes, consider increasing available memory and using fewer Jobs if you notice instability.

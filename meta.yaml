@@ -29,6 +29,7 @@ build:
   script: "{{ PYTHON }} -m pip install . --no-deps -vv"  # Installation command
   entry_points:                     # Command-line executables created
     - blastoise = blastoise.main:main
+    - blastoise-gui = blastoise.gui:main
     - blastoise-sider-filter = blastoise.extra.sider_filter:main
 
 # Package dependencies specification
@@ -44,6 +45,7 @@ requirements:
     - joblib >=1.5.1              # Parallel computing library
     - pandas >=2.3.1              # Data manipulation and analysis
     - pyranges >=0.1.4            # Genomic interval operations
+    - tk                           # Tkinter GUI support (conda)
 
 # Package testing configuration
 test:

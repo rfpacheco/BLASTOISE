@@ -109,5 +109,8 @@ Documentation = "https://github.com/rfpacheco/BLASTOISE#readme"
 # Main blastoise command: 'blastoise' will run the main() function from blastoise.main
 blastoise = "blastoise.main:main"
 
+# GUI launcher using Tkinter
+blastoise-gui = "blastoise.gui:main"
+
 # Additional tools to use as separate commands
 blastoise-sider-filter = "blastoise.extra.sider_filter:main"
