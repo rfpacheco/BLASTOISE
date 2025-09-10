@@ -40,7 +40,7 @@ requirements:
   run:                             # Runtime dependencies (needed when using the package)
     - python >=3.12               # Python runtime requirement
     - biopython >=1.85            # Biological computation library
-    - blast >=2.12                # NCBI BLAST+ suite for sequence alignment
+    - blast >=2.17.0              # NCBI BLAST+ suite for sequence alignment
     - joblib >=1.5.1              # Parallel computing library
     - pandas >=2.3.1              # Data manipulation and analysis
     - pyranges >=0.1.4            # Genomic interval operations
