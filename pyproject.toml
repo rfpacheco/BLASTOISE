@@ -28,8 +28,9 @@
 # =============================================================================
 [build-system]
 # setuptools>=64 is needed for modern pyproject.toml support
+# setuptools <81 to avoid pkg_resources warnings (deprecated versions in PyRagnes)
 # wheel is needed to create wheel distributions (.whl files)
-requires = ["setuptools", "wheel"]
+requires = ["setuptools <81", "wheel"]
 build-backend = "setuptools.build_meta"  # Backend to build your package
 
 # =============================================================================
@@ -43,7 +44,7 @@ authors = [
 ]
 description = "A Tool for SIDER Repetitive Sequence Discovery in Genomic Data"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.12"
 keywords = [
     "bioinformatics",
@@ -64,9 +65,6 @@ classifiers = [
     # Intended audience
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-
-    # License
-    "License :: OSI Approved :: MIT License",
 
     # Operating systems
     "Operating System :: OS Independent",

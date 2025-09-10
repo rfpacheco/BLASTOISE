@@ -34,18 +34,16 @@ build:
 # Package dependencies specification
 requirements:
   host:                            # Build-time dependencies (needed during package creation)
-    - python >=3.12               # Minimum Python version required
+    - python 3.12.*               # Minimum Python version required
     - pip                          # Package installer
-    - setuptools                   # Build system requirements
+    - setuptools <81               # Pin to avoid pkg_resources warnings (deprecated versions in PyRagnes)
   run:                             # Runtime dependencies (needed when using the package)
-    - python >=3.12               # Python runtime requirement
+    - python 3.12.*               # Python runtime requirement
     - blast >=2.17.0              # NCBI BLAST+ suite for sequence alignment
-    - pip                          # Ensure pip is available at runtime
-    - pip:
-        - biopython>=1.85         # Biological computation library (installed via pip)
-        - joblib>=1.5.1           # Parallel computing library (installed via pip)
-        - pandas>=2.3.1           # Data manipulation and analysis (installed via pip)
-        - pyranges>=0.1.4         # Genomic interval operations (installed via pip)
+    - biopython >=1.85            # Biological computation library
+    - joblib >=1.5.1              # Parallel computing library
+    - pandas >=2.3.1              # Data manipulation and analysis
+    - pyranges >=0.1.4            # Genomic interval operations
 
 # Package testing configuration
 test:
