@@ -72,7 +72,7 @@ def parse_arguments() -> argparse.Namespace:
                              'it does not exist.')
     parser.add_argument('-i', '--identity', type=int, default=60, 
                         help='Identity percentage for the first BLASTn step.')
-    parser.add_argument('-ws', '--word_size', type=int, default=15, 
+    parser.add_argument('-ws', '--word_size', type=int, default=11,
                         help='Word size for BLASTn.')
     parser.add_argument('-min', '--min_length', type=int, default=100, 
                         help='Minimum sequence length for filtering.')
