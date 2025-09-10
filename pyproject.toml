@@ -86,7 +86,7 @@ classifiers = [
 # DEPENDENCIES
 # =============================================================================
 # Runtime dependencies (packages needed to run the code)
-# Empty since conda is needed for dependencies outside python
+# Note: Non-Python dependency 'blast' (BLAST+) is managed by the conda environment, not via pip.
 dependencies = [
     "biopython>=1.85",
     "joblib>=1.5.1",
