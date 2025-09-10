@@ -47,7 +47,7 @@ docker pull rfpacheco/blastoise:0.4.2
 
 2. Create and activate the conda environment:
    ```bash
-   conda env create --name blastoise --file environment.yml
+   conda env create --name blastoise --file environment.yaml
    conda activate blastoise
    ```
 
@@ -111,7 +111,7 @@ BLASTOISE/
 │       ├── sider_filter.py          # SIDER filtering tool
 │       └── utils/                   # Utility functions
 ├── docs/                      # Documentation
-├── environment.yml            # Conda environment specification
+├── environment.yaml            # Conda environment specification
 ├── pyproject.toml             # Project metadata and build configuration
 ├── Dockerfile                 # Docker image definition
 └── README.md                  # This file
@@ -121,13 +121,13 @@ BLASTOISE/
 
 ## Dependencies
 
-BLASTOISE requires Python 3.10 or higher and depends on several libraries that are automatically installed through the conda environment:
+BLASTOISE requires Python 3.12 or higher and depends on several libraries. Most Python libraries are installed automatically via the conda environment (and pip),
 
 - pandas
 - pyranges
 - biopython
 - blast
-- Other dependencies specified in environment.yml
+- Other dependencies specified in environment.yaml
 
 ---
 
