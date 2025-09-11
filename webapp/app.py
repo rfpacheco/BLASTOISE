@@ -2,28 +2,72 @@ import os
 import shutil
 import subprocess
 import uuid
-import asyncio
-import threading
+import asyncio  # TODO: remove?
+import threading  # TODO: remove?
 from pathlib import Path
 from typing import Optional, Dict
 
-from fastapi import FastAPI, File, UploadFile, Form, BackgroundTasks
-from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse, StreamingResponse
+from fastapi import (
+    FastAPI,  # Main class to create the app
+    File,  # For handling file uploads in POST request. Loads whole file in bytes.
+    UploadFile,  # For handling file uploads in POST request. Streams file as an object (doesn't load in memory)
+    Form,  # For reading form-encoded data
+    BackgroundTasks  # To run long-running tasks without blocking the HTTP response
+)
+from fastapi.responses import (
+    HTMLResponse,  # Returns raw HTML a response (renders web pages)
+    FileResponse,  # Send files for download
+    PlainTextResponse,  # Sends plain text
+    StreamingResponse  # For streaming large responses to avoid loading them entirely in memory  # TODO: remove?
+)
 
-APP_ROOT = Path("/app")
-UPLOADS_DIR = APP_ROOT / "uploads"
-OUTPUT_DIR = APP_ROOT / "output"
 
-app = FastAPI(title="BLASTOISE Web", description="Simple FastAPI front-end for BLASTOISE pipeline")
+# =====================================================================================
+# Constants
+# =====================================================================================
+APP_ROOT: Path = Path("/app")  # Base directory of the app (used like this because of Docker container)
+UPLOADS_DIR: Path = APP_ROOT / "uploads"  # Where uploaded files are stored
+OUTPUT_DIR: Path = APP_ROOT / "output"  # Where results are written
+
+
+# =====================================================================================
+# Setting FastAPI
+# =====================================================================================
+# Create FastAPI application
+app: FastAPI = FastAPI(title="BLASTOISE Web", description="Simple FastAPI front-end for BLASTOISE pipeline")
 
 # Global dict to store running jobs and their log outputs
 running_jobs: Dict[str, Dict] = {}
 
 
+# =====================================================================================
+# Functions
+# =====================================================================================
 def _save_upload(dst_path: Path, up: UploadFile) -> None:
+    """
+    Saves an uploaded file to the specified destination path.
+
+    The function ensures that the parent directories of the destination path
+    exist, creating them if necessary, and then writes the content of the
+    uploaded file to the specified path.
+
+    Parameters:
+    dst_path : Path
+        The destination file path where the uploaded content will be saved.
+    up : UploadFile
+        The uploaded file object that contains the content to be saved.
+
+    Returns:
+    None
+    """
+    # Create parent directories if they don't exist
     dst_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Open destination file in write binary mode (wb) and copy uploaded file content
+    # Uses shutil.copyfileobj for efficient streaming of file data
+    # This avoids loading the entire file into memory at once
     with dst_path.open("wb") as f:
-        shutil.copyfileobj(up.file, f)
+        shutil.copyfileobj(up.file, f)  # type: ignore
 
 
 def _zip_dir(src_dir: Path, zip_path: Path) -> None:
