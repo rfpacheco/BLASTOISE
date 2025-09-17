@@ -7,52 +7,175 @@
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <div class="box">
-    <h2>BLASTOISE: Run from your browser</h2>
-    <form action="/run" method="post" enctype="multipart/form-data">
-      <div class="row">
-        <label>Data file (-d)</label>
-        <input type="file" name="data_file" required />
-      </div>
-      <div class="row">
-        <label>Genome file (-g)</label>
-        <input type="file" name="genome_file" required />
-      </div>
-      <div class="row"><label>Identity (-i)</label><input type="number" name="identity" value="60" /></div>
-      <div class="row"><label>Word size (-ws)</label><input type="number" name="word_size" value="11" /></div>
-      <div class="row"><label>Min length (-min)</label><input type="number" name="min_length" value="100" /></div>
-      <div class="row"><label>Extend (-ext)</label><input type="number" name="extend" value="100" /></div>
-      <div class="row"><label>Limit (-lim)</label><input type="number" name="limit_len" value="1000" /></div>
-      <div class="row"><label>Jobs (-j)</label><input type="number" name="jobs" value="-1" /></div>
-      <div class="row"><label>Optional job name</label><input type="text" name="job_name" placeholder="my_run" /></div>
-      <button type="submit">Run BLASTOISE</button>
-    </form>
-  </div>
+  <div class="layout">
+    <!-- CSS-only toggles -->
+    <input type="radio" name="tool" id="r-blastoise" class="visually-hidden" checked>
+    <input type="radio" name="tool" id="r-sider-filter" class="visually-hidden">
 
-  <div class="box" style="margin-top: 20px;">
-    <h2>SIDER Filter: Run from your browser</h2>
-    <form action="/run_sider_filter" method="post" enctype="multipart/form-data">
-      <div class="row">
-        <label>Input CSV (-d)</label>
-        <input type="file" name="data_csv" accept=".csv" required />
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">B</div>
+        <div class="brand-text">
+          <h1>BLASTOISE</h1>
+          <p class="subtitle">Analysis Platform</p>
+        </div>
       </div>
-      <div class="row">
-        <label>Genome FASTA (-g)</label>
-        <input type="file" name="genome_file" accept=".fa,.fasta,.fna" required />
-      </div>
-      <div class="row">
-        <label>Recaught FASTA (-rf)</label>
-        <input type="file" name="recaught_file" accept=".fa,.fasta,.fna" required />
-      </div>
-      <div class="row"><label>Recaught threshold (-rt)</label><input type="number" name="recaught_threshold" value="0.001" step="any" /></div>
-      <div class="row"><label>Word size (-ws)</label><input type="number" name="word_size" value="15" /></div>
-      <div class="row"><label>E-value (-e)</label><input type="number" name="evalue" value="1e-09" step="any" /></div>
-      <div class="row"><label>Identity (-i)</label><input type="number" name="identity" value="60" /></div>
-      <div class="row"><label>Min subjects (-ms)</label><input type="number" name="min_subjects" value="5" /></div>
-      <div class="row"><label>Jobs (-j)</label><input type="number" name="jobs" value="-1" /></div>
-      <div class="row"><label>Optional job name</label><input type="text" name="job_name" placeholder="my_sider_filter" /></div>
-      <button type="submit">Run SIDER Filter</button>
-    </form>
+
+      <nav class="nav">
+        <label class="nav-link" for="r-blastoise">
+          <div class="nav-content">
+            <div class="nav-icon"></div>
+            <div class="nav-text">
+              <span class="nav-label">BLASTOISE</span>
+              <span class="nav-desc">Main analysis tool</span>
+            </div>
+          </div>
+        </label>
+        <label class="nav-link" for="r-sider-filter">
+          <div class="nav-content">
+            <div class="nav-icon"></div>
+            <div class="nav-text">
+              <span class="nav-label">SIDER Filter</span>
+              <span class="nav-desc">Sequence filtering</span>
+            </div>
+          </div>
+        </label>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <!-- BLASTOISE PANEL -->
+      <section id="panel-blastoise" class="panel">
+        <div class="panel-header">
+          <h2>BLASTOISE Analysis</h2>
+          <p class="panel-subtitle">Discover repetitive sequences using BLAST-based iterative search</p>
+        </div>
+
+        <div class="card">
+          <form class="form" action="/run" method="post" enctype="multipart/form-data">
+            <div class="form-section">
+              <h3 class="section-title">Input Files</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="b-data">Data file (-d)</label>
+                  <input id="b-data" type="file" name="data_file" required>
+                </div>
+                <div class="form-group">
+                  <label for="b-genome">Genome file (-g)</label>
+                  <input id="b-genome" type="file" name="genome_file" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Parameters</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="b-identity">Identity (-i)</label>
+                  <input id="b-identity" type="number" name="identity" value="60" min="0" max="100">
+                </div>
+                <div class="form-group">
+                  <label for="b-word">Word size (-ws)</label>
+                  <input id="b-word" type="number" name="word_size" value="11" min="1">
+                </div>
+                <div class="form-group">
+                  <label for="b-min">Min length (-min)</label>
+                  <input id="b-min" type="number" name="min_length" value="100" min="0">
+                </div>
+                <div class="form-group">
+                  <label for="b-ext">Extend (-ext)</label>
+                  <input id="b-ext" type="number" name="extend" value="100" min="0">
+                </div>
+                <div class="form-group">
+                  <label for="b-lim">Limit (-lim)</label>
+                  <input id="b-lim" type="number" name="limit_len" value="1000" min="0">
+                </div>
+                <div class="form-group">
+                  <label for="b-jobs">Jobs (-j)</label>
+                  <input id="b-jobs" type="number" name="jobs" value="-1">
+                </div>
+                <div class="form-group">
+                  <label for="b-jobname">Job name (optional)</label>
+                  <input id="b-jobname" type="text" name="job_name" placeholder="my_analysis">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn primary">Run BLASTOISE</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- SIDER FILTER PANEL -->
+      <section id="panel-sider" class="panel">
+        <div class="panel-header">
+          <h2>SIDER Filter Analysis</h2>
+          <p class="panel-subtitle">Filter sequences using SIDER criteria with optional recapture</p>
+        </div>
+
+        <div class="card">
+          <form class="form" action="/run_sider_filter" method="post" enctype="multipart/form-data">
+            <div class="form-section">
+              <h3 class="section-title">Input Files</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="s-csv">Input CSV (-d)</label>
+                  <input id="s-csv" type="file" name="data_csv" accept=".csv" required>
+                </div>
+                <div class="form-group">
+                  <label for="s-genome">Genome FASTA (-g)</label>
+                  <input id="s-genome" type="file" name="genome_file" accept=".fa,.fasta,.fna" required>
+                </div>
+                <div class="form-group">
+                  <label for="s-recaught">Recaught FASTA (-rf)</label>
+                  <input id="s-recaught" type="file" name="recaught_file" accept=".fa,.fasta,.fna" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Parameters</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="s-rt">Recaught threshold (-rt)</label>
+                  <input id="s-rt" type="number" name="recaught_threshold" value="0.001" step="any">
+                </div>
+                <div class="form-group">
+                  <label for="s-ws">Word size (-ws)</label>
+                  <input id="s-ws" type="number" name="word_size" value="15" min="1">
+                </div>
+                <div class="form-group">
+                  <label for="s-e">E-value (-e)</label>
+                  <input id="s-e" type="number" name="evalue" value="1e-09" step="any">
+                </div>
+                <div class="form-group">
+                  <label for="s-i">Identity (-i)</label>
+                  <input id="s-i" type="number" name="identity" value="60" min="0" max="100">
+                </div>
+                <div class="form-group">
+                  <label for="s-ms">Min subjects (-ms)</label>
+                  <input id="s-ms" type="number" name="min_subjects" value="5" min="0">
+                </div>
+                <div class="form-group">
+                  <label for="s-jobs">Jobs (-j)</label>
+                  <input id="s-jobs" type="number" name="jobs" value="-1">
+                </div>
+                <div class="form-group">
+                  <label for="s-jobname">Job name (optional)</label>
+                  <input id="s-jobname" type="text" name="job_name" placeholder="my_sider_filter">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn primary">Run SIDER Filter</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
   </div>
 </body>
 </html>
