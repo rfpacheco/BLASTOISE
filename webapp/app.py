@@ -158,8 +158,11 @@ def run_blastoise_background(job_id: str, cmd: List[str], log_path: Path):
             running_jobs[job_id]["status"] = "completed"
             # Create zip of results
             zip_path = OUTPUT_DIR / f"{job_id}.zip"
-            job_output_dir = OUTPUT_DIR / job_id
-            _zip_dir(job_output_dir, zip_path)
+            # Choose the source directory to zip; default to OUTPUT_DIR/job_id
+            zip_src_dir = running_jobs[job_id].get("zip_src_dir")
+            if not zip_src_dir:
+                zip_src_dir = str(OUTPUT_DIR / job_id)
+            _zip_dir(Path(zip_src_dir), zip_path)
         else:
             running_jobs[job_id]["status"] = "failed"
 
@@ -226,7 +229,8 @@ async def run_blastoise(
         "status": "starting",
         "output": [],
         "return_code": None,
-        "error": None
+        "error": None,
+        "zip_src_dir": str(job_output_dir),
     }
 
     # Start background task
@@ -234,6 +238,68 @@ async def run_blastoise(
     background_tasks.add_task(run_blastoise_background, job_id, cmd, log_path)
 
     # Return progress page (rendered via template)
+    return templates.TemplateResponse("progress.html", {"request": request, "job_id": job_id})
+
+
+@app.post("/run_sider_filter", response_class=HTMLResponse)
+async def run_sider_filter(
+        request: Request,
+        background_tasks: BackgroundTasks,
+        data_csv: UploadFile = File(...),
+        genome_file: UploadFile = File(...),
+        recaught_file: UploadFile = File(...),
+        recaught_threshold: float = Form(1.0e-03),
+        word_size: int = Form(15),
+        evalue: float = Form(1.0e-09),
+        identity: int = Form(60),
+        min_subjects: int = Form(5),
+        jobs: int = Form(-1),
+        job_name: Optional[str] = Form(None),
+):
+    # Create unique job id and paths
+    job_id = (job_name.strip().replace(' ', '_') if job_name else str(uuid.uuid4()))
+    job_upload_dir = UPLOADS_DIR / job_id
+    job_output_dir = OUTPUT_DIR / job_id
+
+    # Save uploaded files
+    csv_path = job_upload_dir / (data_csv.filename or "data.csv")
+    genome_path = job_upload_dir / (genome_file.filename or "genome.fasta")
+    recaught_path = job_upload_dir / (recaught_file.filename or "recaught.fasta")
+    _save_upload(csv_path, data_csv)
+    _save_upload(genome_path, genome_file)
+    _save_upload(recaught_path, recaught_file)
+
+    # Ensure output dir exists
+    job_output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Prepare command for blastoise-sider-filter
+    cmd = [
+        "blastoise-sider-filter",
+        "-d", str(csv_path),
+        "-g", str(genome_path),
+        "-rf", str(recaught_path),
+        "-rt", str(recaught_threshold),
+        "-ws", str(word_size),
+        "-e", str(evalue),
+        "-i", str(identity),
+        "-ms", str(min_subjects),
+        "-j", str(jobs),
+    ]
+
+    # Initialize job status
+    running_jobs[job_id] = {
+        "status": "starting",
+        "output": [],
+        "return_code": None,
+        "error": None,
+        "zip_src_dir": str(job_upload_dir),
+    }
+
+    # Start background task
+    log_path = job_output_dir / "web_run.log"
+    background_tasks.add_task(run_blastoise_background, job_id, cmd, log_path)
+
+    # Return progress page
     return templates.TemplateResponse("progress.html", {"request": request, "job_id": job_id})
 
 

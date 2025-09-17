@@ -28,5 +28,31 @@
       <button type="submit">Run BLASTOISE</button>
     </form>
   </div>
+
+  <div class="box" style="margin-top: 20px;">
+    <h2>SIDER Filter: Run from your browser</h2>
+    <form action="/run_sider_filter" method="post" enctype="multipart/form-data">
+      <div class="row">
+        <label>Input CSV (-d)</label>
+        <input type="file" name="data_csv" accept=".csv" required />
+      </div>
+      <div class="row">
+        <label>Genome FASTA (-g)</label>
+        <input type="file" name="genome_file" accept=".fa,.fasta,.fna" required />
+      </div>
+      <div class="row">
+        <label>Recaught FASTA (-rf)</label>
+        <input type="file" name="recaught_file" accept=".fa,.fasta,.fna" required />
+      </div>
+      <div class="row"><label>Recaught threshold (-rt)</label><input type="number" name="recaught_threshold" value="0.001" step="any" /></div>
+      <div class="row"><label>Word size (-ws)</label><input type="number" name="word_size" value="15" /></div>
+      <div class="row"><label>E-value (-e)</label><input type="number" name="evalue" value="1e-09" step="any" /></div>
+      <div class="row"><label>Identity (-i)</label><input type="number" name="identity" value="60" /></div>
+      <div class="row"><label>Min subjects (-ms)</label><input type="number" name="min_subjects" value="5" /></div>
+      <div class="row"><label>Jobs (-j)</label><input type="number" name="jobs" value="-1" /></div>
+      <div class="row"><label>Optional job name</label><input type="text" name="job_name" placeholder="my_sider_filter" /></div>
+      <button type="submit">Run SIDER Filter</button>
+    </form>
+  </div>
 </body>
 </html>
