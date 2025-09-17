@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLASTOISE Web</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="box">
+    <h2>BLASTOISE: Run from your browser</h2>
+    <form action="/run" method="post" enctype="multipart/form-data">
+      <div class="row">
+        <label>Data file (-d)</label>
+        <input type="file" name="data_file" required />
+      </div>
+      <div class="row">
+        <label>Genome file (-g)</label>
+        <input type="file" name="genome_file" required />
+      </div>
+      <div class="row"><label>Identity (-i)</label><input type="number" name="identity" value="60" /></div>
+      <div class="row"><label>Word size (-ws)</label><input type="number" name="word_size" value="11" /></div>
+      <div class="row"><label>Min length (-min)</label><input type="number" name="min_length" value="100" /></div>
+      <div class="row"><label>Extend (-ext)</label><input type="number" name="extend" value="100" /></div>
+      <div class="row"><label>Limit (-lim)</label><input type="number" name="limit_len" value="1000" /></div>
+      <div class="row"><label>Jobs (-j)</label><input type="number" name="jobs" value="-1" /></div>
+      <div class="row"><label>Optional job name</label><input type="text" name="job_name" placeholder="my_run" /></div>
+      <button type="submit">Run BLASTOISE</button>
+    </form>
+  </div>
+</body>
+</html>

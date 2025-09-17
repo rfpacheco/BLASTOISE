@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLASTOISE Progress - Job: {{ job_id }}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body data-job-id="{{ job_id }}">
+  <div class="progress-container">
+    <h2>BLASTOISE Progress</h2>
+    <h3>Job ID: {{ job_id }}</h3>
+    <div id="status" class="status running">Status: Starting...</div>
+
+    <h4>Console Output:</h4>
+    <div id="console" class="console-output">Initializing...</div>
+
+    <div id="downloads" class="download-links" style="display: none;">
+      <a id="dl-zip" href="/download/{{ job_id }}">Download Results (.zip)</a>
+      <a id="dl-log" href="/download/{{ job_id }}?file=web_run.log">Download Log</a>
+      <a href="/">Start New Job</a>
+    </div>
+  </div>
+
+  <script src="/static/js/progress.js" defer></script>
+</body>
+</html>

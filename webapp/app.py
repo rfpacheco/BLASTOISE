@@ -2,24 +2,29 @@ import os
 import shutil
 import subprocess
 import uuid
-import asyncio  # TODO: remove?
-import threading  # TODO: remove?
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
+# noinspection PyPackageRequirements
 from fastapi import (
     FastAPI,  # Main class to create the app
     File,  # For handling file uploads in POST request. Loads whole file in bytes.
     UploadFile,  # For handling file uploads in POST request. Streams file as an object (doesn't load in memory)
     Form,  # For reading form-encoded data
-    BackgroundTasks  # To run long-running tasks without blocking the HTTP response
+    BackgroundTasks,  # To run long-running tasks without blocking the HTTP response
+    Request  # To pass request object into templates
 )
+# noinspection PyPackageRequirements
 from fastapi.responses import (
     HTMLResponse,  # Returns raw HTML a response (renders web pages)
     FileResponse,  # Send files for download
     PlainTextResponse,  # Sends plain text
     StreamingResponse  # For streaming large responses to avoid loading them entirely in memory  # TODO: remove?
 )
+# noinspection PyPackageRequirements
+from fastapi.staticfiles import StaticFiles
+# noinspection PyPackageRequirements
+from fastapi.templating import Jinja2Templates
 
 
 # =====================================================================================
@@ -35,6 +40,14 @@ OUTPUT_DIR: Path = APP_ROOT / "output"  # Where results are written
 # =====================================================================================
 # Create FastAPI application
 app: FastAPI = FastAPI(title="BLASTOISE Web", description="Simple FastAPI front-end for BLASTOISE pipeline")
+
+# Template and static configuration
+BASE_DIR: Path = Path(__file__).parent
+TEMPLATES_DIR: Path = BASE_DIR / "templates"
+STATIC_DIR: Path = BASE_DIR / "static"
+
+templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Global dict to store running jobs and their log outputs
 running_jobs: Dict[str, Dict] = {}
@@ -70,30 +83,62 @@ def _save_upload(dst_path: Path, up: UploadFile) -> None:
         shutil.copyfileobj(up.file, f)  # type: ignore
 
 
-def _zip_dir(src_dir: Path, zip_path: Path) -> None:
+def _zip_dir(src_dir: Path, zip_path: Path) -> None:  # TODO: too complex maybe
+    """
+    Create a ZIP file from the contents of the specified directory.
+
+    This function compresses all files (including those in subdirectories) within
+    the provided directory into a single ZIP archive. Files are stored in the
+    archive with paths relative to the parent of the given source directory.
+
+    Parameters
+    ----------
+    src_dir : Path
+        The source directory containing files and subdirectories to compress.
+    zip_path : Path
+        The destination path where the ZIP file will be created.
+
+    """
     from zipfile import ZipFile, ZIP_DEFLATED
-    with ZipFile(zip_path, 'w', ZIP_DEFLATED) as zipf:
-        for root, _, files in os.walk(src_dir):
-            for file in files:
-                full_path = Path(root) / file
-                arcname = full_path.relative_to(src_dir.parent)
-                zipf.write(full_path, arcname)
+    with ZipFile(zip_path, 'w', ZIP_DEFLATED) as zipf:  # Open ZIP file in write mode with compression
+        for root, _, files in os.walk(src_dir):  # Walk through all files in source directory
+            for file in files:  # For each file found
+                full_path = Path(root) / file  # Get full path to current file
+                arcname = full_path.relative_to(src_dir.parent)  # Get relative path for ZIP structure
+                zipf.write(full_path, arcname)  # Add file to ZIP using relative path
 
 
-def run_blastoise_background(job_id: str, cmd: list, log_path: Path):
-    """Run BLASTOISE in background and capture output line by line"""
+def run_blastoise_background(job_id: str, cmd: List[str], log_path: Path):
+    """
+    Runs a command in the background while capturing its output.
+
+    This function runs a specified command as a subprocess, logs the output to a file,
+    and updates the status and output associated with the given job ID. The subprocess
+    output is monitored in real-time, and relevant details such as the return code and
+    status are updated based on the execution result. If the command succeeds, the job
+    output is archived in a zip file; otherwise, the job is marked as failed or errored.
+
+    Parameters
+    ----------
+    job_id : str
+        The unique identifier for the job being executed.
+    cmd : list
+        The command to be executed as a subprocess, represented as a list of strings.
+    log_path : Path
+        The path to the file where the subprocess output will be logged.
+    """
     running_jobs[job_id]["status"] = "running"
     running_jobs[job_id]["output"] = []
 
     try:
         # Start the process
-        process = subprocess.Popen(
+        # noinspection PyTypeChecker
+        process = subprocess.Popen(  # TODO: check types
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            bufsize=1,
-            universal_newlines=True
+            bufsize=1
         )
 
         # Read output line by line
@@ -125,82 +170,8 @@ def run_blastoise_background(job_id: str, cmd: list, log_path: Path):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index() -> str:
-    return (
-        """
-        <html>
-          <head>
-            <title>BLASTOISE Web</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 40px; }
-              .box { max-width: 720px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-              label { display: block; margin-top: 12px; font-weight: bold; }
-              input[type=number], input[type=text] { width: 200px; }
-              .row { margin-bottom: 10px; }
-              button { margin-top: 16px; padding: 10px 16px; }
-
-              /* Progress page styles */
-              .progress-container { max-width: 900px; margin: auto; padding: 20px; }
-              .console-output { 
-                background: #1e1e1e; 
-                color: #00ff00; 
-                font-family: 'Courier New', monospace; 
-                font-size: 12px;
-                height: 400px; 
-                overflow-y: auto; 
-                padding: 15px; 
-                border: 1px solid #333; 
-                border-radius: 5px;
-                white-space: pre-wrap;
-              }
-              .status { 
-                padding: 10px; 
-                margin: 10px 0; 
-                border-radius: 5px; 
-                font-weight: bold; 
-              }
-              .status.running { background: #fff3cd; color: #856404; }
-              .status.completed { background: #d4edda; color: #155724; }
-              .status.failed { background: #f8d7da; color: #721c24; }
-              .status.error { background: #f8d7da; color: #721c24; }
-              .download-links { margin-top: 20px; }
-              .download-links a { 
-                display: inline-block; 
-                margin: 5px 10px 5px 0; 
-                padding: 8px 15px; 
-                background: #007bff; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 4px; 
-              }
-            </style>
-          </head>
-          <body>
-            <div class="box">
-              <h2>BLASTOISE: Run from your browser</h2>
-              <form action="/run" method="post" enctype="multipart/form-data">
-                <div class="row">
-                  <label>Data file (-d)</label>
-                  <input type="file" name="data_file" required />
-                </div>
-                <div class="row">
-                  <label>Genome file (-g)</label>
-                  <input type="file" name="genome_file" required />
-                </div>
-                <div class="row"><label>Identity (-i)</label><input type="number" name="identity" value="60" /></div>
-                <div class="row"><label>Word size (-ws)</label><input type="number" name="word_size" value="11" /></div>
-                <div class="row"><label>Min length (-min)</label><input type="number" name="min_length" value="100" /></div>
-                <div class="row"><label>Extend (-ext)</label><input type="number" name="extend" value="100" /></div>
-                <div class="row"><label>Limit (-lim)</label><input type="number" name="limit_len" value="1000" /></div>
-                <div class="row"><label>Jobs (-j)</label><input type="number" name="jobs" value="-1" /></div>
-                <div class="row"><label>Optional job name</label><input type="text" name="job_name" placeholder="my_run" /></div>
-                <button type="submit">Run BLASTOISE</button>
-              </form>
-            </div>
-          </body>
-        </html>
-        """
-    )
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/health")
@@ -210,6 +181,7 @@ async def health() -> dict:
 
 @app.post("/run", response_class=HTMLResponse)
 async def run_blastoise(
+        request: Request,
         background_tasks: BackgroundTasks,
         data_file: UploadFile = File(...),
         genome_file: UploadFile = File(...),
@@ -261,112 +233,8 @@ async def run_blastoise(
     log_path = job_output_dir / "web_run.log"
     background_tasks.add_task(run_blastoise_background, job_id, cmd, log_path)
 
-    # Return progress page
-    return HTMLResponse(content=f"""
-        <html>
-          <head>
-            <title>BLASTOISE Progress - Job: {job_id}</title>
-            <style>
-              body {{ font-family: Arial, sans-serif; margin: 40px; }}
-              .progress-container {{ max-width: 900px; margin: auto; padding: 20px; }}
-              .console-output {{ 
-                background: #1e1e1e; 
-                color: #00ff00; 
-                font-family: 'Courier New', monospace; 
-                font-size: 12px;
-                height: 400px; 
-                overflow-y: auto; 
-                padding: 15px; 
-                border: 1px solid #333; 
-                border-radius: 5px;
-                white-space: pre-wrap;
-              }}
-              .status {{ 
-                padding: 10px; 
-                margin: 10px 0; 
-                border-radius: 5px; 
-                font-weight: bold; 
-              }}
-              .status.running {{ background: #fff3cd; color: #856404; }}
-              .status.completed {{ background: #d4edda; color: #155724; }}
-              .status.failed {{ background: #f8d7da; color: #721c24; }}
-              .status.error {{ background: #f8d7da; color: #721c24; }}
-              .download-links {{ margin-top: 20px; }}
-              .download-links a {{ 
-                display: inline-block; 
-                margin: 5px 10px 5px 0; 
-                padding: 8px 15px; 
-                background: #007bff; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 4px; 
-              }}
-            </style>
-          </head>
-          <body>
-            <div class="progress-container">
-              <h2>BLASTOISE Progress</h2>
-              <h3>Job ID: {job_id}</h3>
-              <div id="status" class="status running">Status: Starting...</div>
-
-              <h4>Console Output:</h4>
-              <div id="console" class="console-output">Initializing...</div>
-
-              <div id="downloads" class="download-links" style="display: none;">
-                <a href="/download/{job_id}">Download Results (.zip)</a>
-                <a href="/download/{job_id}?file=web_run.log">Download Log</a>
-                <a href="/">Start New Job</a>
-              </div>
-            </div>
-
-            <script>
-              const jobId = '{job_id}';
-              const statusDiv = document.getElementById('status');
-              const consoleDiv = document.getElementById('console');
-              const downloadsDiv = document.getElementById('downloads');
-
-              // Poll for updates every 2 seconds
-              function updateProgress() {{
-                fetch(`/progress/${{jobId}}`)
-                  .then(response => response.json())
-                  .then(data => {{
-                    // Update status
-                    statusDiv.className = `status ${{data.status}}`;
-                    statusDiv.textContent = `Status: ${{data.status.toUpperCase()}}`;
-
-                    // Update console output
-                    if (data.output && data.output.length > 0) {{
-                      consoleDiv.textContent = data.output.join('\\n');
-                      consoleDiv.scrollTop = consoleDiv.scrollHeight;
-                    }}
-
-                    // Show downloads if completed
-                    if (data.status === 'completed') {{
-                      downloadsDiv.style.display = 'block';
-                      clearInterval(pollInterval);
-                    }} else if (data.status === 'failed' || data.status === 'error') {{
-                      downloadsDiv.innerHTML = `
-                        <a href="/download/${{jobId}}?file=web_run.log">Download Error Log</a>
-                        <a href="/">Start New Job</a>
-                      `;
-                      downloadsDiv.style.display = 'block';
-                      clearInterval(pollInterval);
-                    }}
-                  }})
-                  .catch(error => {{
-                    console.error('Error:', error);
-                    statusDiv.className = 'status error';
-                    statusDiv.textContent = 'Status: ERROR - Connection failed';
-                  }});
-              }}
-
-              // Update immediately and then every 2 seconds
-              updateProgress();
-              const pollInterval = setInterval(updateProgress, 2000);
-            </script>
-          </body>
-        </html>
-    """)
+    # Return progress page (rendered via template)
+    return templates.TemplateResponse("progress.html", {"request": request, "job_id": job_id})
 
 
 @app.get("/progress/{job_id}")
