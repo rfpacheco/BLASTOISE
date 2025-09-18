@@ -8,11 +8,14 @@
 </head>
 <body data-job-id="{{ job_id }}">
   <div class="progress-container">
-    <h2>BLASTOISE Progress</h2>
-    <h3>Job ID: {{ job_id }}</h3>
+    <div class="panel-header">
+      <h2>Job Progress</h2>
+      <p class="panel-subtitle">Monitoring execution — Job ID: <code>{{ job_id }}</code></p>
+    </div>
+
     <div id="status" class="status running">Status: Starting...</div>
 
-    <h4>Console Output:</h4>
+    <h3 class="section-title">Console Output</h3>
     <div id="console" class="console-output">Initializing...</div>
 
     <div id="downloads" class="download-links" style="display: none;">
