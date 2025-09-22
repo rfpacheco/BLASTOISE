@@ -22,6 +22,15 @@ Author: R. Pacheco
 Version: 0.4.2
 License: MIT
 """
+import warnings
+
+# Silence the pkg_resources deprecation warning emitted by sorted_nearest
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    module=r"sorted_nearest(\.__init__)?",
+    message=r"pkg_resources is deprecated as an API\."
+)
 
 import argparse
 import os
