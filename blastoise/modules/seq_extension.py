@@ -169,45 +169,44 @@ def _process_single_row_extension(
         prune_against_df: Optional[pd.DataFrame] = None,
 ) -> Dict[str, Any]:
     """
-    Process a single row for sequence extension with recursive extension capability.
+    Processes a single row of genomic data to extend sequence regions based on
+    various constraints such as extension direction, sequence length limits,
+    and pruning against previously processed intervals. The function employs
+    recursion to repeatedly extend sequences until the required conditions
+    are met or a maximum recursion depth is reached.
 
-    This helper function processes a single row from the DataFrame, evaluates the sequence length,
-    and extends the sequence if it's shorter than the specified limit. The extension can be done by
-    adjusting the start and end coordinates on both sides, only on the left side, or only on the 
-    right side, ensuring they don't go beyond valid genome boundaries. After extension, it performs 
-    a BLAST search and uses the results to determine if further extension is possible through 
-    recursive calls based on the next_side_extension_checker analysis.
+    Parameters:
+    -----------
+    row_data: Tuple
+        Contains the row index and the corresponding data as a pandas Series.
+    genome_fasta: str
+        Path to the genome FASTA file used for extracting sequences.
+    extend_number: int
+        Number of base pairs to extend the sequence during each iteration.
+    limit_len: int
+        Maximum allowed length for the extended sequence.
+    extension_direction: str, default="both"
+        Specifies whether to extend "both" sides, only "left", or only "right."
+    identity: int, default=60
+        Minimum percentage identity to be used in BLAST alignments.
+    word_size: int, default=15
+        Word size parameter for the BLAST alignment.
+    min_length: int, default=100
+        Minimum sequence length required for BLAST results.
+    max_recursion_depth: int, default=10
+        Maximum depth for recursive function calls.
+    current_depth: int, default=0
+        Tracks the current recursion depth.
+    prune_enabled: bool, default=False
+        Whether to enable pruning based on overlap with previously processed data.
+    prune_against_df: Optional[pd.DataFrame], default=None
+        DataFrame used for pruning sequences that overlap with previously processed intervals.
 
-    Parameters
-    ----------
-    row_data : Tuple[Any, pd.Series]
-        A tuple containing the index and the row data from the DataFrame. The row data
-        must contain 'sstart', 'send', 'sseqid', and 'sstrand' columns.
-    genome_fasta : str
-        The path to the genome FASTA file used for extracting sequence data.
-        This should be a BLAST database created with makeblastdb.
-    extend_number : int
-        The number of nucleotides to add on each side of the sequence.
-        For example, if extend_number=100, the sequence will be extended by 
-        100 nucleotides on both the 5' and 3' ends.
-    limit_len : int
-        A length threshold that triggers sequence extension. If the sequence
-        is already longer than this value, no extension is performed.
-    extension_direction : str, optional
-        Direction for extension. Options are:
-        - "both": Extend on both sides (default)
-        - "left": Extend only on the left side (5' end)
-        - "right": Extend only on the right side (3' end)
-    identity : int, optional
-        Identity percentage for BLAST search. Default is 60.
-    word_size : int, optional
-        Word size for BLAST search. Default is 15.
-    min_length : int, optional
-        Minimum sequence length for filtering BLAST results. Default is 100.
-    max_recursion_depth : int, optional
-        Maximum allowed recursion depth to prevent infinite recursion. Default is 10.
-    current_depth : int, optional
-        Current recursion depth level. Used internally for tracking. Default is 0.
+    Return:
+    -------
+    result: Dict
+        A dictionary containing information about the processed row,
+        including the extension status, current depth, and recursion details.
     """
     # -----------------------------------------------------------------------------
     # STEP 0: Extract row index and initialize result structure
