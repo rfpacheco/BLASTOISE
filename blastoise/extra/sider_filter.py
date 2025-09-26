@@ -77,7 +77,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-ws", "--word_size", 
         type=int, 
-        default=15,
+        default=11,
         help="Word size parameter for BLASTN."
     )
 
