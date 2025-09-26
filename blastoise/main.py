@@ -73,9 +73,9 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument('-d', '--data', type=str, required=True, 
-                        help='Path to the input data file.')
+                        help='Path to the input data file in FASTA format. This will be the query data.')
     parser.add_argument('-g', '--genome', type=str, required=True, 
-                        help='Path to the reference genome file.')
+                        help='Path to the reference genome file in FASTA format.')
     parser.add_argument('-o', '--output', type=str, required=True,
                         help='Path for the output working directory. The specified directory will be created if '
                              'it does not exist.')

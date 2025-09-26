@@ -57,11 +57,11 @@
               <h3 class="section-title">Input Files</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="b-data">Data file (-d)</label>
+                  <label for="b-data">Data to search:</label>
                   <input id="b-data" type="file" name="data_file" required>
                 </div>
                 <div class="form-group">
-                  <label for="b-genome">Genome file (-g)</label>
+                  <label for="b-genome">Genome:</label>
                   <input id="b-genome" type="file" name="genome_file" required>
                 </div>
               </div>
@@ -71,27 +71,27 @@
               <h3 class="section-title">Parameters</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="b-identity">Identity (-i)</label>
+                  <label for="b-identity">Identity:</label>
                   <input id="b-identity" type="number" name="identity" value="60" min="0" max="100">
                 </div>
                 <div class="form-group">
-                  <label for="b-word">Word size (-ws)</label>
+                  <label for="b-word">Word size:</label>
                   <input id="b-word" type="number" name="word_size" value="11" min="1">
                 </div>
                 <div class="form-group">
-                  <label for="b-min">Min length (-min)</label>
+                  <label for="b-min">Mininum length:</label>
                   <input id="b-min" type="number" name="min_length" value="100" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="b-ext">Extend (-ext)</label>
+                  <label for="b-ext">Extension steps:</label>
                   <input id="b-ext" type="number" name="extend" value="100" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="b-lim">Limit (-lim)</label>
+                  <label for="b-lim">Extension limit length</label>
                   <input id="b-lim" type="number" name="limit_len" value="1000" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="b-jobs">Jobs (-j)</label>
+                  <label for="b-jobs">Multi-processing jobs</label>
                   <input id="b-jobs" type="number" name="jobs" value="-1">
                 </div>
                 <div class="form-group">
@@ -121,15 +121,15 @@
               <h3 class="section-title">Input Files</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="s-csv">Input CSV (-d)</label>
+                  <label for="s-csv">BLASTOISE output CSV:</label>
                   <input id="s-csv" type="file" name="data_csv" accept=".csv" required>
                 </div>
                 <div class="form-group">
-                  <label for="s-genome">Genome FASTA (-g)</label>
+                  <label for="s-genome">Genome:</label>
                   <input id="s-genome" type="file" name="genome_file" accept=".fa,.fasta,.fna" required>
                 </div>
                 <div class="form-group">
-                  <label for="s-recaught">Recaught FASTA (-rf)</label>
+                  <label for="s-recaught">Recaught element:</label>
                   <input id="s-recaught" type="file" name="recaught_file" accept=".fa,.fasta,.fna" required>
                 </div>
               </div>
@@ -139,27 +139,27 @@
               <h3 class="section-title">Parameters</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="s-rt">Recaught threshold (-rt)</label>
+                  <label for="s-rt">Recaught threshold:</label>
                   <input id="s-rt" type="number" name="recaught_threshold" value="0.001" step="any">
                 </div>
                 <div class="form-group">
-                  <label for="s-ws">Word size (-ws)</label>
+                  <label for="s-ws">Word size:</label>
                   <input id="s-ws" type="number" name="word_size" value="15" min="1">
                 </div>
                 <div class="form-group">
-                  <label for="s-e">E-value (-e)</label>
+                  <label for="s-e">E-value:</label>
                   <input id="s-e" type="number" name="evalue" value="1e-09" step="any">
                 </div>
                 <div class="form-group">
-                  <label for="s-i">Identity (-i)</label>
+                  <label for="s-i">Identity:</label>
                   <input id="s-i" type="number" name="identity" value="60" min="0" max="100">
                 </div>
                 <div class="form-group">
-                  <label for="s-ms">Min subjects (-ms)</label>
+                  <label for="s-ms">Minimum subjects: </label>
                   <input id="s-ms" type="number" name="min_subjects" value="5" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="s-jobs">Jobs (-j)</label>
+                  <label for="s-jobs">Multi-processing jobs:</label>
                   <input id="s-jobs" type="number" name="jobs" value="-1">
                 </div>
                 <div class="form-group">
