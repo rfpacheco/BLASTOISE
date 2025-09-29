@@ -470,3 +470,75 @@ body {
     padding: 20px;
   }
 }
+
+/* Info tooltip styles */
+.info {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  position: relative;
+  user-select: none;
+  cursor: default;
+}
+
+.info .tooltip {
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--text);
+  color: #ffffff;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  min-width: 240px;
+  max-width: 420px;
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  white-space: normal;
+}
+
+.info .tooltip::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent var(--text) transparent transparent;
+}
+
+.info:hover .tooltip,
+.info:focus .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 480px) {
+  .info .tooltip {
+    left: 0;
+    top: 28px;
+    transform: none;
+  }
+  .info .tooltip::before {
+    left: 10px;
+    top: -12px;
+    transform: none;
+    border-color: transparent transparent var(--text) transparent;
+    border-width: 6px;
+  }
+}
