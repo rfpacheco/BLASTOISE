@@ -372,14 +372,6 @@ def repetitive_sider_searcher(
                 prune_against_df=accumulated_data
             )
 
-            # Check overlapping data of `new_elems_extended` with `accumulated_data`
-            overlapping_elems_extended: pd.DataFrame = fetch_overlapping_intervals(new_elems_extended, accumulated_data)
-            if not overlapping_elems_extended.empty:
-                print(f"\t- Remove overlaps with accumulated_data: {len(overlapping_elems_extended)}")
-                new_elems_extended = match_data_and_remove(new_elems_extended, overlapping_elems_extended)
-                new_elems_extended.sort_values(by=['sseqid', 'sstart'], inplace=True)
-                new_elems_extended.reset_index(drop=True, inplace=True)
-
             accumulated_data = pd.concat([accumulated_data, new_elems_extended], ignore_index=True)
             accumulated_data.sort_values(by=['sseqid', 'sstart'], inplace=True)
             accumulated_data.reset_index(drop=True, inplace=True)
