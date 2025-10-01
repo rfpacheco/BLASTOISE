@@ -1,4 +1,3 @@
-
 # =============================================================================
 # BASE IMAGE
 # =============================================================================
@@ -96,26 +95,69 @@ EXPOSE 8000
 # Set the entrypoint to our activation script
 ENTRYPOINT ["/start.sh"]
 
-# Start the FastAPI app with uvicorn inside the blastoise conda environment
+# Start the FastAPI app with uvicorn inside the blastoise conda environment by default
 CMD ["uvicorn", "webapp.app:app", "--host", "0.0.0.0", "--port", "8000"]
-
 
 # =============================================================================
 # USAGE INFORMATION (as comments)
 # =============================================================================
-# To build this image:
-#   docker build -t blastoise:0.4.3 .
 #
-# To run the web app:
-#   docker run --rm -p 8000:8000 blastoise:0.4.3
-#   # Then open http://localhost:8000 in your browser
+# ---------------------------
+# --- 1. Get the Image ---
+# ---------------------------
 #
-# To run interactively with data mounting:
-#   docker run -it -v /path/to/your/data:/app/data blastoise:0.4.3 /bin/bash
+# === Pull from Docker Hub (Recommended) ===
+# Pull the latest version of the image.
+#   docker pull rfpacheco/blastoise:latest
 #
-# To run a specific BLASTOISE command (CLI):
-#   docker run --rm -v /path/to/data:/app/data -v /path/to/output:/app/output blastoise:0.4.3 \
-#   conda run -n blastoise blastoise -d /app/data/input.fasta -g /app/data/genome.fasta -o /app/output
+# You can also pull a specific version for reproducibility. This project's
+# current version is 0.4.3.
+#   docker pull rfpacheco/blastoise:0.4.3
 #
-# To check available commands:
-#   docker run --rm blastoise:0.4.3 conda run -n blastoise blastoise --help
+# === Build Locally (Alternative) ===
+# Build the image from the project's root directory. You can name it anything
+# you like using the `-t` (tag) flag.
+#
+#   docker build -t my-blastoise-app .
+#
+# ----------------------------------------
+# --- 2. How to Run BLASTOISE ---
+# ----------------------------------------
+# BLASTOISE offers two main interfaces: a web application and command-line tools.
+# The recommended approach depends on your needs.
+#
+# === Run the Web Application (Recommended for Docker) ===
+# The default and primary way to use this Docker image is to run the FastAPI
+# web interface for interactive analysis.
+# The `--rm` flag removes the container on exit, and `-p` maps the ports.
+#
+#   docker run --rm -p 8000:8000 rfpacheco/blastoise:latest
+#
+# Then, open a web browser and navigate to http://localhost:8000
+#
+# === Run Command-Line (CLI) Tools ===
+# For users who primarily want to use the command-line tools, the local
+# installation method using Conda (described in README.md) is often more direct.
+# However, you can still run CLI commands via Docker, thought is not recommended.
+# To do this, you must mount your local data and output
+# directories into the container using the `-v` flag.
+#
+#   -v /path/on/your/host:/path/in/container
+#
+# Example (main 'blastoise' tool):
+#   docker run --rm \
+#     -v /path/to/your_data:/app/data \
+#     -v /path/to/your_output:/app/output \
+#     rfpacheco/blastoise:latest \
+#     blastoise -d /app/data/query.fasta -g /app/data/genome.fasta -o /app/output/my_results
+#
+# Example (getting help):
+#   docker run --rm rfpacheco/blastoise:latest blastoise --help
+#
+# ------------------------------------
+# --- 3. Start an Interactive Shell ---
+# ------------------------------------
+# To get a bash shell inside the container for debugging or manual operations.
+# The `-it` flags make the session interactive.
+#
+#   docker run --rm -it -v /path/to/your_data:/app/data rfpacheco/blastoise:latest bash

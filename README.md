@@ -1,93 +1,182 @@
 # BLASTOISE: BLAST Oriented to the Identification of SIDER Elements
 
-**BLASTOISE** (BLAST Oriented to the Identification of SIDER Elements) is a Python-based Linux software designed to automate the identification of **SIDER elements** within *Leishmania spp.* species. These retroposons, known for their heterogeneity and degeneration, pose significant challenges in their identification, which BLASTOISE effectively addresses.
+**BLASTOISE** is a Python-based software tool engineered to automate the identification of SIDER (Short Interspersed 
+Degenerated Retroposon) elements within the genomes of Leishmania spp. species. The inherent heterogeneity and 
+degeneration of these retroposons present considerable identification challenges, which BLASTOISE is designed to 
+overcome.
 
-**Version:** 0.4.2
+The software is distributed through several channels: 
+- Docker image on [DockerHub](https://hub.docker.com/r/rfpacheco/blastoise).
+- Anaconda package on [Anaconda Cloud](https://anaconda.org/rfpacheco/blastoise).
+- Open-source code on [GitHub](https://github.com/rfpacheco/BLASTOISE).
 
-BLASTOISE is available as:
-- A Docker image on [DockerHub](https://hub.docker.com/repository/docker/rfpacheco/blastoise/general)
-- Open-source code on [GitHub](https://github.com/rfpacheco/BLASTOISE)
+## Table of Contents  
 
----
+* [Use Methods](#use-methods)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Project Structure](#project-structure)
+* [Dependencies](#dependencies)
+* [License](#license)
+* [Citation](#citation)
+* [Contact](#contact)
 
-## Key Features
-
-- **Automated SIDER Element Identification**: Tailored for the analysis of *Leishmania spp.* species
-- **Flexible Installation Options**: Supports Docker-based deployment for easy containerized usage, as well as installation via `git clone` and `conda` environments
-- **Robust Libraries**: Leverages a range of powerful libraries and tools, including:
-    - [Pandas](https://pandas.pydata.org/) for data manipulation (McKinney et al., 2010)
-    - [PyRanges](https://pyranges.readthedocs.io/) for genomic feature processing
-    - [BioPython](https://biopython.org/) for biological computations (Cock et al., 2009)
-    - [BLAST](https://www.ncbi.nlm.nih.gov/books/NBK279690/) for sequence alignment (Camacho et al., 2009)
-- **Additional Tools**:
-    - Coordinate Corrector: Adjust genomic coordinates
-    - SIDER Filter: Filter and process SIDER elements
-
----
+## Use Methods
+BLASTOISE offers two distinct operational interfaces to accommodate different user requirements:
+* **Web Application:** A comprehensive web application, powered by the FastAPI framework, that provides an intuitive 
+    graphical user interface for interactive analysis. This modality is recommended for users deploying the software via 
+    Docker.
+* **Command-Line Interface (CLI):** A suite of robust command-line tools designed for integration into automated 
+    bioinformatics workflows and for users preferring a terminal-based environment.
 
 ## Installation
+BLASTOISE can be deployed using one of several methods, depending on the desired use case.
 
-BLASTOISE can be installed and used in multiple ways:
+### Method 1: Docker (Recommended for Web Application)
+This approach is recommended for most users as it simplifies dependency management and ensures a consistent runtime 
+environment, particularly for the web application.
 
-### Using Docker (Recommended)
-
-To run the Docker image, first you will need to install [Docker engine](https://docs.docker.com/engine/install/ubuntu/) for Linux, including the [Linux postinstall instructions](https://docs.docker.com/engine/install/linux-postinstall/) if you want to omit the `sudo` command. Then, to download **BLASTOISE** software, follow these instructions:
+1. **Install Docker Engine:** Ensure that Docker Engine is installed on the local system by following the official 
+    instructions pertinent to your operating system.
+2. **Pull the Docker Image:** Download the official BLASTOISE image from Docker Hub. Users may pull the `:latest` tag for 
+    the most recent version or a specific version tag to ensure long-term reproducibility.
 
 ```bash
-docker pull rfpacheco/blastoise:0.4.2
+# Pull the latest version
+docker pull rfpacheco/blastoise:latest
+
+# Or, pull a specific version (e.g., 0.4.3)
+docker pull rfpacheco/blastoise:0.4.3
 ```
 
-### Using Conda (Alternative)
+### Method 2: Conda Package (Recommended for CLI)
+This is the most direct method for installing the command-line tools on a local system.
+   1. **Prerequisites:** A functional installation of the Conda or Mamba package manager is required.
+   2. **Install the Package:** Execute the following command to install BLASTOISE and all its dependencies directly 
+        from the Anaconda Cloud repository. This makes the `blastoise` and `blastoise-sider-filter` commands immediately 
+        available in your terminal.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/rfpacheco/BLASTOISE.git
-   cd BLASTOISE
-   ```
+```bash
+conda install rfpacheco::blastoise
+```
 
-2. Create and activate the conda environment:
-   ```bash
-   conda env create --name blastoise --file environment.yaml
-   conda activate blastoise
-   ```
+### Method 3: From Source (for Development)
+This method facilitates a direct local installation from the source code, which is particularly suitable for development 
+purposes.
+1. **Prerequisites:** A functional installation of the Conda or Mamba package manager is required.
+2. **Clone the Source Repository:**
 
-3. Install the package:
-   ```bash
-   pip install -e .
-   ```
+```bash
+git clone https://github.com/rfpacheco/BLASTOISE.git
+cd BLASTOISE
+```
 
----
+3. **Create and Activate the Conda Environment:** This command interprets the `environment.yaml` file to provision an 
+  environment with all the necessary dependencies.
+
+```bash
+# Using Conda
+conda env create --file environment.yaml
+conda activate blastoise
+
+# Or, using the Mamba package manager for faster resolution
+mamba env create --file environment.yaml
+mamba activate blastoise
+```
+
+4. **Install the BLASTOISE Package:** Install the package in editable mode via pip to complete the setup.
+
+```bash
+pip install -e .
+```
 
 ## Usage
+BLASTOISE may be operated through either its web application or its command-line interface.
 
-### Docker Usage
-
-To run BLASTOISE using Docker:
-
-```bash
-# Run interactively with data mounting
-docker run -it -v /path/to/your/data:/app/data rfpacheco/blastoise:0.4.2
-
-# Run a specific BLASTOISE command
-docker run --rm -v /path/to/data:/app/data -v /path/to/output:/app/output rfpacheco/blastoise:0.4.2 \
-conda run -n blastoise blastoise -d /app/data/input.fasta -g /app/data/genome.fasta -o /app/output
-
-# Check available commands
-docker run --rm rfpacheco/blastoise:0.4.2 conda run -n blastoise blastoise --help
-```
-
-### Command Line Usage (when installed via conda)
+### 1. Docker: Web Application (Primary Method)
+The primary and recommended method for using the Docker image is through the web-based graphical user interface, which 
+is optimal for interactive analysis.
+1. **Run the Container:** Execute the following command to instantiate the container and start the web server. The `-p 
+    8000:8000` flag maps the container's internal port to the host machine.
 
 ```bash
-# Main BLASTOISE command
-blastoise -d input.fasta -g genome.fasta -o output_directory
-
-# Additional tools
-blastoise-coordinate-corrector --help
-blastoise-sider-filter --help
+docker run --rm -p 8000:8000 rfpacheco/blastoise:latest
 ```
 
----
+> **Note**  
+> If the image was built locally under a different tag (e.g., m`y-blastoise-app`), that tag should be used
+> instead of `rfpacheco/blastoise:latest`.
+
+2. `Access the Web Interface:` Navigate to the following address in a web browser: http://localhost:8000 (or replace
+   localhost with the host IP and 8000 with the port number specified when running the container).
+3. `Execute an Analysis:`
+   * Upload the requisite input files (query data and genome).
+   * Configure the analysis parameters as necessary.
+   * Initiate the job by selecting "Run BLASTOISE" or "Run SIDER Filter".
+   * Upon completion, the results will be available for download.
+
+### 2. Command-Line Interface (CLI)
+The command-line interface is designed for users who require automation, scripting capabilities, or prefer a 
+terminal-based workflow. It is the principal mode of interaction for local Conda-based installations.
+
+#### `blastoise` (Main Discovery Tool)
+This executable is the primary entry point for executing the SIDER discovery pipeline.
+
+**Basic Example:**
+```bash
+blastoise -d path/to/query.fasta -g path/to/genome.fasta -o path/to/output_dir
+```
+
+**Arguments:**
+
+| Flag   | Full Argument  | Description                                                                             | Default | 
+|--------|----------------|-----------------------------------------------------------------------------------------|---------|
+| `-h`   | `--help`       | Display the help message and exit.                                                      | -       |
+| `-d`   | `--data`       | **Required**. Specifies the path to the input data file (FASTA format query).           | None    |
+| `-g`   | `--genome`     | **Required**. Specifies the path to the reference genome file (FASTA format).           | None    |
+| `-o`   | `--output`     | **Required**. Specifies the path for the output working directory.                      | None    |
+| `-i`   | `--identity`   | Sets the identity percentage for the initial BLASTn step.                               | 60      |
+| `-ws`  | `--word_size`  | Defines the word size for the BLASTn algorithm.                                         | 11      |
+| `-min` | `--min_length` | Sets the minimum sequence length for filtering operations.                              | 100     |
+| `-ext` | `--extend`     | Defines the number of nucleotides for sequence extension.                               | 100     |
+| `-lim` | `--limit`      | Sets the length limit that triggers sequence extension.                                 | 1000    |
+| `-j`   | `--jobs`       | Specifies the number of jobs for parallel processing (-1 utilizes all available cores). | -1      |
+
+#### `blastoise-sider-filter` (Validation Tool)
+This utility is used to validate candidate sequences that have been identified by the main discovery tool.
+
+**Basic Example:**
+```bash
+blastoise-sider-filter -d candidates.csv -g genome.fasta -rf query.fasta -o filtered_results
+```
+
+**Arguments:**
+
+| Flag  | Full Argument           | Description                                                                             | Default | 
+|-------|-------------------------|-----------------------------------------------------------------------------------------|---------|
+| `-h`  | `--help `               | Display the help message and exit.                                                      | -       |
+| `-d ` | `--data `               | **Required**. Specifies the path to the input CSV file containing sequence data.        | None    |
+| `-g`  | `--genome  `            | **Required**. Specifies the path to the genome FASTA file for BLASTn database creation. | None    |
+| `-rf` | `--recaught_file`       | **Required**. Specifies the path to the FASTA file used for recapturing sequences.      | None    |
+| `-rt` | `--recaught_threshold ` | Sets the e-value threshold for recapturing sequences.                                   | 0.001   |
+| `-ws` | `--word_size`           | Defines the word size for the BLASTn algorithm.                                         | 11      |
+| `-e`  | `--evalue`              | Sets the e-value threshold for the initial BLASTn filtering step.                       | 1e-09   |
+| `-i`  | `--identity`            | Defines the minimum percentage identity for sequence recapturing.                       | 60      |
+| `-ms` | `--min_subjects`        | Sets the minimum number of unique subjects required for a sequence to be accepted.      | 5       |
+| `-j`  | `--jobs `               | Specifies the number of jobs for parallel processing (-1 utilizes all available cores). | -1      |
+
+### 3. Advanced: Docker CLI Usage
+It is also possible to execute CLI commands directly via Docker by overriding the container's default command. This 
+procedure requires mounting local data directories into the container's filesystem using the `-v` flag.
+
+```bash
+# Example: Execute the main 'blastoise' tool via Docker
+docker run --rm \
+ -v /path/to/your_data:/app/data \
+ -v /path/to/your_output:/app/output \
+ rfpacheco/blastoastoise:latest \
+ blastoise -d /app/data/query.fasta -g /app/data/genome.fasta -o /app/output/my_results
+```
 
 ## Project Structure
 
@@ -95,61 +184,49 @@ blastoise-sider-filter --help
 BLASTOISE/
 ├── blastoise/                  # Main package directory
 │   ├── __init__.py            # Package initialization
-│   ├── main.py                # Main entry point
+│   ├── main.py                # Main CLI entry point
 │   ├── modules/               # Core functionality modules
-│   │   ├── aesthetics.py      # UI and output formatting
-│   │   ├── blaster.py         # BLAST integration
-│   │   ├── compare.py         # Sequence comparison
-│   │   ├── files_manager.py   # File handling
-│   │   ├── filters.py         # Filtering mechanisms
-│   │   ├── genomic_ranges.py  # Genomic range operations
-│   │   ├── seq_identifier.py  # Sequence identification
-│   │   ├── seq_modifier.py    # Sequence modification
-│   │   └── strand_location.py # Strand location utilities
-│   └── extra/                 # Additional tools
-│       ├── coordinate_corrector.py  # Coordinate correction tool
-│       ├── sider_filter.py          # SIDER filtering tool
-│       └── utils/                   # Utility functions
-├── docs/                      # Documentation
+│   └── extra/                 # Additional tools (SIDER filter)
+├── webapp/                     # FastAPI web application source
 ├── environment.yaml            # Conda environment specification
-├── pyproject.toml             # Project metadata and build configuration
-├── Dockerfile                 # Docker image definition
-└── README.md                  # This file
+├── pyproject.toml              # Project metadata and build configuration
+├── meta.yaml                   # Conda recipe for Anaconda distribution
+├── Dockerfile                  # Docker image definition
+└── README.md                   # This file
 ```
-
----
 
 ## Dependencies
-
-BLASTOISE requires Python 3.12 or higher and depends on several libraries. Most Python libraries are installed automatically via the conda environment (and pip),
-
-- pandas
-- pyranges
-- biopython
-- blast
-- Other dependencies specified in environment.yaml
-
----
+The operation of BLASTOISE is contingent upon Python version 3.12 or higher, in addition to several external packages. 
+All dependencies are managed automatically through the `environment.yaml` file for Conda-based installations and are 
+pre-installed in the official Docker image.
+* Core Tools:
+  * blast
+* Python Libraries:
+  * biopython
+  * pandas
+  * pyranges
+  * joblib
+  * fastapi (for web application)
+  * uvicorn (for web application)
 
 ## License
-
-BLASTOISE is open-source software, licensed under the [MIT License](https://opensource.org/licenses/MIT).
-
----
+BLASTOISE is open-source software distributed under the terms of the **MIT License**.
 
 ## Citation
-
-If you use BLASTOISE in your research, please cite:
+Should you use BLASTOISE in your research, we kindly request that you cite the following publication:
 
 ```
-Pacheco, R. (2023). BLASTOISE: BLAST Oriented to the Identification of SIDER Elements. 
-GitHub repository: https://github.com/rfpacheco/BLASTOISE
+@software{Pacheco_BLASTOISE_2025,
+author = {Pacheco, R.},
+title = {{BLASTOISE: BLAST Oriented to the Identification of SIDER Elements}},
+year = {2025},
+publisher = {GitHub},
+journal = {GitHub repository},
+url = {https://github.com/rfpacheco/BLASTOISE}
+}
 ```
-
----
 
 ## Contact
-
-For questions, issues, or contributions, please contact:
-- R. Pacheco (ronnyfph@gmail.com)
-- [GitHub Issues](https://github.com/rfpacheco/BLASTOISE/issues)
+For inquiries, bug reports, or contributions, please use the following channels:
+* **Author:** R. Pacheco (ronnyfph@gmail.com)
+* **Issue Tracker:** GitHub Issues Page
