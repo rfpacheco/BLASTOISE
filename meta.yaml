@@ -12,6 +12,41 @@
 #
 # For more information about conda recipes, see:
 # https://docs.conda.io/projects/conda-build/en/latest/resources/define-metadata.html
+#
+# =============================================================================
+# DEVELOPER NOTES - BUILDING AND UPLOADING TO ANACONDA CLOUD
+# =============================================================================
+#
+# IMPORTANT: This package requires dependencies from conda-forge and bioconda
+# channels that are not available in the default conda channel.
+#
+# --- HOW TO BUILD THE PACKAGE ---
+# The following channels MUST be specified during build:
+#   conda-build meta.yaml -c conda-forge -c bioconda
+#
+# --- HOW TO UPLOAD TO ANACONDA CLOUD ---
+# Option 1 - Build and upload in one step:
+#   conda-build meta.yaml -c conda-forge -c bioconda --upload
+#
+# Option 2 - Build first, then upload separately:
+#   conda-build meta.yaml -c conda-forge -c bioconda
+#   anaconda upload /path/to/built/package.tar.bz2
+#
+# --- PACKAGE INSTALLATION FOR USERS ---
+# Users need to specify the same channels when installing:
+#   conda install -c rfpacheco -c conda-forge -c bioconda blastoise
+#
+# --- OPTIONAL: Global channel configuration ---
+# To avoid specifying channels every time, create ~/.condarc:
+#   channels:
+#     - conda-forge
+#     - bioconda
+#     - defaults
+#
+# Note: The "channels" section cannot be added directly to this meta.yaml file
+# as it's not a standard conda-build feature. Channels must be specified at
+# build time via command line arguments.
+#
 # =============================================================================
 
 # Package identification and versioning
@@ -39,11 +74,11 @@ requirements:
     - setuptools <81               # Pin to avoid pkg_resources warnings (deprecated versions in PyRagnes)
   run:                             # Runtime dependencies (needed when using the package)
     - python 3.12.*               # Python runtime requirement
-    - blast >=2.17.0              # NCBI BLAST+ suite for sequence alignment
+    - blast >=2.17.0              # NCBI BLAST+ suite for sequence alignment (from bioconda)
     - biopython >=1.85            # Biological computation library
     - joblib >=1.5.1              # Parallel computing library
     - pandas >=2.3.1              # Data manipulation and analysis
-    - pyranges >=0.1.4            # Genomic interval operations
+    - pyranges >=0.1.4            # Genomic interval operations (from conda-forge)
 
 # Package testing configuration
 test:

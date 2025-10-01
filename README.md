@@ -61,7 +61,7 @@ This is the most direct method for installing the command-line tools on a local 
         available in your terminal.
 
 ```bash
-conda install rfpacheco::blastoise
+conda install -c rfpacheco -c conda-forge -c bioconda blastoise
 ```
 
 ### Method 3: From Source (for Development)
