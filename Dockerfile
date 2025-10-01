@@ -2,7 +2,8 @@
 # BASE IMAGE
 # =============================================================================
 # miniconda3 as the base image - provides Python and conda package manager
-# This image is based on Debian and includes conda pre-installed
+# This image is based on Debian (Linux) and is cross-platform compatible,
+# meaning it can be run on Windows, macOS, and Linux systems with Docker installed.
 FROM continuumio/miniconda3
 
 # =============================================================================

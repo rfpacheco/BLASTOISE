@@ -33,21 +33,25 @@ BLASTOISE offers two distinct operational interfaces to accommodate different us
 BLASTOISE can be deployed using one of several methods, depending on the desired use case.
 
 ### Method 1: Docker (Recommended for Web Application)
-This approach is recommended for most users as it simplifies dependency management and ensures a consistent runtime 
-environment, particularly for the web application.
+This approach is recommended for most users as it simplifies dependency management and ensures a consistent runtime
+environment. The Docker container runs on **Windows, macOS, and Linux**.
 
-1. **Install Docker Engine:** Ensure that Docker Engine is installed on the local system by following the official 
-    instructions pertinent to your operating system.
-2. **Pull the Docker Image:** Download the official BLASTOISE image from Docker Hub. Users may pull the `:latest` tag for 
-    the most recent version or a specific version tag to ensure long-term reproducibility.
+1.  **Install Docker:** Ensure that **Docker Desktop** (for Windows and macOS) or **Docker Engine** (for Linux) is 
+    installed on your system by following the official instructions.
+2.  **Get the Docker Image:** You can get the image in two ways:
 
-```bash
-# Pull the latest version
-docker pull rfpacheco/blastoise:latest
+    *   **Option A: Docker Desktop GUI (Windows/macOS):** Open Docker Desktop, search for `rfpacheco/blastoise` in the 
+        images search bar, and click "Pull".
+    *   **Option B: Command Line (All Platforms):** Download the official BLASTOISE image from Docker Hub. Users may 
+        pull the `:latest` tag for the most recent version or a specific version tag to ensure long-term reproducibility.
 
-# Or, pull a specific version (e.g., 0.4.3)
-docker pull rfpacheco/blastoise:0.4.3
-```
+    ```bash
+    # Pull the latest version
+    docker pull rfpacheco/blastoise:latest
+
+    # Or, pull a specific version (e.g., 0.4.3)
+    docker pull rfpacheco/blastoise:0.4.3
+    ```
 
 ### Method 2: Conda Package (Recommended for CLI)
 This is the most direct method for installing the command-line tools on a local system.
@@ -94,22 +98,33 @@ pip install -e .
 BLASTOISE may be operated through either its web application or its command-line interface.
 
 ### 1. Docker: Web Application (Primary Method)
-The primary and recommended method for using the Docker image is through the web-based graphical user interface, which 
-is optimal for interactive analysis.
-1. **Run the Container:** Execute the following command to instantiate the container and start the web server. The `-p 
-    8000:8000` flag maps the container's internal port to the host machine.
 
-```bash
-docker run --rm -p 8000:8000 rfpacheco/blastoise:latest
-```
+The primary and recommended method for using the Docker image is through the web-based graphical user interface.
+
+*   **Option A: Docker Desktop GUI (Windows/macOS):**
+     1.  **Run the image:** In Docker Desktop, go to the "Images" section, find the `rfpacheco/blastoise` image, and 
+         click the "Run" button.
+     2.  **Configure port:** In the "Optional settings", set the "Host port" to `8000`. This maps the container's port 
+         8000 to your local machine's port 8000.
+     3.  **Run the container:** Click "Run".
+     4.  **Access the Web Interface:** Navigate to `http://localhost:8000` in a web browser.
+
+*   **Option B: Command Line (All Platforms):**
+    1.  Execute the following command to start the container. The `-p 8000:8000` flag maps the container's internal port
+        to the host machine.
+    ```bash
+    docker run --rm -p 8000:8000 rfpacheco/blastoise:latest
+    ```
 
 > **Note**  
-> If the image was built locally under a different tag (e.g., m`y-blastoise-app`), that tag should be used
+> If the image was built locally under a different tag (e.g., `my-blastoise-app`), that tag should be used
 > instead of `rfpacheco/blastoise:latest`.
 
-2. `Access the Web Interface:` Navigate to the following address in a web browser: http://localhost:8000 (or replace
+Once the container is running, you can access the web interface.
+
+2. **Access the Web Interface:** Navigate to the following address in a web browser: http://localhost:8000 (or replace
    localhost with the host IP and 8000 with the port number specified when running the container).
-3. `Execute an Analysis:`
+3. **Execute an Analysis:**
    * Upload the requisite input files (query data and genome).
    * Configure the analysis parameters as necessary.
    * Initiate the job by selecting "Run BLASTOISE" or "Run SIDER Filter".
@@ -147,7 +162,7 @@ This utility is used to validate candidate sequences that have been identified b
 
 **Basic Example:**
 ```bash
-blastoise-sider-filter -d candidates.csv -g genome.fasta -rf query.fasta -o filtered_results
+blastoise-sider-filter -d candidates.csv -g genome.fasta -rf query.fasta
 ```
 
 **Arguments:**
@@ -175,7 +190,7 @@ docker run --rm \
  -v /path/to/your_data:/app/data \
  -v /path/to/your_output:/app/output \
  rfpacheco/blastoastoise:latest \
- blastoise -d /app/data/query.fasta -g /app/data/genome.fasta -o /app/output/my_results
+ blastoise -d /app/data/query.fasta -g /app/data/genome.fasta
 ```
 
 ## Project Structure
