@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+<!--suppress HtmlUnknownTag, GrazieInspection -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BLASTOISE Web</title>
+  <!--suppress HtmlUnknownTarget -->
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
@@ -57,11 +59,21 @@
               <h3 class="section-title">Input Files</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="b-data">Data to search:<span class="info" aria-label="Data to search info">i<span class="tooltip">Query sequence to search in reference genome. FASTA format.</span></span></label>
+                  <label for="b-data">
+                    Data to search:
+                    <span class="info" aria-label="Data to search info">
+                      i<span class="tooltip">Query sequence to search in reference genome. FASTA format.</span>
+                    </span>
+                  </label>
                   <input id="b-data" type="file" name="data_file" required>
                 </div>
                 <div class="form-group">
-                  <label for="b-genome">Genome:<span class="info" aria-label="Genome info">i<span class="tooltip">Reference genome. FASTA format.</span></span></label>
+                  <label for="b-genome">
+                    Genome:
+                    <span class="info" aria-label="Genome info">
+                      i<span class="tooltip">Reference genome. FASTA format.</span>
+                    </span>
+                  </label>
                   <input id="b-genome" type="file" name="genome_file" required>
                 </div>
               </div>
@@ -71,31 +83,67 @@
               <h3 class="section-title">Parameters</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="b-identity">Identity:<span class="info" aria-label="Identity info">i<span class="tooltip">Sets the percentage for BALSTn hit similarity.</span></span></label>
+                  <label for="b-identity">
+                    Identity:
+                    <span class="info" aria-label="Identity info">
+                      i
+                      <span class="tooltip">Sets the percentage for BALSTn hit similarity.</span>
+                    </span>
+                  </label>
                   <input id="b-identity" type="number" name="identity" value="60" min="0" max="100">
                 </div>
                 <div class="form-group">
-                  <label for="b-word">Word size:<span class="info" aria-label="Word size info">i<span class="tooltip">Sets the length of exact matches used for the alignment seed.</span></span></label>
+                  <label for="b-word">
+                    Word size:
+                    <span class="info" aria-label="Word size info">
+                      i
+                      <span class="tooltip">Sets the length of exact matches used for the alignment seed.</span>
+                    </span>
+                  </label>
                   <input id="b-word" type="number" name="word_size" value="11" min="1">
                 </div>
                 <div class="form-group">
-                  <label for="b-min">Mininum length:<span class="info" aria-label="Minimum length info">i<span class="tooltip">Sets the minimum sequence length required for processing.</span></span></label>
+                  <label for="b-min">
+                    Minimum length:
+                    <span class="info" aria-label="Minimum length info">
+                      i<span class="tooltip">Sets the minimum sequence length required for processing.</span></span>
+                  </label>
                   <input id="b-min" type="number" name="min_length" value="100" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="b-ext">Extension steps:<span class="info" aria-label="Extension steps info">i<span class="tooltip">Number of nucleotides added per extension iteration.</span></span></label>
+                  <label for="b-ext">
+                    Extension steps:
+                    <span class="info" aria-label="Extension steps info">
+                      i<span class="tooltip">Number of nucleotides added per extension iteration.</span>
+                    </span>
+                  </label>
                   <input id="b-ext" type="number" name="extend" value="100" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="b-lim">Extension limit length:<span class="info" aria-label="Extension limit length info">i<span class="tooltip">Sets the limit length for the extension process.</span></span></label>
+                  <label for="b-lim">
+                    Extension limit length:
+                    <span class="info" aria-label="Extension limit length info">
+                      i<span class="tooltip">Sets the limit length for the extension process.</span>
+                    </span>
+                  </label>
                   <input id="b-lim" type="number" name="limit_len" value="1000" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="b-jobs">Multi-processing jobs:<span class="info" aria-label="Jobs info">i<span class="tooltip">Sets the CPU cores used for the execution. -1 will use all available resources.</span></span></label>
+                  <label for="b-jobs">
+                    Multi-processing jobs:
+                    <span class="info" aria-label="Jobs info">
+                    i<span class="tooltip">Sets the CPU cores used for the execution. -1 will use all available resources.</span>
+                    </span>
+                  </label>
                   <input id="b-jobs" type="number" name="jobs" value="-1">
                 </div>
                 <div class="form-group">
-                  <label for="b-jobname">Job name (optional):<span class="info" aria-label="Job name info">i<span class="tooltip">Gives the job a name.</span></span></label>
+                  <label for="b-jobname">
+                    Job name (optional):
+                    <span class="info" aria-label="Job name info">
+                      i<span class="tooltip">Gives the job a name.</span>
+                    </span>
+                  </label>
                   <input id="b-jobname" type="text" name="job_name" placeholder="my_analysis">
                 </div>
               </div>
@@ -121,15 +169,30 @@
               <h3 class="section-title">Input Files</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="s-csv">BLASTOISE output CSV:<span class="info" aria-label="BLASTOISE output CSV info">i<span class="tooltip">Result sequences from the BLASTOISE execution. CSV format.</span></span></label>
+                  <label for="s-csv">
+                    BLASTOISE output CSV:
+                    <span class="info" aria-label="BLASTOISE output CSV info">
+                      i<span class="tooltip">Result sequences from the BLASTOISE execution. CSV format.</span>
+                    </span>
+                  </label>
                   <input id="s-csv" type="file" name="data_csv" accept=".csv" required>
                 </div>
                 <div class="form-group">
-                  <label for="s-genome">Genome:<span class="info" aria-label="Genome info">i<span class="tooltip">Reference genome. FASTA format.</span></span></label>
+                  <label for="s-genome">
+                    Genome:
+                    <span class="info" aria-label="Genome info">
+                      i<span class="tooltip">Reference genome. FASTA format.</span>
+                    </span>
+                  </label>
                   <input id="s-genome" type="file" name="genome_file" accept=".fa,.fasta,.fna" required>
                 </div>
                 <div class="form-group">
-                  <label for="s-recaught">Recaught element:<span class="info" aria-label="Recaught element info">i<span class="tooltip">Will be used to recover potential false negatives after the filter. FASTA format.</span></span></label>
+                  <label for="s-recaught">
+                    Recaught element:
+                    <span class="info" aria-label="Recaught element info">
+                      i<span class="tooltip">Will be used to recover potential false negatives after the filter. FASTA format.</span>
+                    </span>
+                  </label>
                   <input id="s-recaught" type="file" name="recaught_file" accept=".fa,.fasta,.fna" required>
                 </div>
               </div>
@@ -139,31 +202,66 @@
               <h3 class="section-title">Parameters</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="s-rt">Recaught threshold:<span class="info" aria-label="Recaught threshold info">i<span class="tooltip">E-value threshold used to recapture sequences after filtering.</span></span></label>
+                  <label for="s-rt">
+                    Recaught threshold:
+                    <span class="info" aria-label="Recaught threshold info">
+                      i<span class="tooltip">E-value threshold used to recapture sequences after filtering.</span>
+                    </span>
+                  </label>
                   <input id="s-rt" type="number" name="recaught_threshold" value="0.001" step="any">
                 </div>
                 <div class="form-group">
-                  <label for="s-ws">Word size:<span class="info" aria-label="Word size info">i<span class="tooltip">Sets the length of exact matches used for the alignment seed.</span></span></label>
+                  <label for="s-ws">
+                    Word size:
+                    <span class="info" aria-label="Word size info">
+                      i<span class="tooltip">Sets the length of exact matches used for the alignment seed.</span>
+                    </span>
+                  </label>
                   <input id="s-ws" type="number" name="word_size" value="11" min="1">
                 </div>
                 <div class="form-group">
-                  <label for="s-e">E-value:<span class="info" aria-label="E-value info">i<span class="tooltip">Expected value threshold for the BLASTn search.</span></span></label>
+                  <label for="s-e">
+                    E-value:
+                    <span class="info" aria-label="E-value info">
+                      i<span class="tooltip">Expected value threshold for the BLASTn search.</span>
+                    </span>
+                  </label>
                   <input id="s-e" type="number" name="evalue" value="1e-09" step="any">
                 </div>
                 <div class="form-group">
-                  <label for="s-i">Identity:<span class="info" aria-label="Identity info">i<span class="tooltip">Sets the percentage for BALSTn hit similarity.</span></span></label>
+                  <label for="s-i">
+                    Identity:
+                    <span class="info" aria-label="Identity info">
+                      i<span class="tooltip">Sets the percentage for BALSTn hit similarity.</span>
+                    </span>
+                  </label>
                   <input id="s-i" type="number" name="identity" value="60" min="0" max="100">
                 </div>
                 <div class="form-group">
-                  <label for="s-ms">Minimum subjects: <span class="info" aria-label="Minimum subjects info">i<span class="tooltip">Minimum number of unique subjects required for a sequence to be accepted.</span></span></label>
+                  <label for="s-ms">
+                    Minimum subjects:
+                    <span class="info" aria-label="Minimum subjects info">
+                      i<span class="tooltip">Minimum number of unique subjects required for a sequence to be accepted.</span>
+                    </span>
+                  </label>
                   <input id="s-ms" type="number" name="min_subjects" value="5" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="s-jobs">Multi-processing jobs:<span class="info" aria-label="Jobs info">i<span class="tooltip">Sets the CPU cores used for the execution. -1 will use all available resources.</span></span></label>
+                  <label for="s-jobs">
+                    Multi-processing jobs:
+                    <span class="info" aria-label="Jobs info">
+                      i<span class="tooltip">Sets the CPU cores used for the execution. -1 will use all available resources.</span>
+                    </span>
+                  </label>
                   <input id="s-jobs" type="number" name="jobs" value="-1">
                 </div>
                 <div class="form-group">
-                  <label for="s-jobname">Job name (optional):<span class="info" aria-label="Job name info">i<span class="tooltip">Gives the job a name.</span></span></label>
+                  <label for="s-jobname">
+                    Job name (optional):
+                    <span class="info" aria-label="Job name info">
+                      i<span class="tooltip">Gives the job a name.</span>
+                    </span>
+                  </label>
                   <input id="s-jobname" type="text" name="job_name" placeholder="my_sider_filter">
                 </div>
               </div>
