@@ -1,34 +1,116 @@
+/**
+ * ============================================================================
+ * STYLES.CSS - Main Stylesheet for Web Application
+ * ============================================================================
+ *
+ * This stylesheet provides a complete design system for a web application
+ * with a sidebar navigation layout. It includes:
+ * - CSS custom properties (design tokens) for consistent theming
+ * - Layout system with flexbox-based sidebar and main content areas
+ * - Navigation with radio button-based panel switching
+ * - Form components with modern styling
+ * - Progress indicators and status displays
+ * - Responsive design for mobile devices
+ * - Accessibility features (screen reader classes, focus states)
+ *
+ * Structure:
+ * 1. CSS Custom Properties (Design Tokens)
+ * 2. Global Styles & Resets
+ * 3. Layout System
+ * 4. Sidebar Component
+ * 5. Navigation System
+ * 6. Main Content Area
+ * 7. Panel Visibility & Animations
+ * 8. Cards & Containers
+ * 9. Form Elements
+ * 10. Buttons & Actions
+ * 11. Progress & Status Components
+ * 12. Info Tooltips
+ * 13. Responsive Design
+ */
+
+/* ============================================================================
+   CSS CUSTOM PROPERTIES (DESIGN TOKENS)
+   ============================================================================
+   These variables define the design system's foundation. They ensure
+   consistency across the application and make theming easier.
+   To change the color scheme, modify these values.
+   ========================================================================== */
+
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #dbeafe;
-  --secondary: #64748b;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  /* --------------------------------------------------------------------
+     PRIMARY COLOR PALETTE
+     Used for main interactive elements, links, and primary actions
+     ------------------------------------------------------------------ */
+  --primary: #2563eb;           /* Main brand color (blue) */
+  --primary-hover: #1d4ed8;     /* Darker shade for hover states */
+  --primary-light: #dbeafe;     /* Light tint for backgrounds and focus rings */
 
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-hover: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
+  /* --------------------------------------------------------------------
+     SEMANTIC COLORS
+     Used to convey meaning (success, warning, error states)
+     ------------------------------------------------------------------ */
+  --secondary: #64748b;         /* Secondary elements, less emphasis */
+  --success: #10b981;           /* Success states, completed actions (green) */
+  --warning: #f59e0b;           /* Warning states, caution messages (amber) */
+  --danger: #ef4444;            /* Error states, destructive actions (red) */
 
-  --sidebar-bg: #1e293b;
-  --sidebar-surface: #334155;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-text: #f1f5f9;
-  --sidebar-text-muted: #94a3b8;
+  /* --------------------------------------------------------------------
+     SURFACE COLORS
+     Background colors for different surfaces and layers
+     ------------------------------------------------------------------ */
+  --bg: #f8fafc;                /* Main page background (light gray) */
+  --surface: #ffffff;           /* Card and panel surfaces (white) */
+  --surface-hover: #f1f5f9;     /* Hover state for interactive surfaces */
+  --border: #e2e8f0;            /* Border color for dividers and inputs */
 
-  --radius: 8px;
-  --radius-lg: 12px;
+  /* --------------------------------------------------------------------
+     TEXT COLORS
+     Hierarchy of text colors for different levels of emphasis
+     ------------------------------------------------------------------ */
+  --text: #0f172a;              /* Primary text color (almost black) */
+  --text-secondary: #64748b;    /* Secondary text, less emphasis (gray) */
+  --text-muted: #94a3b8;        /* Muted text for hints and placeholders (light gray) */
+
+  /* --------------------------------------------------------------------
+     SIDEBAR COLORS
+     Dark theme colors specifically for the sidebar component
+     ------------------------------------------------------------------ */
+  --sidebar-bg: #1e293b;            /* Sidebar background (dark slate) */
+  --sidebar-surface: #334155;       /* Sidebar interactive surfaces (lighter slate) */
+  --sidebar-border: rgba(255, 255, 255, 0.1);  /* Subtle borders in dark theme */
+  --sidebar-text: #f1f5f9;          /* Sidebar text (light gray on dark) */
+  --sidebar-text-muted: #94a3b8;    /* Sidebar muted text */
+
+  /* --------------------------------------------------------------------
+     BORDER RADIUS
+     Consistent rounding for UI elements
+     ------------------------------------------------------------------ */
+  --radius: 8px;                /* Standard border radius for buttons, inputs */
+  --radius-lg: 12px;            /* Large border radius for cards, panels */
+
+  /* --------------------------------------------------------------------
+     SHADOWS
+     Elevation system for creating visual hierarchy
+     ------------------------------------------------------------------ */
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* Small shadow for subtle elevation (buttons, inputs) */
+
   --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  /* Medium shadow for cards and modals */
+
   --shadow-xl: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* Large shadow for floating elements and emphasis */
 }
 
-/* Global Styles */
+/* ============================================================================
+   GLOBAL STYLES & RESETS
+   ============================================================================
+   Basic resets and default styles applied to all elements
+   ========================================================================== */
+
+/* Apply box-sizing: border-box to all elements
+   This makes width/height calculations include padding and border */
 * {
   box-sizing: border-box;
 }
