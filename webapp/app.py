@@ -19,7 +19,6 @@ from fastapi.responses import (
     HTMLResponse,  # Returns raw HTML a response (renders web pages)
     FileResponse,  # Send files for download
     PlainTextResponse,  # Sends plain text
-    StreamingResponse  # For streaming large responses to avoid loading them entirely in memory  # TODO: remove?
 )
 # noinspection PyPackageRequirements
 from fastapi.staticfiles import StaticFiles
@@ -106,6 +105,26 @@ def _zip_dir(src_dir: Path, zip_path: Path) -> None:  # TODO: too complex maybe
                 full_path = Path(root) / file  # Get full path to current file
                 arcname = full_path.relative_to(src_dir.parent)  # Get relative path for ZIP structure
                 zipf.write(full_path, arcname)  # Add file to ZIP using relative path
+
+
+def _initialize_job(job_id: str, zip_src_dir: Path) -> None:
+    """
+    Initialize a job entry in the running_jobs dictionary.
+
+    Parameters
+    ----------
+    job_id : str
+        The unique identifier for the job.
+    zip_src_dir : Path
+        The directory to be zipped when the job completes.
+    """
+    running_jobs[job_id] = {
+        "status": "starting",
+        "output": [],
+        "return_code": None,
+        "error": None,
+        "zip_src_dir": str(zip_src_dir),
+    }
 
 
 def run_blastoise_background(job_id: str, cmd: List[str], log_path: Path):
@@ -225,13 +244,7 @@ async def run_blastoise(
     ]
 
     # Initialize job status
-    running_jobs[job_id] = {
-        "status": "starting",
-        "output": [],
-        "return_code": None,
-        "error": None,
-        "zip_src_dir": str(job_output_dir),
-    }
+    _initialize_job(job_id, job_output_dir)
 
     # Start background task
     log_path = job_output_dir / "web_run.log"
@@ -287,13 +300,7 @@ async def run_sider_filter(
     ]
 
     # Initialize job status
-    running_jobs[job_id] = {
-        "status": "starting",
-        "output": [],
-        "return_code": None,
-        "error": None,
-        "zip_src_dir": str(job_upload_dir),
-    }
+    _initialize_job(job_id, job_output_dir)
 
     # Start background task
     log_path = job_output_dir / "web_run.log"
