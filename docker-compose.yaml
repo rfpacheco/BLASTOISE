@@ -1,0 +1,19 @@
+version: '0.3.8'
+
+services:
+  blastoise-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+
+      - ./webapp:/app/webapp # Mount source code for live updates
+      - ./webapp/templates:/app/webapp/templates  # Mount templates and static files
+      - ./webapp/static:/app/webapp/static
+      - ./uploads:/app/uploads # Mount uploads and output directories
+      - ./output:/app/output
+    command: uvicorn webapp.app:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - PYTHONUNBUFFERED=1
