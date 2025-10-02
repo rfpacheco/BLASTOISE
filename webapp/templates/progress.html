@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BLASTOISE Progress - Job: {{ job_id }}</title>
+  <!--suppress HtmlUnknownTarget -->
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body data-job-id="{{ job_id }}">
@@ -20,11 +21,13 @@
 
     <div id="downloads" class="download-links" style="display: none;">
       <a id="dl-zip" href="/download/{{ job_id }}">Download Results (.zip)</a>
+      <!--suppress HtmlUnknownTarget -->
       <a id="dl-log" href="/download/{{ job_id }}?file=web_run.log">Download Log</a>
       <a href="/">Start New Job</a>
     </div>
   </div>
 
+  <!--suppress HtmlUnknownTarget -->
   <script src="/static/js/progress.js" defer></script>
 </body>
 </html>
