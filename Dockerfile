@@ -11,7 +11,7 @@ FROM continuumio/miniconda3
 # =============================================================================
 LABEL maintainer="R. Pacheco <ronnyfph@gmail.com>"
 LABEL description="BLASTOISE: A Tool for SIDER Repetitive Sequence Discovery"
-LABEL version="0.4.3"
+LABEL version="0.4.4"
 
 # =============================================================================
 # SYSTEM SETUP

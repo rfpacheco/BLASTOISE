@@ -38,7 +38,7 @@ build-backend = "setuptools.build_meta"  # Backend to build your package
 # =============================================================================
 [project]
 name = "blastoise"
-version = "0.4.3"
+version = "0.4.4"
 authors = [
     {name = "R. Pacheco", email = "ronnyfph@gmail.com"}
 ]
@@ -117,7 +117,7 @@ blastoise-sider-filter = "blastoise.extra.sider_filter:main"
 # =============================================================================
 [tool.setuptools]
 # Explicitly specify which packages to include
-packages = ["blastoise", "blastoise.modules", "blastoise.extra"]
+packages = ["blastoise", "blastoise.modules", "blastoise.extra", "blastoise.extra.utils"]
 
 # Alternative: use find directive to auto-discover blastoise package only
 # [tool.setuptools.packages.find]

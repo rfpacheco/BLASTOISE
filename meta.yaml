@@ -52,7 +52,7 @@
 # Package identification and versioning
 package:
   name: blastoise                    # Package name as it appears in conda
-  version: "0.4.3"                  # Current version number
+  version: "0.4.4"                  # Current version number
 
 # Source code location for building the package
 source:
