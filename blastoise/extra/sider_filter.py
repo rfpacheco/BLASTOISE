@@ -123,7 +123,7 @@ def main():
         csv_path: str = os.path.expanduser(args.data)
         dict_path: str = os.path.expanduser(args.genome)
         # Use the directory of the input file as the output location
-        output_dir: str = os.path.dirname(csv_path)
+        output_dir: str = os.path.dirname(csv_path) or '.'
         recaught_file_path: str = os.path.expanduser(args.recaught_file)
 
         # Setup directories and BLASTN database
